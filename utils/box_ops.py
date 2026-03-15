@@ -1,6 +1,10 @@
 """
-Box operations for PFDet-Nano.
+Box operations for PFDet-Nano v5.
 Includes: CIoU loss, NMS, box format conversions, grid generation.
+
+v5 changes:
+  - Extended sigmoid decode: sigmoid(x)*2 - 0.5 for offsets
+  - Removed foot point (5ch output: obj, dx, dy, lw, lh)
 """
 
 import math
@@ -83,44 +87,52 @@ def make_grid(h, w, device='cpu', dtype=torch.float32):
 
 
 def decode_predictions(raw_pred, stride, img_size):
+    """Decode raw model output to boxes (torch, batched)."""
     B, C, H, W = raw_pred.shape
     device = raw_pred.device
     pred = raw_pred.reshape(B, C, -1).permute(0, 2, 1)
     grid = make_grid(H, W, device=device, dtype=pred.dtype)
     obj = torch.sigmoid(pred[..., 0:1])
-    cx = (torch.sigmoid(pred[..., 1:2]) + grid[None, :, 0:1]) * stride / img_size
-    cy = (torch.sigmoid(pred[..., 2:3]) + grid[None, :, 1:2]) * stride / img_size
+    cx = (torch.sigmoid(pred[..., 1:2]) * 2 - 0.5 + grid[None, :, 0:1]) * stride / img_size
+    cy = (torch.sigmoid(pred[..., 2:3]) * 2 - 0.5 + grid[None, :, 1:2]) * stride / img_size
     bw = torch.exp(pred[..., 3:4].clamp(-5, 5)) * stride / img_size
     bh = torch.exp(pred[..., 4:5].clamp(-5, 5)) * stride / img_size
-    fx = torch.sigmoid(pred[..., 5:6])
-    fy = torch.sigmoid(pred[..., 6:7])
-    return torch.cat([obj, cx, cy, bw, bh, fx, fy], dim=-1)
+    return torch.cat([obj, cx, cy, bw, bh], dim=-1)
+
+
+def _stable_sigmoid(x):
+    """Numerically stable sigmoid for numpy scalars/arrays."""
+    x = np.clip(x, -50, 50)
+    return 1.0 / (1.0 + np.exp(-x))
 
 
 def decode_predictions_np(raw_pred, stride, img_size):
+    """Decode raw model output to detection dicts (numpy, single image)."""
     C, H, W = raw_pred.shape
     results = []
-    obj_map = 1.0 / (1.0 + np.exp(-raw_pred[0]))
+    obj_map = _stable_sigmoid(raw_pred[0])
     for j in range(H):
         for i in range(W):
             score = obj_map[j, i]
             if score < 0.01:
                 continue
-            dx = 1.0 / (1.0 + np.exp(-raw_pred[1, j, i]))
-            dy = 1.0 / (1.0 + np.exp(-raw_pred[2, j, i]))
+            dx = _stable_sigmoid(raw_pred[1, j, i]) * 2 - 0.5
+            dy = _stable_sigmoid(raw_pred[2, j, i]) * 2 - 0.5
             cx = (i + dx) * stride / img_size
             cy = (j + dy) * stride / img_size
             lw = np.clip(raw_pred[3, j, i], -5, 5)
             lh = np.clip(raw_pred[4, j, i], -5, 5)
             bw = np.exp(lw) * stride / img_size
             bh = np.exp(lh) * stride / img_size
-            fx = 1.0 / (1.0 + np.exp(-raw_pred[5, j, i]))
-            fy = 1.0 / (1.0 + np.exp(-raw_pred[6, j, i]))
             x1 = cx - bw / 2
             y1 = cy - bh / 2
             x2 = cx + bw / 2
             y2 = cy + bh / 2
-            results.append({'score': float(score), 'box': [float(x1), float(y1), float(x2), float(y2)], 'foot': [float(fx), float(fy)], 'cx': float(cx), 'cy': float(cy)})
+            results.append({
+                'score': float(score),
+                'box': [float(x1), float(y1), float(x2), float(y2)],
+                'cx': float(cx), 'cy': float(cy),
+            })
     return results
 
 

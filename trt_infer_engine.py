@@ -17,7 +17,7 @@ import numpy as np
 import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils.box_ops import decode_predictions_np, nms_numpy
+from utils_old.box_ops import decode_predictions_np, nms_numpy
 
 
 class TRTEngine:

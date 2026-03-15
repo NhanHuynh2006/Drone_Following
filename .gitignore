@@ -1,0 +1,33 @@
+# Datasets (too large)
+VisDrone2019-*/
+data/
+*.zip
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Training weights (large)
+runs/*/best.pt
+runs/*/last.pt
+
+# Videos
+*.mp4
+*.avi
+*.mov
+
+# Val sample images
+runs/*/val_samples/
+
+# Old/temp
+utils_old/
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

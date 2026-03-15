@@ -1,12 +1,8 @@
-# ============================================================
-# PFDet-Nano Training Configuration
-# ============================================================
-# Optimized for VisDrone person detection on Jetson Nano
+# PFDet-Nano v5 Training Configuration
 
 model:
-  base_c: 24          # Base channel width (24=nano, 32=small)
-  img_size: 416       # Input resolution (416 for speed, 512 for accuracy)
-  num_bifpn: 2        # Number of BiFPN repetitions
+  base_c: 32
+  img_size: 416
 
 data:
   root: "./data/visdrone"
@@ -14,41 +10,24 @@ data:
   train_labels: "train/labels"
   val_images: "val/images"
   val_labels: "val/labels"
-  mosaic_prob: 0.5     # Mosaic augmentation probability
+  mosaic_prob: 0.6
+  mixup_prob: 0.15
 
 train:
   device: "cuda:0"
-  epochs: 30
-  batch_size: 48    # Reduce to 8 if GPU OOM
-  num_workers: 8
-  lr: 0.003            # Peak learning rate
-  lr_min: 0.00001      # Minimum learning rate
+  epochs: 200
+  batch_size: 64
+  num_workers: 12
+  lr: 0.003
+  lr_min: 0.00001
   weight_decay: 0.0005
-  warmup_epochs: 5
-  amp: true         # Mixed precision training
-  save_dir: "./runs/train"
-  val_interval: 5      # Validate every N epochs
-  mosaic_off_last: 10  # Disable mosaic in last N epochs
+  warmup_epochs: 10
+  amp: true
+  save_dir: "./runs/train_v5"
+  val_interval: 5
+  mosaic_off_last: 20
+  ema_decay: 0.9998
 
 loss:
-  obj_weight: 1.0      # Objectness loss weight
-  box_weight: 5.0      # Box regression (CIoU) loss weight
-  foot_weight: 1.0     # Foot point loss weight
-
-# ============================================================
-# Notes for VisDrone dataset preparation:
-# ============================================================
-# 1. Download VisDrone-DET dataset
-# 2. Convert to YOLO format (class cx cy w h):
-#    - class 0 = pedestrian (VisDrone class 1)
-#    - class 0 = person (VisDrone class 2)
-# 3. Directory structure:
-#    data/visdrone/
-#      train/
-#        images/  (*.jpg)
-#        labels/  (*.txt, YOLO format)
-#      val/
-#        images/
-#        labels/
-#
-# The convert_visdrone.py script handles this conversion.
+  obj_weight: 0.5
+  box_weight: 5.0
