@@ -35,8 +35,8 @@ import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import PFDetNano
-from utils_old.box_ops import decode_predictions_np, nms_numpy
+from models import build_model_from_checkpoint
+from utils import decode_predictions_np, nms_numpy
 
 
 # ============================================================
@@ -339,11 +339,13 @@ class DroneFollowController:
       - target_size = 0.15-0.25 (desired bbox height ratio)
     """
     def __init__(self, model, img_size, device,
-                 pixhawk=None, target_size=0.20):
+                 pixhawk=None, target_size=0.20,
+                 decode_fn=decode_predictions_np):
         self.model = model
         self.img_size = img_size
         self.device = device
         self.pixhawk = pixhawk
+        self.decode_fn = decode_fn
 
         # Target setpoints (normalized)
         self.target_cx = 0.5     # Horizontal center
@@ -376,8 +378,11 @@ class DroneFollowController:
         self.tracker = TargetTracker(max_lost_frames=15, distance_threshold=0.15)
 
         # Detection params
-        self.conf_thr = 0.35
+        self.conf_thr = 0.45
         self.nms_iou = 0.45
+        self.min_box_area = 64.0
+        self.min_aspect = 1.0
+        self.max_aspect = 5.5
 
         # Safety
         self.armed = False
@@ -412,30 +417,40 @@ class DroneFollowController:
         all_dets = []
         for si, pred in enumerate(preds):
             raw = pred[0].cpu().numpy()
-            dets = decode_predictions_np(raw, self.model.strides[si], self.img_size)
+            dets = self.decode_fn(raw, self.model.strides[si], self.img_size)
             all_dets.extend(dets)
 
         all_dets = [d for d in all_dets if d['score'] >= self.conf_thr]
         all_dets = nms_numpy(all_dets, iou_threshold=self.nms_iou)
 
         # Scale back to normalized [0,1] relative to original frame
+        filtered = []
         for d in all_dets:
             x1, y1, x2, y2 = d['box']
             x1 = (x1 * self.img_size - left) / (ratio * w0)
             y1 = (y1 * self.img_size - top) / (ratio * h0)
             x2 = (x2 * self.img_size - left) / (ratio * w0)
             y2 = (y2 * self.img_size - top) / (ratio * h0)
-            d['box'] = [
+            box = [
                 max(0, min(1, x1)), max(0, min(1, y1)),
                 max(0, min(1, x2)), max(0, min(1, y2))
             ]
-            fx, fy = d['foot']
-            d['foot'] = [
-                max(0, min(1, (fx * self.img_size - left) / (ratio * w0))),
-                max(0, min(1, (fy * self.img_size - top) / (ratio * h0)))
-            ]
+            bw = max(0.0, box[2] - box[0]) * w0
+            bh = max(0.0, box[3] - box[1]) * h0
+            aspect = bh / max(bw, 1e-6)
+            if bw * bh < self.min_box_area:
+                continue
+            if aspect < self.min_aspect or aspect > self.max_aspect:
+                continue
 
-        return all_dets
+            d['box'] = box
+            d['foot'] = [
+                (box[0] + box[2]) / 2,
+                box[3],
+            ]
+            filtered.append(d)
+
+        return filtered[:100]
 
     def compute_control(self, target):
         """
@@ -630,7 +645,7 @@ def main():
     parser.add_argument("--pixhawk", default=None,
                         help="Pixhawk connection string (e.g. /dev/ttyTHS1, udp:127.0.0.1:14550)")
     parser.add_argument("--baudrate", type=int, default=921600, help="Serial baudrate")
-    parser.add_argument("--conf", type=float, default=0.35, help="Detection confidence")
+    parser.add_argument("--conf", type=float, default=0.45, help="Detection confidence")
     parser.add_argument("--target-size", type=float, default=0.20,
                         help="Desired target bbox height (0.15=far, 0.30=close)")
     parser.add_argument("--save", default=None, help="Save video to file")
@@ -640,22 +655,17 @@ def main():
 
     # Load model
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
-    ckpt = torch.load(args.weights, map_location=device)
+    model, ckpt, model_version, model_kwargs = build_model_from_checkpoint(
+        args.weights,
+        device=device,
+        use_ema=True,
+    )
     cfg = ckpt['cfg']
 
-    model = PFDetNano(
-        base_c=cfg['model']['base_c'],
-        num_bifpn=cfg['model'].get('num_bifpn', 2)
-    ).to(device)
-
-    if 'ema' in ckpt:
-        model.load_state_dict(ckpt['ema'])
-    else:
-        model.load_state_dict(ckpt['model'])
-    model.eval()
-
     img_size = cfg['model']['img_size']
-    print(f"[MODEL] PFDet-Nano loaded (base_c={cfg['model']['base_c']}, img={img_size})")
+    print(f"[MODEL] PFDet-Nano {model_version} loaded (base_c={cfg['model'].get('base_c', 'n/a')}, img={img_size})")
+    if model_kwargs:
+        print(f"[MODEL] kwargs: {model_kwargs}")
 
     # Connect to Pixhawk
     pixhawk = None
@@ -673,6 +683,7 @@ def main():
         device=device,
         pixhawk=pixhawk,
         target_size=args.target_size,
+        decode_fn=decode_predictions_np,
     )
     controller.conf_thr = args.conf
 

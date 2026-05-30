@@ -1,0 +1,111 @@
+# PFDet-Nano v14 Light Training Configuration — v7
+# Improvements over v6:
+#   - extra_enable_epoch: 50 → 80  (wait for VisDrone to stabilize before COCO mix)
+#   - extra_disable_epoch: 150 → 190  (keep same ~110 epoch COCO window)
+#   - epochs: 250 → 300  (model was still improving at epoch 215)
+#   - prog_epochs: 250 → 300  (loss scheduler tracks full training)
+# Target: Raspberry Pi 5 CPU deployment (~20-25 FPS)
+
+meta:
+  role: edge_candidate
+  notes: "v7: delayed COCO onset to avoid early disruption, +50 epochs."
+
+model:
+  version: v14
+  profile: light
+  activation: silu
+  use_area_attention: true
+  base_c: 24
+  neck_c: 48
+  num_bifpn: 1
+  area: 3
+  img_size: 320
+
+data:
+  root: "./data/visdrone"
+  cache_ram: false
+  train_images: "train/images"
+  train_labels: "train/labels"
+  val_images: "val/images"
+  val_labels: "val/labels"
+
+  extra_images: "../coco_person/images"
+  extra_labels: "../coco_person/labels"
+  extra_sample_ratio: 0.20
+  extra_enable_epoch: 80       # was 50 — wait for VisDrone AP to stabilize (~0.30)
+  extra_disable_epoch: 190     # was 150 — same ~110 epoch COCO window
+
+  mosaic_prob: 0.30
+  mixup_prob: 0.0
+  hflip_prob: 0.5
+  affine_prob: 1.0
+  color_jitter_prob: 1.0
+  drone_aug_prob: 0.20
+  copy_paste_prob: 0.25      # Copy-paste tiny persons — proven +3-5 AP on VisDrone
+
+train:
+  device: "cuda:0"
+  benchmark_profile: desktop_4060
+  channels_last: true
+  epochs: 300
+  batch_size: 32
+  num_workers: 14
+  optimizer:
+    name: adamw
+    fused: auto
+    lr: 0.003
+    lr_min: 0.00003
+    weight_decay: 0.0005
+    momentum: 0.937
+  warmup_epochs: 10
+  amp: true
+  ema_decay: 0.9998
+  seed: 42
+  val_interval: 5
+  val_vis_conf: 0.25
+  mosaic_off_last: 40          # mosaic off at epoch 260
+  val_use_ema: true
+  save_dir: "./runs/train_v14_light_v7"
+  multiscale:
+    enabled: true
+    range: [0.75, 1.25]    # 240px–400px (base 320px)
+    step: 32               # must be divisible by max stride (32)
+    freq: 10               # change resolution every 10 batches
+
+loss:
+  obj_weight: 8.0
+  box_weight: 4.0
+  qfl_beta: 2.0
+  hard_floor: 0.0
+  obj_warmup_epochs: 10
+  prog_epochs: 300             # was 250 — tracks full 300-epoch schedule
+  k_tiny: 6
+  k_normal: 3
+  search_r_tiny: 3
+  search_r_normal: 2
+  tiny_area_px: 576.0
+  scale_match_alpha: 0.5
+  scale_match_base: 2.0
+  asl_area_ref: 0.004
+  asl_max: 4.0
+  # TAL: Task-Aligned Label Assignment (replaces distance-based AAPA)
+  tal_alpha: 1.0             # score exponent in alignment = score^α × IoU^β
+  tal_beta: 6.0              # IoU exponent — strict selection, higher quality positives
+  # NWD: Normalized Wasserstein Distance for tiny objects
+  nwd_area_thr: 1024.0       # Use NWD for objects < 32×32px (more stable than CIoU)
+  nwd_c: 0.04                # calibrated for 320px normalized coords (= 12/320)
+  # OHEM: Online Hard Example Mining
+  ohem_ratio: 8.0            # keep 8×n_pos hardest negatives (~10% of all cells)
+
+eval:
+  conf_thr: 0.01
+  iou_thr: 0.5
+  max_det: 300
+  min_box_area: 16.0
+  min_aspect: 0.0
+  max_aspect: 8.0
+  focus_min_gt_area: 64.0
+  focus_primary: true
+
+export:
+  output_names: [output_p2, output_p3, output_p4, output_p5]

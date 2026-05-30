@@ -1,13 +1,8 @@
 """
-TensorRT inference engine for PFDet-Nano on Jetson Nano.
+TensorRT runtime for PFDet-Nano v14.
 
-Uses TensorRT for ~2-3x speedup over PyTorch on Jetson Nano.
-Typical performance: 20-30 FPS @ 416x416 with FP16 on Jetson Nano B01.
-
-Usage:
-  1. First export: python export.py --weights best.pt --format all --fp16
-  2. Build engine on Jetson: python3 best_build_trt.py
-  3. Run: python3 trt_infer_engine.py --engine best_fp16.engine --camera 0
+Expected engine contract:
+  input -> output_p2, output_p3, output_p4, output_p5
 """
 
 import os
@@ -17,7 +12,7 @@ import numpy as np
 import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils_old.box_ops import decode_predictions_np, nms_numpy
+from utils import decode_predictions_np, nms_numpy
 
 
 class TRTEngine:
@@ -25,7 +20,7 @@ class TRTEngine:
     TensorRT engine wrapper for PFDet-Nano.
     Handles memory allocation, inference, and output parsing.
     """
-    def __init__(self, engine_path, img_size=416):
+    def __init__(self, engine_path, img_size=384):
         import tensorrt as trt
         import pycuda.driver as cuda
         import pycuda.autoinit  # noqa - initializes CUDA context
@@ -70,7 +65,7 @@ class TRTEngine:
         """
         Run inference on preprocessed image.
         img_np: (1, 3, H, W) float32 numpy array, normalized [0,1]
-        Returns: list of raw outputs [(7, H1, W1), (7, H2, W2), (7, H3, W3)]
+        Returns: list of raw outputs [(5, H1, W1), ..., (5, H4, W4)]
         """
         import pycuda.driver as cuda
 
@@ -95,10 +90,11 @@ class TRTEngine:
         return results
 
 
-def run_trt_camera(engine_path, camera_source=0, img_size=416,
-                   strides=[8, 16, 32], conf_thr=0.35, show=True):
+def run_trt_camera(engine_path, camera_source=0, img_size=384,
+                   strides=None, conf_thr=0.35, show=True):
     """Run TensorRT inference on camera feed."""
     engine = TRTEngine(engine_path, img_size)
+    strides = strides or [4, 8, 16, 32]
 
     cap = cv2.VideoCapture(camera_source)
     if not cap.isOpened():
@@ -134,6 +130,10 @@ def run_trt_camera(engine_path, camera_source=0, img_size=416,
 
         # Decode
         all_dets = []
+        if len(outputs) != len(strides):
+            raise RuntimeError(
+                f"TensorRT output count mismatch: got {len(outputs)} outputs for {len(strides)} strides"
+            )
         for si, raw in enumerate(outputs):
             dets = decode_predictions_np(raw, strides[si], img_size)
             all_dets.extend(dets)
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--engine", required=True, help="TensorRT engine path")
     parser.add_argument("--camera", default="0", help="Camera source")
-    parser.add_argument("--img-size", type=int, default=416)
+    parser.add_argument("--img-size", type=int, default=384)
     parser.add_argument("--conf", type=float, default=0.35)
     args = parser.parse_args()
 

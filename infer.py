@@ -1,11 +1,8 @@
 """
-Inference script for PFDet-Nano v5.
-Supports: single image, directory, video, webcam.
+Inference script for PFDet-Nano v14.
 
-Usage:
-  python infer.py --weights runs/train_v5/best.pt --source image.jpg --show
-  python infer.py --weights runs/train_v5/best.pt --source video.mp4
-  python infer.py --weights runs/train_v5/best.pt --source 0  (webcam)
+Supports single-image, directory, video, and webcam inference with the
+4-scale PFDet decoder contract used by training/export/runtime paths.
 """
 
 import os
@@ -18,8 +15,8 @@ import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import PFDetNano
-from utils.box_ops import decode_predictions_np, nms_numpy
+from models import build_model_from_checkpoint
+from utils import decode_predictions_np, nms_numpy
 
 
 def soft_nms(detections, sigma=0.5, score_threshold=0.05):
@@ -55,25 +52,18 @@ def soft_nms(detections, sigma=0.5, score_threshold=0.05):
 
 
 def load_model(weights_path, device='cpu', use_ema=True):
-    ckpt = torch.load(weights_path, map_location=device, weights_only=False)
+    model, ckpt, model_version, model_kwargs = build_model_from_checkpoint(
+        weights_path,
+        device=device,
+        use_ema=use_ema,
+    )
     cfg = ckpt['cfg']
 
-    model = PFDetNano(
-        base_c=cfg['model']['base_c'],
-    ).to(device)
-
-    if use_ema and 'ema' in ckpt:
-        model.load_state_dict(ckpt['ema'])
-        print("[INFO] Loaded EMA weights")
-    elif 'model' in ckpt:
-        model.load_state_dict(ckpt['model'])
-        print("[INFO] Loaded model weights")
-    else:
-        model.load_state_dict(ckpt['ema'])
-        print("[INFO] Loaded EMA weights (fallback)")
-
-    model.eval()
-    return model, cfg['model']['img_size']
+    state_key = 'ema' if use_ema and 'ema' in ckpt else 'model'
+    print(f"[INFO] Loaded {state_key.upper()} weights")
+    if model_kwargs:
+        print(f"[INFO] Model kwargs: {model_kwargs}")
+    return model, cfg['model']['img_size'], model_version
 
 
 def preprocess(img, img_size):
@@ -94,8 +84,33 @@ def preprocess(img, img_size):
     return img_tensor.unsqueeze(0), ratio, (top, left), (h0, w0)
 
 
+def filter_detections(detections, min_box_area=0, min_aspect=0.0,
+                      max_aspect=0.0, max_det=300):
+    filtered = []
+    for det in detections:
+        x1, y1, x2, y2 = det['box']
+        bw = max(0.0, x2 - x1)
+        bh = max(0.0, y2 - y1)
+        area = bw * bh
+        aspect = bh / max(bw, 1e-6)
+
+        if area < min_box_area:
+            continue
+        if min_aspect > 0 and aspect < min_aspect:
+            continue
+        if max_aspect > 0 and aspect > max_aspect:
+            continue
+
+        filtered.append(det)
+        if len(filtered) >= max_det:
+            break
+
+    return filtered
+
+
 def postprocess(preds, strides, img_size, conf_thr=0.3, nms_iou=0.45,
-                ratio=1.0, pad=(0, 0), orig_size=(0, 0), use_soft_nms=True):
+                ratio=1.0, pad=(0, 0), orig_size=(0, 0), use_soft_nms=False,
+                min_box_area=0, min_aspect=0.0, max_aspect=0.0, max_det=300):
     all_dets = []
     for si, pred in enumerate(preds):
         raw = pred[0].cpu().numpy()
@@ -124,7 +139,13 @@ def postprocess(preds, strides, img_size, conf_thr=0.3, nms_iou=0.45,
         # Foot point = bottom center of bounding box (standard in literature)
         d['foot'] = [(d['box'][0] + d['box'][2]) / 2, d['box'][3]]
 
-    return all_dets
+    return filter_detections(
+        all_dets,
+        min_box_area=min_box_area,
+        min_aspect=min_aspect,
+        max_aspect=max_aspect,
+        max_det=max_det,
+    )
 
 
 def draw_detections(img, detections, show_foot=True):
@@ -150,7 +171,8 @@ def draw_detections(img, detections, show_foot=True):
 
 
 def run_image(model, img_path, img_size, device, conf_thr=0.3, nms_iou=0.45,
-              save_path=None, show=False):
+              save_path=None, show=False, use_soft_nms=False,
+              min_box_area=0, min_aspect=0.0, max_aspect=0.0, max_det=300):
     img = cv2.imread(img_path)
     if img is None:
         print(f"[ERROR] Cannot read image: {img_path}")
@@ -165,8 +187,15 @@ def run_image(model, img_path, img_size, device, conf_thr=0.3, nms_iou=0.45,
         preds = model(inp)
     dt = time.time() - t0
 
-    dets = postprocess(preds, model.strides, img_size, conf_thr, nms_iou,
-                       ratio, pad, orig_size)
+    dets = postprocess(
+        preds, model.strides, img_size, conf_thr, nms_iou,
+        ratio, pad, orig_size,
+        use_soft_nms=use_soft_nms,
+        min_box_area=min_box_area,
+        min_aspect=min_aspect,
+        max_aspect=max_aspect,
+        max_det=max_det,
+    )
 
     print(f"  {img_path}: {len(dets)} persons detected ({dt*1000:.1f}ms)")
 
@@ -184,7 +213,8 @@ def run_image(model, img_path, img_size, device, conf_thr=0.3, nms_iou=0.45,
 
 
 def run_video(model, source, img_size, device, conf_thr=0.3, nms_iou=0.45,
-              save_path=None, show=True):
+              save_path=None, show=True, use_soft_nms=False,
+              min_box_area=0, min_aspect=0.0, max_aspect=0.0, max_det=300):
     if source.isdigit():
         idx = int(source)
         cap = None
@@ -242,8 +272,15 @@ def run_video(model, source, img_size, device, conf_thr=0.3, nms_iou=0.45,
             preds = model(inp)
         dt = time.time() - t0
 
-        dets = postprocess(preds, model.strides, img_size, conf_thr, nms_iou,
-                           ratio, pad, orig_size)
+        dets = postprocess(
+            preds, model.strides, img_size, conf_thr, nms_iou,
+            ratio, pad, orig_size,
+            use_soft_nms=use_soft_nms,
+            min_box_area=min_box_area,
+            min_aspect=min_aspect,
+            max_aspect=max_aspect,
+            max_det=max_det,
+        )
 
         fps_now = 1.0 / max(dt, 1e-6)
         fps_smooth = 0.9 * fps_smooth + 0.1 * fps_now if fps_smooth > 0 else fps_now
@@ -282,8 +319,16 @@ def main():
     parser = argparse.ArgumentParser(description="PFDet-Nano Inference")
     parser.add_argument("--weights", required=True, help="Path to .pt weights")
     parser.add_argument("--source", required=True, help="Image/video/webcam")
-    parser.add_argument("--conf", type=float, default=0.3, help="Confidence threshold")
+    parser.add_argument("--conf", type=float, default=0.4, help="Confidence threshold")
     parser.add_argument("--nms-iou", type=float, default=0.45, help="NMS IoU threshold")
+    parser.add_argument("--soft-nms", action="store_true", help="Use soft-NMS instead of standard NMS")
+    parser.add_argument("--min-box-area", type=float, default=64.0,
+                        help="Minimum box area in original-image pixels")
+    parser.add_argument("--min-aspect", type=float, default=1.0,
+                        help="Minimum box aspect ratio h/w to keep")
+    parser.add_argument("--max-aspect", type=float, default=5.5,
+                        help="Maximum box aspect ratio h/w to keep")
+    parser.add_argument("--max-det", type=int, default=100, help="Maximum detections per image/frame")
     parser.add_argument("--save", default=None, help="Save output path")
     parser.add_argument("--show", action="store_true", help="Show results")
     parser.add_argument("--device", default="cuda:0", help="Device (cpu or cuda:0)")
@@ -291,14 +336,19 @@ def main():
     args = parser.parse_args()
 
     device = torch.device(args.device if torch.cuda.is_available() or args.device == 'cpu' else 'cpu')
-    model, img_size = load_model(args.weights, device, use_ema=not args.no_ema)
-    print(f"Model loaded, img_size={img_size}, device={device}")
+    model, img_size, model_version = load_model(args.weights, device, use_ema=not args.no_ema)
+    print(f"Model loaded: {model_version}, img_size={img_size}, device={device}")
 
     source = args.source
     if source.isdigit() or source.endswith(('.mp4', '.avi', '.mov', '.mkv')):
         run_video(model, source, img_size, device,
                   conf_thr=args.conf, nms_iou=args.nms_iou,
-                  save_path=args.save, show=args.show)
+                  save_path=args.save, show=args.show,
+                  use_soft_nms=args.soft_nms,
+                  min_box_area=args.min_box_area,
+                  min_aspect=args.min_aspect,
+                  max_aspect=args.max_aspect,
+                  max_det=args.max_det)
     elif os.path.isdir(source):
         out_dir = args.save or "runs/detect"
         os.makedirs(out_dir, exist_ok=True)
@@ -308,11 +358,21 @@ def main():
                 sp = os.path.join(out_dir, fname) if args.save else None
                 run_image(model, img_path, img_size, device,
                          conf_thr=args.conf, nms_iou=args.nms_iou,
-                         save_path=sp, show=args.show)
+                         save_path=sp, show=args.show,
+                         use_soft_nms=args.soft_nms,
+                         min_box_area=args.min_box_area,
+                         min_aspect=args.min_aspect,
+                         max_aspect=args.max_aspect,
+                         max_det=args.max_det)
     else:
         run_image(model, source, img_size, device,
                  conf_thr=args.conf, nms_iou=args.nms_iou,
-                 save_path=args.save, show=args.show)
+                 save_path=args.save, show=args.show,
+                 use_soft_nms=args.soft_nms,
+                 min_box_area=args.min_box_area,
+                 min_aspect=args.min_aspect,
+                 max_aspect=args.max_aspect,
+                 max_det=args.max_det)
 
 
 if __name__ == "__main__":

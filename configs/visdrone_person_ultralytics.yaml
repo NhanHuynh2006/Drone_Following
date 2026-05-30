@@ -1,0 +1,6 @@
+path: ./data/visdrone_ultralytics
+train: train/images
+val: val/images
+
+names:
+  0: person
