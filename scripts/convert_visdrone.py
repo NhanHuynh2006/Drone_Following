@@ -6,12 +6,11 @@ VisDrone annotation format:
 
 Object categories we care about:
   1 = pedestrian
-  2 = person (people)
+  2 = people / crowd-like person group
 
 Output YOLO format:
-  class_id cx cy w h fx fy
+  class_id cx cy w h
   All normalized to [0,1]
-  fx, fy = foot point (bottom center of bbox)
 """
 
 import os
@@ -22,12 +21,12 @@ from PIL import Image
 from tqdm import tqdm
 
 
-# VisDrone categories that map to "person"
-PERSON_CATEGORIES = {1, 2}  # pedestrian, people
+DEFAULT_PERSON_CATEGORIES = {1}  # pedestrian only by default
 
 
-def convert_annotation(ann_path, img_path, out_path, min_size=10):
+def convert_annotation(ann_path, img_path, out_path, min_size=10, person_categories=None):
     """Convert a single VisDrone annotation file to YOLO format."""
+    person_categories = person_categories or DEFAULT_PERSON_CATEGORIES
     # Get image dimensions
     try:
         img = Image.open(img_path)
@@ -55,7 +54,7 @@ def convert_annotation(ann_path, img_path, out_path, min_size=10):
             occlusion = int(parts[7])
 
             # Filter: only person classes, not heavily occluded, reasonable size
-            if category not in PERSON_CATEGORIES:
+            if category not in person_categories:
                 continue
             if occlusion >= 2:  # 0=no occlusion, 1=partial, 2=heavy
                 continue
@@ -68,17 +67,13 @@ def convert_annotation(ann_path, img_path, out_path, min_size=10):
             w = bbox_w / img_w
             h = bbox_h / img_h
 
-            # Foot point: bottom center of bbox
-            fx = cx
-            fy = min(1.0, (bbox_top + bbox_h) / img_h)
-
             # Validate
             if cx <= 0 or cx >= 1 or cy <= 0 or cy >= 1:
                 continue
             if w <= 0.001 or h <= 0.001 or w >= 1 or h >= 1:
                 continue
 
-            lines.append(f"0 {cx:.6f} {cy:.6f} {w:.6f} {h:.6f} {fx:.6f} {fy:.6f}")
+            lines.append(f"0 {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}")
             n_person += 1
 
     with open(out_path, 'w') as f:
@@ -87,7 +82,8 @@ def convert_annotation(ann_path, img_path, out_path, min_size=10):
     return n_person
 
 
-def convert_split(src_images, src_annotations, dst_images, dst_labels, min_size=10):
+def convert_split(src_images, src_annotations, dst_images, dst_labels,
+                  min_size=10, person_categories=None):
     """Convert a full split (train/val/test)."""
     os.makedirs(dst_images, exist_ok=True)
     os.makedirs(dst_labels, exist_ok=True)
@@ -119,7 +115,11 @@ def convert_split(src_images, src_annotations, dst_images, dst_labels, min_size=
 
         # Convert annotation
         out_label = os.path.join(dst_labels, stem + '.txt')
-        n = convert_annotation(ann_path, img_path, out_label, min_size=min_size)
+        n = convert_annotation(
+            ann_path, img_path, out_label,
+            min_size=min_size,
+            person_categories=person_categories,
+        )
         total_persons += n
         total_images += 1
 
@@ -132,11 +132,16 @@ def main():
     parser.add_argument("--src", required=True, help="VisDrone dataset root (contains VisDrone2019-DET-*)")
     parser.add_argument("--dst", default="./data/visdrone", help="Output directory")
     parser.add_argument("--min-size", type=int, default=10, help="Minimum bbox side in pixels")
+    parser.add_argument("--include-people", action="store_true",
+                        help="Also include VisDrone category 2 (group/people boxes)")
     args = parser.parse_args()
 
     print(f"Converting VisDrone dataset from {args.src} to {args.dst}")
     print(f"Minimum bbox size: {args.min_size}px")
+    print(f"Categories: {'pedestrian + people' if args.include_people else 'pedestrian only'}")
     print()
+
+    person_categories = {1, 2} if args.include_people else DEFAULT_PERSON_CATEGORIES
 
     # Standard VisDrone directory structure
     splits = {
@@ -159,6 +164,7 @@ def main():
             os.path.join(args.dst, split_name, 'images'),
             os.path.join(args.dst, split_name, 'labels'),
             min_size=args.min_size,
+            person_categories=person_categories,
         )
 
     print(f"\nDone! Dataset saved to {args.dst}")

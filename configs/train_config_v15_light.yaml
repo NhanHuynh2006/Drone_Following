@@ -1,0 +1,107 @@
+# PFDet-Nano v15 Light Training Configuration
+# Target: Raspberry Pi 5 (~20 FPS at 320px inference)
+# Compare fair with v14 light (same base_c=24, neck_c=48, num_bifpn=1)
+# v15 improvements: CSPUIBStage + LSKBlock in backbone + STAL loss
+
+meta:
+  role: edge_candidate
+  notes: "v15 light: fair comparison with v14 light on Pi 5. ~1.0M params."
+
+model:
+  version: v15
+  profile: light             # base_c=24, neck_c=48, num_bifpn=1 — same as v14 light
+  activation: silu
+  use_area_attention: true
+  area: 3
+  img_size: 640
+
+data:
+  root: "./data/visdrone"
+  cache_ram: false
+  train_images: "train/images"
+  train_labels: "train/labels"
+  val_images: "val/images"
+  val_labels: "val/labels"
+
+  extra_images: "../coco_person/images"
+  extra_labels: "../coco_person/labels"
+  extra_sample_ratio: 0.20
+  extra_enable_epoch: 150
+  extra_disable_epoch: 280
+
+  mosaic_prob: 0.50
+  mixup_prob: 0.10
+  hflip_prob: 0.5
+  affine_prob: 1.0
+  color_jitter_prob: 1.0
+  drone_aug_prob: 0.30
+  copy_paste_prob: 0.40
+
+train:
+  device: "cuda:0"
+  benchmark_profile: desktop_4060
+  channels_last: true
+  epochs: 400
+  batch_size: 12
+  grad_accumulate: 8         # effective batch = 96
+  num_workers: 14
+  optimizer:
+    name: adamw
+    lr: 0.002
+    lr_min: 0.00002
+    weight_decay: 0.0005
+    momentum: 0.95
+  warmup_epochs: 10
+  amp: true
+  ema_decay: 0.9998
+  seed: 42
+  val_interval: 5
+  val_vis_conf: 0.50
+  mosaic_off_last: 60
+  val_use_ema: true
+  save_dir: "./runs/train_v15_light_adamw_v3"
+  multiscale:
+    enabled: true
+    range: [0.5, 1.0]        # 320px–640px (covers Pi deployment at 320px)
+    step: 32
+    freq: 10
+
+loss:
+  obj_weight: 8.0
+  box_weight: 4.0
+  qfl_beta: 2.0
+  hard_floor: 0.0
+  obj_warmup_epochs: 10
+  prog_epochs: 1200         # slow k reduction: k_tiny stays 6 for most of 400ep training
+  k_tiny: 6
+  k_normal: 3
+  search_r_tiny: 3
+  search_r_normal: 2
+  tiny_area_px: 576.0
+  asl_area_ref: 0.004
+  asl_max: 4.0
+  tal_alpha: 1.0
+  tal_beta: 8.0
+  nwd_area_thr: 1024.0
+  nwd_c: 0.019               # 12/640
+  ohem_ratio: 8.0
+  # STAL — YOLOv26: guaranteed min anchors for tiny objects
+  stal_gamma: 2.0
+  stal_area_ref: 576.0
+  stal_min_area_px: 64.0   # objects < 8×8px get guaranteed k_min assignments
+  stal_k_min: 4
+  # ProgLoss — YOLOv26: progressive weight schedule
+  prog_loss_factor: 2.0    # obj starts 2×, box starts 0.5×; both reach 1× at epoch=total
+
+eval:
+  conf_thr: 0.01
+  iou_thr: 0.5
+  max_det: 300
+  min_box_area: 16.0
+  min_aspect: 0.0
+  max_aspect: 8.0
+  focus_min_gt_area: 64.0
+  focus_primary: true
+
+export:
+  output_names: [output_p2, output_p3, output_p4, output_p5]

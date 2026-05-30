@@ -1,104 +1,205 @@
-# PFDet-Nano: Lightweight Person Detector for Drone Applications
+# PFDet Drone Follow
 
-Hệ thống phát hiện người từ góc nhìn drone, tối ưu cho thiết bị edge (Raspberry Pi 5, Jetson Nano).
+Lightweight person detection for drone footage, with a re-baselining workflow against modern Ultralytics detectors.
 
----
+The repo now has two parallel goals:
 
-## Kiến trúc Model
+1. Keep `PFDet-v14` as a research detector for tiny aerial persons.
+2. Re-benchmark it fairly against current strong baselines such as `YOLO26`, `YOLO11`, and `RT-DETR`.
 
-PFDet-Nano v5 - Anchor-free single-class detector (~900K params)
+## Current Model
 
-- **Backbone**: MobileNetV2-style InvertedResidual blocks, SiLU activation
-- **Neck**: FPN (top-down) + PAN (bottom-up) - bidirectional feature fusion
-- **Head**: Per-scale detection head (3 scales: stride 8/16/32)
-- **Output**: 5 channels per cell (objectness, dx, dy, log_w, log_h)
+`PFDet-v14` is the active in-repo detector.
 
-Chi tiet kien truc: xem `runs/train_v5/pfdet_nano_v5_architecture.png`
+- Backbone: `EdgeContextStem + UIB`
+- Pyramid: `P2/P3/P4/P5` with strides `[4, 8, 16, 32]`
+- Neck: `BiFPN`
+- Head: `RepConv` decoupled head
+- Optional: `AreaAttention`
+- Export/runtime contract: `output_p2`, `output_p3`, `output_p4`, `output_p5`
 
----
+## Config Roles
 
-## Cau truc Project
+Use the config role before training anything:
 
-```
-pfdet_drone_follow/
-├── models/
-│   └── pfdet_nano.py          # Model architecture
-├── datasets/
-│   └── visdrone_person.py     # VisDrone dataset + augmentation
-├── utils/
-│   ├── box_ops.py             # CIoU, NMS, decode predictions
-│   └── losses.py              # BCE + CIoU + L1 loss
-├── configs/
-│   └── train_config.yaml      # Training configuration
-├── train_v3.py                # Training script
-├── infer.py                   # Inference (image/video/webcam)
-├── drone_follow.py            # Drone follow-me controller
-├── trt_infer_engine.py        # TensorRT inference engine
-├── make_demo_video.py         # Generate demo video from image sequence
-└── plot_architecture.py       # Generate architecture diagram
-```
+- `configs/train_config_v14_clean.yaml`
+  Role: `research_baseline`
+  Purpose: clean PFDet baseline for ablation.
+  Keeps only the core architecture and simple loss.
 
----
+- `configs/train_config_v14.yaml`
+  Role: `research_enhanced`
+  Purpose: stronger PFDet config with extra assignment/loss/data tricks.
+  Use this only after `v14_clean` has been benchmarked.
 
-## Training
+- `configs/train_config_v14_light.yaml`
+  Role: `edge_candidate`
+  Purpose: smaller PFDet profile for edge deployment.
+  `AreaAttention` is disabled here on purpose.
 
-### Dataset: VisDrone-DET (person class only)
-- Train: 6,471 images | Val: 548 images
-- Augmentation: Mosaic, Color Jitter, Horizontal Flip, Random Affine, MixUp
+## Training PFDet
 
-### Config
-```yaml
-model:
-  base_c: 32
-  img_size: 416
-train:
-  epochs: 200
-  batch_size: 64
-  lr: 0.003
-  warmup_epochs: 10
-  ema_decay: 0.9998
-loss:
-  obj_weight: 0.5
-  box_weight: 5.0
-```
-
-### Run training
-```bash
-python train_v3.py --config configs/train_config.yaml
-```
-
----
-
-## Results
-
-| Metric | Value |
-|--------|-------|
-| AP@0.5 | 0.390 |
-| Recall | 61.1% |
-| Parameters | ~900K |
-| Model FPS (GPU) | ~200 FPS |
-
-Training curves: xem `runs/train_v5/training_curves.png`
-
----
-
-## Inference
+Clean baseline:
 
 ```bash
-# Image
-python infer.py --weights runs/train_v5/best.pt --source image.jpg --show
-
-# Video
-python infer.py --weights runs/train_v5/best.pt --source video.mp4 --show
-
-# Webcam
-python infer.py --weights runs/train_v5/best.pt --source 0 --show
+python train_v3.py --config configs/train_config_v14_clean.yaml --model v14
 ```
 
----
+Enhanced research config:
+
+```bash
+python train_v3.py --config configs/train_config_v14.yaml --model v14
+```
+
+Edge candidate:
+
+```bash
+python train_v3.py --config configs/train_config_v14_light.yaml --model v14
+```
+
+## PFDet Benchmarking
+
+`benchmark.py` now benchmarks the fused deploy graph by default. This matters because `RepConv` must be fused before export/speed measurement.
+
+Example:
+
+```bash
+python benchmark.py \
+  --weights runs/train_v14_clean/best.pt \
+  --profile desktop_4060 \
+  --img-size 640 \
+  --scoreboard runs/rebaseline/scoreboard.csv \
+  --label pfdet_v14_clean
+```
+
+Reported fields include:
+
+- train params / deploy params
+- train FLOPs / deploy FLOPs
+- model-only FPS
+- end-to-end FPS
+- AP@0.5
+- focus AP / recall / precision
+
+## Export
+
+`export.py` now exports the fused deploy graph by default.
+
+```bash
+python export.py --weights runs/train_v14_clean/best.pt --format onnx
+```
+
+Use `--no-fuse` only if you intentionally want the training graph.
+
+## Re-Baselining Against World Models
+
+### 1. Prepare an Ultralytics-friendly dataset view
+
+PFDet labels can contain 7 columns (`cls cx cy w h fx fy`), while Ultralytics detectors expect 5 columns.
+
+Prepare a mirrored dataset:
+
+```bash
+python scripts/prepare_ultralytics_dataset.py \
+  --src ./data/visdrone \
+  --dst ./data/visdrone_ultralytics
+```
+
+This writes labels compatible with:
+
+- `YOLO26n`
+- `YOLO26s`
+- `YOLO11n`
+- `RT-DETR-L`
+
+Dataset YAML:
+
+- `configs/visdrone_person_ultralytics.yaml`
+
+### 2. Fine-tune official pretrained baselines
+
+```bash
+python scripts/rebaseline_world_models.py train \
+  --models yolo26n.pt yolo26s.pt yolo11n.pt rtdetr-l.pt \
+  --data configs/visdrone_person_ultralytics.yaml \
+  --img-size 640 \
+  --epochs 100 \
+  --project runs/rebaseline
+```
+
+### 3. Benchmark full-frame and SAHI
+
+```bash
+python scripts/rebaseline_world_models.py benchmark \
+  --models \
+    runs/rebaseline/yolo26n_640/weights/best.pt \
+    runs/rebaseline/yolo26s_640/weights/best.pt \
+    runs/rebaseline/yolo11n_640/weights/best.pt \
+    runs/rebaseline/rtdetr-l_640/weights/best.pt \
+  --data configs/visdrone_person_ultralytics.yaml \
+  --profile desktop_4060 \
+  --img-size 640 \
+  --slice-sizes 512 640 \
+  --scoreboard runs/rebaseline/scoreboard.csv
+```
+
+This produces standardized rows for:
+
+- `full_frame`
+- `sahi_512`
+- `sahi_640`
+
+## Model Selection Rule
+
+The decision rule is encoded in `configs/rebaseline_candidates.yaml`.
+
+Choose the winner by:
+
+1. `focus_ap50`
+2. `precision`
+3. `end_to_end_fps`
+
+That means the final production model does not have to remain PFDet if a baseline wins clearly.
+
+## Notes On PFDet-Clean
+
+`train_config_v14_clean.yaml` intentionally disables the confounding extras:
+
+- `AreaAttention`
+- `copy_paste`
+- `multiscale`
+- `NWD`
+- `ASL`
+- `OHEM`
+- progressive multi-positive assignment
+- COCO-person extra mixing
+
+This gives a baseline that is much easier to trust during ablation.
 
 ## Requirements
+
+Core repo:
 
 ```bash
 pip install torch torchvision pyyaml tqdm opencv-python matplotlib
 ```
+
+Optional for full re-baselining:
+
+```bash
+pip install ultralytics sahi thop onnxruntime onnxsim
+```
+
+## Important Caveat
+
+Do not compare:
+
+- PFDet at `320/384` full-frame
+- YOLO26/YOLO11/RT-DETR at `640`
+
+and then conclude one model is better.
+
+For tiny aerial persons, the comparison must be done at the same benchmark input strategy, and ideally with both:
+
+- full-frame inference
+- tiled / SAHI inference

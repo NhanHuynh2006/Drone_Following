@@ -1,31 +1,32 @@
 """
-Export PFDet-Nano to ONNX and TensorRT for Jetson Nano deployment.
+Export PFDet-Nano v14 to ONNX and TensorRT-compatible artifacts.
 
-Pipeline: PyTorch -> ONNX -> TensorRT (FP16)
-
-Usage:
-  # Export to ONNX
-  python export.py --weights runs/train/best.pt --format onnx
-
-  # Export to TensorRT (run on Jetson Nano)
-  python export.py --weights runs/train/best.pt --format trt --fp16
-
-  # Both
-  python export.py --weights runs/train/best.pt --format all --fp16
+The export contract mirrors the 4-scale v14 runtime path:
+  input -> output_p2, output_p3, output_p4, output_p5
 """
 
 import os
 import sys
 import argparse
+import copy
 import torch
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import PFDetNano, count_params
+from models import DEFAULT_EXPORT_OUTPUT_NAMES, build_model_from_checkpoint, count_params
 
 
-def export_onnx(model, img_size, output_path, opset=11, simplify=True):
+def prepare_export_model(model, fuse=True):
+    export_model = copy.deepcopy(model).eval()
+    fused = False
+    if fuse and hasattr(export_model, 'reparameterize'):
+        export_model = export_model.reparameterize()
+        fused = True
+    return export_model, fused
+
+
+def export_onnx(model, img_size, output_path, output_names, opset=11, simplify=True):
     """
     Export model to ONNX format.
     """
@@ -35,12 +36,9 @@ def export_onnx(model, img_size, output_path, opset=11, simplify=True):
     model.eval()
 
     # Dynamic axes for potential batch size flexibility
-    dynamic_axes = {
-        'input': {0: 'batch'},
-        'output_p3': {0: 'batch'},
-        'output_p4': {0: 'batch'},
-        'output_p5': {0: 'batch'},
-    }
+    dynamic_axes = {'input': {0: 'batch'}}
+    for name in output_names:
+        dynamic_axes[name] = {0: 'batch'}
 
     torch.onnx.export(
         model,
@@ -48,7 +46,7 @@ def export_onnx(model, img_size, output_path, opset=11, simplify=True):
         output_path,
         opset_version=opset,
         input_names=['input'],
-        output_names=['output_p3', 'output_p4', 'output_p5'],
+        output_names=output_names,
         dynamic_axes=dynamic_axes,
         do_constant_folding=True,
     )
@@ -190,28 +188,38 @@ def main():
     parser.add_argument("--fp16", action="store_true", help="FP16 for TensorRT")
     parser.add_argument("--output-dir", default=None, help="Output directory")
     parser.add_argument("--opset", type=int, default=11, help="ONNX opset version")
+    parser.add_argument("--no-fuse", action="store_true", help="Export the training graph instead of the fused deploy graph")
     args = parser.parse_args()
 
     # Load model
     device = torch.device('cpu')
-    ckpt = torch.load(args.weights, map_location=device)
+    model, ckpt, model_version, model_kwargs = build_model_from_checkpoint(
+        args.weights,
+        device=device,
+        use_ema=True,
+    )
     cfg = ckpt['cfg']
 
-    model = PFDetNano(
-        base_c=cfg['model']['base_c'],
-        num_bifpn=cfg['model'].get('num_bifpn', 2)
-    )
-
-    if 'ema' in ckpt:
-        model.load_state_dict(ckpt['ema'])
-    else:
-        model.load_state_dict(ckpt['model'])
-    model.eval()
-
     img_size = cfg['model']['img_size']
+    export_cfg = cfg.get('export', {})
+    output_names = list(export_cfg.get('output_names') or DEFAULT_EXPORT_OUTPUT_NAMES)
+    if len(output_names) != len(model.strides):
+        raise ValueError(
+            f"Expected {len(model.strides)} export outputs for PFDet v14, got {len(output_names)}"
+        )
+    export_model, fused = prepare_export_model(model, fuse=not args.no_fuse)
     total, _ = count_params(model)
-    print(f"Model: PFDetNano (base_c={cfg['model']['base_c']}, params={total/1e6:.2f}M)")
+    deploy_total, _ = count_params(export_model)
+    print(
+        f"Model: PFDetNano {model_version} "
+        f"(base_c={cfg['model'].get('base_c', 'n/a')}, "
+        f"train_params={total/1e6:.2f}M, deploy_params={deploy_total/1e6:.2f}M)"
+    )
+    if model_kwargs:
+        print(f"Model kwargs: {model_kwargs}")
     print(f"Input size: {img_size}x{img_size}")
+    print(f"Export outputs: {output_names}")
+    print(f"Fused for export: {'yes' if fused else 'no'}")
 
     # Output directory
     output_dir = args.output_dir or os.path.dirname(args.weights)
@@ -221,12 +229,12 @@ def main():
 
     if args.format in ("onnx", "all"):
         onnx_path = os.path.join(output_dir, f"{stem}.onnx")
-        export_onnx(model, img_size, onnx_path, opset=args.opset)
+        export_onnx(export_model, img_size, onnx_path, output_names, opset=args.opset)
 
     if args.format in ("trt", "all"):
         onnx_path = os.path.join(output_dir, f"{stem}.onnx")
         if not os.path.exists(onnx_path):
-            export_onnx(model, img_size, onnx_path, opset=args.opset)
+            export_onnx(export_model, img_size, onnx_path, output_names, opset=args.opset)
 
         trt_path = os.path.join(output_dir, f"{stem}_fp16.engine" if args.fp16 else f"{stem}.engine")
         export_tensorrt(onnx_path, trt_path, img_size, fp16=args.fp16)

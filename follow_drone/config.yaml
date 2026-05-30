@@ -1,0 +1,93 @@
+# Follow Drone Configuration
+# Đọc kỹ trước khi chạy thật. Các giá trị conservative cho an toàn.
+
+model:
+  weights: "../runs/train_v15_light_musgd_v3/best.pt"
+  conf_threshold: 0.4
+  nms_iou: 0.45
+  img_size: 640         # Inference size, model trained ở 640
+  use_ema: true
+  device: "cpu"         # Pi 5 không có CUDA. Dùng "cuda:0" để test trên desktop
+
+camera:
+  source: 0             # 0 = first camera. Camera USB rời thường là 1
+  width: 640
+  height: 480
+  fps: 30
+  # Camera intrinsics (CALIBRATE bằng OpenCV checkerboard trước khi bay!)
+  fx: 700.0
+  fy: 700.0
+  cx: 320.0
+  cy: 240.0
+
+tracking:
+  max_age: 90           # 3s @ 30 FPS — track survive 3s occlusion
+  min_hits: 3           # Cần 3 detection liên tiếp mới confirm track
+  iou_threshold: 0.3
+  delta_t: 3            # OC-SORT look-back
+
+target_selection:
+  strategy: "largest"   # "largest" hoặc "center" hoặc "manual"
+  lock_on_first: true   # Lock vào target đầu tiên detect được
+
+distance:
+  person_height_m: 1.7  # Chiều cao giả định
+  min_bbox_height_px: 20
+  max_distance_m: 30.0
+
+control:
+  follow_distance_m: 5.0    # Setpoint khoảng cách
+  follow_altitude_m: 5.0    # Setpoint độ cao AGL
+  command_rate_hz: 10       # MAVLink send rate
+
+  forward_pid:
+    Kp: 0.5
+    Ki: 0.05
+    Kd: 0.1
+    v_max: 3.0
+    integral_max: 2.0
+
+  yaw_pid:
+    Kp: 2.0
+    Ki: 0.0           # Yaw không nên có integral
+    Kd: 0.3
+    rate_max: 1.5     # rad/s
+
+  vertical_pid:
+    Kp: 0.8
+    Ki: 0.1
+    Kd: 0.2
+    v_max: 2.0
+    integral_max: 1.0
+
+safety:
+  d_min: 3.0                  # Hard stop, không tiến gần hơn
+  d_max: 15.0                 # Beyond này, follow chậm + warn
+  v_max_horizontal: 5.0       # Cap vận tốc ngang
+  yaw_rate_max: 1.5
+  altitude_min_agl: 2.0
+  altitude_max_agl: 25.0      # Phải thấp hơn FENCE_ALT_MAX
+
+  target_lost:
+    coast_duration_s: 3.0     # Tiếp tục với Kalman prediction
+    hover_duration_s: 5.0     # Sau coast, hover (vel=0)
+    loiter_duration_s: 7.0    # Sau hover, switch LOITER
+
+  command_timeout_s: 3.0      # ArduPilot GUIDED timeout
+
+  require_gps_3d_fix: true
+  max_hdop: 200               # cm * 100 = 2.0 HDOP
+
+mavlink:
+  connection: "/dev/serial0"  # Pi 5 GPIO UART. Test SITL: "udpin:127.0.0.1:14550"
+  baud: 921600
+  source_system: 255          # Pi as GCS
+  source_component: 1
+  takeoff_altitude_m: 5.0
+  arm_check_timeout_s: 10.0
+
+logging:
+  log_dir: "./logs"
+  log_level: "INFO"
+  csv_log: true
+  log_video: false            # Bật để debug post-flight (tốn disk)

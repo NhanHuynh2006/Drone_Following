@@ -1,33 +1,58 @@
-# Datasets (too large)
+# Datasets (too large for git)
 VisDrone2019-*/
 data/
 *.zip
+annotations/
 
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 
-# Training weights (large)
+# Training weights (large — download separately)
 runs/*/best.pt
 runs/*/last.pt
+runs/*/swa.pt
+*.pt
+*.onnx
+*.engine
+*.tflite
 
-# Videos
+# Training run artifacts
+runs/*/val_samples/
+runs/*/training_curves.png
+runs/continue_train.txt
+
+# Logs
+logs/
+*.log
+follow_drone/logs/
+
+# Videos / images output
 *.mp4
 *.avi
 *.mov
+*.gif
+runs/*/training_curves.png
+runs/train_v5/
 
-# Val sample images
-runs/*/val_samples/
+# Old / deleted model files (tracked by git, not needed)
+models/pfdet_nano.py
+models/pfdet_nano_old.py
+utils/losses.py
+utils/pfdet_nano.py
+configs/train_config.yaml
 
-# Old/temp
+# Notebook outputs
+.codex
+
+# Misc tools
 utils_old/
 .claude/
 
-# IDE
+# IDE / OS
 .vscode/
 .idea/
-
-# OS
 .DS_Store
 Thumbs.db

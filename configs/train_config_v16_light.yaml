@@ -1,0 +1,103 @@
+# PFDet-Nano v16 Light Training Configuration
+# Stability-first hybrid backbone + standalone v16 loss
+
+meta:
+  role: edge_candidate
+  notes: "v16 light: v14-style early backbone, light CSP only at P5, STAL+ProgLoss."
+
+model:
+  version: v16
+  profile: light
+  activation: silu
+  use_area_attention: true
+  area: 3
+  img_size: 640
+
+data:
+  root: "./data/visdrone"
+  cache_ram: false
+  train_images: "train/images"
+  train_labels: "train/labels"
+  val_images: "val/images"
+  val_labels: "val/labels"
+
+  extra_images: "../coco_person/images"
+  extra_labels: "../coco_person/labels"
+  extra_sample_ratio: 0.20
+  extra_enable_epoch: 150
+  extra_disable_epoch: 280
+
+  mosaic_prob: 0.50
+  mixup_prob: 0.10
+  hflip_prob: 0.5
+  affine_prob: 1.0
+  color_jitter_prob: 1.0
+  drone_aug_prob: 0.30
+  copy_paste_prob: 0.40
+
+train:
+  device: "cuda:0"
+  benchmark_profile: desktop_4060
+  channels_last: true
+  epochs: 400
+  batch_size: 12
+  grad_accumulate: 8
+  num_workers: 14
+  optimizer:
+    name: adamw
+    lr: 0.002
+    lr_min: 0.00002
+    weight_decay: 0.0005
+    momentum: 0.95
+  warmup_epochs: 10
+  amp: true
+  ema_decay: 0.9998
+  seed: 42
+  val_interval: 5
+  val_vis_conf: 0.50
+  mosaic_off_last: 60
+  val_use_ema: true
+  save_dir: "./runs/train_v16_light_v1"
+  multiscale:
+    enabled: true
+    range: [0.5, 1.0]
+    step: 32
+    freq: 10
+
+loss:
+  obj_weight: 8.0
+  box_weight: 4.0
+  qfl_beta: 2.0
+  hard_floor: 0.0
+  obj_warmup_epochs: 10
+  prog_epochs: 1200
+  k_tiny: 6
+  k_normal: 3
+  search_r_tiny: 3
+  search_r_normal: 2
+  tiny_area_px: 576.0
+  asl_area_ref: 0.004
+  asl_max: 4.0
+  tal_alpha: 1.0
+  tal_beta: 8.0
+  nwd_area_thr: 1024.0
+  nwd_c: 0.019
+  ohem_ratio: 8.0
+  stal_gamma: 2.0
+  stal_area_ref: 576.0
+  stal_min_area_px: 64.0
+  stal_k_min: 4
+  prog_loss_factor: 2.0
+
+eval:
+  conf_thr: 0.01
+  iou_thr: 0.5
+  max_det: 300
+  min_box_area: 16.0
+  min_aspect: 0.0
+  max_aspect: 8.0
+  focus_min_gt_area: 64.0
+  focus_primary: true
+
+export:
+  output_names: [output_p2, output_p3, output_p4, output_p5]

@@ -1,0 +1,108 @@
+# PFDet-Nano v14 Light Training Configuration — v8
+# Improvements over v7:
+#   - extra_enable_epoch: 80 → 150  (LR ~0.0015 at ep150, less disruption than ep80)
+#   - extra_disable_epoch: 190 → 240  (90-epoch COCO window, same as v7)
+#   - extra_sample_ratio: 0.20 → 0.15  (gentler COCO introduction)
+#   - epochs: 300 → 350  (model still improving at ep300)
+#   - mosaic_off_last: 40 → 50  (longer fine-tuning: ep300-350)
+
+meta:
+  role: edge_candidate
+  notes: "v8: late COCO onset (ep150) at low LR, +50 epochs, longer mosaic-off phase."
+
+model:
+  version: v14
+  profile: light
+  activation: silu
+  use_area_attention: true
+  base_c: 24
+  neck_c: 48
+  num_bifpn: 1
+  area: 3
+  img_size: 320
+
+data:
+  root: "./data/visdrone"
+  cache_ram: false
+  train_images: "train/images"
+  train_labels: "train/labels"
+  val_images: "val/images"
+  val_labels: "val/labels"
+
+  extra_images: "../coco_person/images"
+  extra_labels: "../coco_person/labels"
+  extra_sample_ratio: 0.15      # was 0.20 — gentler mix
+  extra_enable_epoch: 150       # was 80 — LR ~0.0015, less disruption
+  extra_disable_epoch: 240      # 90-epoch COCO window
+
+  mosaic_prob: 0.30
+  mixup_prob: 0.0
+  hflip_prob: 0.5
+  affine_prob: 1.0
+  color_jitter_prob: 1.0
+  drone_aug_prob: 0.20
+  copy_paste_prob: 0.25
+
+train:
+  device: "cuda:0"
+  benchmark_profile: desktop_4060
+  channels_last: true
+  epochs: 350
+  batch_size: 32
+  num_workers: 14
+  optimizer:
+    name: adamw
+    fused: auto
+    lr: 0.003
+    lr_min: 0.00003
+    weight_decay: 0.0005
+    momentum: 0.937
+  warmup_epochs: 10
+  amp: true
+  ema_decay: 0.9998
+  seed: 42
+  val_interval: 5
+  val_vis_conf: 0.25
+  mosaic_off_last: 50           # mosaic off at epoch 300, 50 epochs fine-tuning
+  val_use_ema: true
+  save_dir: "./runs/train_v14_light_v8"
+  multiscale:
+    enabled: true
+    range: [0.75, 1.25]
+    step: 32
+    freq: 10
+
+loss:
+  obj_weight: 8.0
+  box_weight: 4.0
+  qfl_beta: 2.0
+  hard_floor: 0.0
+  obj_warmup_epochs: 10
+  prog_epochs: 350              # tracks full 350-epoch schedule
+  k_tiny: 6
+  k_normal: 3
+  search_r_tiny: 3
+  search_r_normal: 2
+  tiny_area_px: 576.0
+  scale_match_alpha: 0.5
+  scale_match_base: 2.0
+  asl_area_ref: 0.004
+  asl_max: 4.0
+  tal_alpha: 1.0
+  tal_beta: 6.0
+  nwd_area_thr: 1024.0
+  nwd_c: 0.04
+  ohem_ratio: 8.0
+
+eval:
+  conf_thr: 0.01
+  iou_thr: 0.5
+  max_det: 300
+  min_box_area: 16.0
+  min_aspect: 0.0
+  max_aspect: 8.0
+  focus_min_gt_area: 64.0
+  focus_primary: true
+
+export:
+  output_names: [output_p2, output_p3, output_p4, output_p5]

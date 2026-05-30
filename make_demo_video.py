@@ -7,19 +7,17 @@ import os
 import sys
 import time
 import cv2
-import numpy as np
 import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import PFDetNano
 from infer import load_model, preprocess, postprocess, draw_detections
 
 # ── Config ──
-WEIGHTS = "runs/train_v5/best.pt"
+WEIGHTS = "runs/train_v14/best.pt"
 IMG_DIR = "/home/nolan/Documents/pfdet_drone_follow/VisDrone2019-SOT-val/sequences/uav0000024_00000_s"
-OUTPUT_VIDEO = "runs/train_v5/demo_detection.mp4"
-CONF_THR = 0.3
+OUTPUT_VIDEO = "runs/train_v14/demo_detection.mp4"
+CONF_THR = 0.4
 NMS_IOU = 0.45
 FPS = 30
 DEVICE = "cuda:0"
@@ -27,8 +25,8 @@ DEVICE = "cuda:0"
 
 def main():
     device = torch.device(DEVICE if torch.cuda.is_available() else "cpu")
-    model, img_size = load_model(WEIGHTS, device)
-    print(f"Model loaded, img_size={img_size}, device={device}")
+    model, img_size, model_version = load_model(WEIGHTS, device)
+    print(f"Model loaded: {model_version}, img_size={img_size}, device={device}")
 
     # Get sorted image list
     imgs = sorted([f for f in os.listdir(IMG_DIR) if f.endswith('.jpg')])
@@ -55,11 +53,13 @@ def main():
         inp = inp.to(device)
 
         # Only measure model forward pass
-        torch.cuda.synchronize()
+        if device.type == "cuda":
+            torch.cuda.synchronize()
         t0_model = time.time()
         with torch.no_grad():
             preds = model(inp)
-        torch.cuda.synchronize()
+        if device.type == "cuda":
+            torch.cuda.synchronize()
         dt_model = time.time() - t0_model
 
         dets = postprocess(preds, model.strides, img_size, CONF_THR, NMS_IOU,

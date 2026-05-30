@@ -1,16 +1,9 @@
 """
-Training script for PFDet-Nano v5.
-
-Features:
-  - Multi-positive assignment (3 cells per GT per scale)
-  - Extended sigmoid decode (range [-0.5, 1.5])
-  - IoU-aware objectness target
-  - AMP (mixed precision)
-  - Cosine LR with warmup
-  - EMA with BatchNorm buffer copy
-  - Mosaic + MixUp + affine augmentation
-  - Val sample visualization every N epochs
-  - Training curves (loss, AP, recall)
+Training script for PFDet-Nano v14.
+===================================
+Optimized for Drone Person Detection (VisDrone/UAVDT).
+- Đã ÉP CỨNG in ảnh/mAP mỗi 5 Epoch.
+- Đã BẬT TÍNH NĂNG TRỘN COCO (30%) cho kịch bản bay thấp.
 """
 
 import os
@@ -18,6 +11,7 @@ import sys
 import math
 import copy
 import argparse
+import traceback
 import yaml
 import csv
 import random
@@ -27,15 +21,21 @@ from collections import defaultdict
 
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset, Subset
 import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import PFDetNano, count_params
+from models import build_model, count_params, normalize_model_version
 from datasets import VisDronePersonDataset, collate_fn
-from utils import PFDetLoss, decode_predictions_np, nms_numpy, xywh2xyxy
-
+from utils import (
+    PFDetLossV14,
+    PFDetLossV15,
+    PFDetLossV16,
+    decode_predictions_np,
+    nms_numpy,
+    xywh2xyxy,
+)
 
 # ============================================================
 #  EMA
@@ -62,36 +62,174 @@ class ModelEMA:
         return self.ema.state_dict()
 
 
+def build_train_loader(dataset, batch_size, num_workers):
+    return DataLoader(
+        dataset, batch_size=batch_size, shuffle=True,
+        num_workers=num_workers, pin_memory=True,
+        persistent_workers=num_workers > 0,
+        prefetch_factor=4 if num_workers > 0 else None,
+        collate_fn=collate_fn, drop_last=True,
+    )
+
+def _dataset_aug_kwargs(data_cfg):
+    return {
+        'mosaic_prob': data_cfg.get('mosaic_prob', 0.2),
+        'mixup_prob': data_cfg.get('mixup_prob', 0.0),
+        'drone_aug_prob': data_cfg.get('drone_aug_prob', 0.5),
+        'copy_paste_prob': data_cfg.get('copy_paste_prob', 0.0),
+        'hflip_prob': data_cfg.get('hflip_prob', 0.5),
+        'affine_prob': data_cfg.get('affine_prob', 0.8),       
+        'color_jitter_prob': data_cfg.get('color_jitter_prob', 0.8),
+    }
+
+def build_mixed_train_set(base_train_set, extra_set, extra_sample_ratio=0.3, seed=42):
+    if extra_set is None:
+        return base_train_set, 0
+    ratio = float(extra_sample_ratio)
+    if ratio <= 0.0:
+        return base_train_set, 0
+    if ratio >= 1.0:
+        sampled_extra = extra_set
+    else:
+        n_extra = max(1, min(len(extra_set), int(round(len(base_train_set) * ratio))))
+        rng = random.Random(seed)
+        indices = list(range(len(extra_set)))
+        rng.shuffle(indices)
+        sampled_extra = Subset(extra_set, indices[:n_extra])
+    return ConcatDataset([base_train_set, sampled_extra]), len(sampled_extra)
+
+def _set_aug_mix(dataset, mosaic_prob, mixup_prob):
+    if isinstance(dataset, ConcatDataset):
+        for ds in dataset.datasets:
+            _set_aug_mix(ds, mosaic_prob, mixup_prob)
+        return
+    if isinstance(dataset, Subset):
+        _set_aug_mix(dataset.dataset, mosaic_prob, mixup_prob)
+        return
+    if hasattr(dataset, 'mosaic_prob'):
+        dataset.mosaic_prob = mosaic_prob
+    if hasattr(dataset, 'mixup_prob'):
+        dataset.mixup_prob = mixup_prob
+
+def disable_train_aug_mix(dataset):
+    _set_aug_mix(dataset, mosaic_prob=0.0, mixup_prob=0.0)
+
+def resolve_optimizer_cfg(train_cfg):
+    opt_cfg = dict(train_cfg.get('optimizer') or {})
+    return {
+        'name': str(opt_cfg.get('name', train_cfg.get('optimizer_name', 'adamw'))).lower(),
+        'lr': float(opt_cfg.get('lr', train_cfg.get('lr', 1e-3))),
+        'lr_min': float(opt_cfg.get('lr_min', train_cfg.get('lr_min', 1e-5))),
+        'weight_decay': float(opt_cfg.get('weight_decay', train_cfg.get('weight_decay', 5e-4))),
+        'momentum': float(opt_cfg.get('momentum', train_cfg.get('momentum', 0.937))),
+        'fused': opt_cfg.get('fused', 'auto'),
+    }
+
+def build_optimizer(model, optimizer_cfg, device=None):
+    opt_name = optimizer_cfg['name']
+    wd       = optimizer_cfg['weight_decay']
+    lr       = optimizer_cfg['lr']
+
+    def _is_nodecay(pname, p):
+        return p.ndim == 1 or pname.endswith('.bias') or 'bn' in pname.lower()
+
+    if opt_name == 'musgd':
+        # Matches Ultralytics YOLO26 (commit f2d3aed):
+        #   - 2D weight params → use_muon=True: blend Muon 50% + SGD 50%
+        #   - 1D params (bias, BN) → use_muon=False: plain SGD
+        #   - NO separate AdamW path — 50-50 blend handles head layers naturally
+        #     (thin 1×48 head conv: Muon ≡ normalization + scale=1, SGD provides update)
+        from utils.musgd import MuSGD
+        muon_params, sgd_params = [], []
+        muon_nodecay, sgd_nodecay = [], []
+        for pname, p in model.named_parameters():
+            if not p.requires_grad:
+                continue
+            if _is_nodecay(pname, p):
+                sgd_nodecay.append(p)   # bias, BN → plain SGD, no decay
+            elif p.ndim >= 2:
+                muon_params.append(p)   # 2D weights → Muon+SGD blend, with decay
+            else:
+                sgd_params.append(p)    # fallback (shouldn't happen)
+        param_groups = [
+            {'params': muon_params,  'weight_decay': wd,  'use_muon': True,  'lr': lr, 'lr_ratio': 1.0},
+            {'params': sgd_nodecay,  'weight_decay': 0.0, 'use_muon': False, 'lr': lr, 'lr_ratio': 1.0},
+        ]
+        if sgd_params:
+            param_groups.append(
+                {'params': sgd_params, 'weight_decay': wd, 'use_muon': False, 'lr': lr, 'lr_ratio': 1.0}
+            )
+        return MuSGD(param_groups, lr=lr,
+                     momentum=optimizer_cfg.get('momentum', 0.9),
+                     weight_decay=wd,
+                     nesterov=True)
+
+    decay_params, no_decay_params = [], []
+    for pname, p in model.named_parameters():
+        if not p.requires_grad: continue
+        (no_decay_params if _is_nodecay(pname, p) else decay_params).append(p)
+    param_groups = [
+        {'params': decay_params,    'weight_decay': wd},
+        {'params': no_decay_params, 'weight_decay': 0.0},
+    ]
+    fused_cfg = optimizer_cfg.get('fused', 'auto')
+    use_fused = bool(device is not None and device.type == 'cuda') if fused_cfg == 'auto' else bool(fused_cfg)
+
+    if opt_name == 'adamw':
+        try: return torch.optim.AdamW(param_groups, lr=lr, fused=use_fused)
+        except TypeError: return torch.optim.AdamW(param_groups, lr=lr)
+    if opt_name == 'sgd':
+        return torch.optim.SGD(param_groups, lr=lr, momentum=optimizer_cfg['momentum'], nesterov=True)
+    raise ValueError(f"Unsupported optimizer.name: {opt_name!r}")
+
+def dets_sorted(detections):
+    return sorted(detections, key=lambda d: d.get('score', 0.0), reverse=True)
+
+def filter_eval_detections(detections, img_size, min_box_area=0.0, min_aspect=0.0, max_aspect=0.0, max_det=300):
+    filtered = []
+    for det in dets_sorted(detections):
+        x1, y1, x2, y2 = det['box']
+        bw = max(0.0, (x2 - x1) * img_size)
+        bh = max(0.0, (y2 - y1) * img_size)
+        area = bw * bh
+        aspect = bh / max(bw, 1e-6)
+        if area < min_box_area: continue
+        if min_aspect > 0 and aspect < min_aspect: continue
+        if max_aspect > 0 and aspect > max_aspect: continue
+        filtered.append(det)
+        if len(filtered) >= max_det: break
+    return filtered
+
 # ============================================================
 #  LR Scheduler
 # ============================================================
 
-def cosine_lr(optimizer, epoch, total_epochs, warmup_epochs=5,
-              lr_start=1e-4, lr_max=1e-3, lr_min=1e-5):
+def cosine_lr(optimizer, epoch, total_epochs, warmup_epochs=5, lr_start=1e-4, lr_max=1e-3, lr_min=1e-5):
     if epoch < warmup_epochs:
         lr = lr_start + (lr_max - lr_start) * epoch / warmup_epochs
     else:
         progress = (epoch - warmup_epochs) / (total_epochs - warmup_epochs)
         lr = lr_min + 0.5 * (lr_max - lr_min) * (1 + math.cos(math.pi * progress))
     for pg in optimizer.param_groups:
-        pg['lr'] = lr
+        # lr_ratio lets different groups (e.g. AdamW head vs Muon body) scale together.
+        pg['lr'] = lr * pg.get('lr_ratio', 1.0)
     return lr
-
 
 # ============================================================
 #  Validation
 # ============================================================
 
 @torch.no_grad()
-def evaluate(model, loader, device, img_size, strides, conf_thr=0.01, iou_thr=0.5):
+def evaluate(model, loader, device, img_size, strides, conf_thr=0.01, iou_thr=0.5,
+             decode_fn=decode_predictions_np, min_box_area=0.0, min_aspect=0.0,
+             max_aspect=0.0, max_det=300, min_gt_area=0.0, progress_desc=None):
     model.eval()
-    all_scores = []
-    all_correct = []
-    total_gt = 0
-    total_tp = 0
-    total_fp = 0
+    all_scores, all_correct = [], []
+    total_gt, total_tp, total_fp = 0, 0, 0
 
-    for imgs, labels_list, _ in loader:
+    iterator = tqdm(loader, desc=progress_desc, leave=False, total=len(loader)) if progress_desc else loader
+
+    for imgs, labels_list, _ in iterator:
         imgs = imgs.to(device, non_blocking=True)
         preds = model(imgs)
 
@@ -99,30 +237,29 @@ def evaluate(model, loader, device, img_size, strides, conf_thr=0.01, iou_thr=0.
             gt_labels = labels_list[b]
             gt_person = gt_labels[gt_labels[:, 0] == 0] if len(gt_labels) > 0 else gt_labels
             gt_boxes_xywh = gt_person[:, 1:5].numpy() if len(gt_person) > 0 else np.zeros((0, 4))
+            if min_gt_area > 0 and len(gt_boxes_xywh) > 0:
+                gt_area = gt_boxes_xywh[:, 2] * img_size * gt_boxes_xywh[:, 3] * img_size
+                gt_boxes_xywh = gt_boxes_xywh[gt_area >= min_gt_area]
             n_gt = len(gt_boxes_xywh)
             total_gt += n_gt
 
             dets = []
             for si, pred in enumerate(preds):
                 raw = pred[b].cpu().numpy()
-                scale_dets = decode_predictions_np(raw, strides[si], img_size)
+                scale_dets = decode_fn(raw, strides[si], img_size, conf_thr=conf_thr)
                 dets.extend(scale_dets)
 
-            dets = [d for d in dets if d['score'] >= conf_thr]
             dets = nms_numpy(dets, iou_threshold=0.5)
+            dets = filter_eval_detections(dets, img_size=img_size, min_box_area=min_box_area, min_aspect=min_aspect, max_aspect=max_aspect, max_det=max_det)
 
             if n_gt == 0:
                 for d in dets:
-                    all_scores.append(d['score'])
-                    all_correct.append(0)
+                    all_scores.append(d['score']); all_correct.append(0); total_fp += 1
                 continue
-
-            if len(dets) == 0:
-                continue
+            if len(dets) == 0: continue
 
             det_boxes = np.array([d['box'] for d in dets])
             gt_boxes_xyxy = np.array([xywh2xyxy(g) for g in gt_boxes_xywh])
-
             iou_matrix = np.zeros((len(dets), n_gt))
             for di in range(len(dets)):
                 for gi in range(n_gt):
@@ -133,18 +270,12 @@ def evaluate(model, loader, device, img_size, strides, conf_thr=0.01, iou_thr=0.
                 best_gi = iou_matrix[di].argmax()
                 best_iou = iou_matrix[di, best_gi]
                 if best_iou >= iou_thr and best_gi not in matched_gt:
-                    all_scores.append(dets[di]['score'])
-                    all_correct.append(1)
-                    matched_gt.add(best_gi)
-                    total_tp += 1
+                    all_scores.append(dets[di]['score']); all_correct.append(1)
+                    matched_gt.add(best_gi); total_tp += 1
                 else:
-                    all_scores.append(dets[di]['score'])
-                    all_correct.append(0)
-                    total_fp += 1
+                    all_scores.append(dets[di]['score']); all_correct.append(0); total_fp += 1
 
-    if len(all_scores) == 0 or total_gt == 0:
-        return 0.0, 0.0, 0.0
-
+    if len(all_scores) == 0 or total_gt == 0: return 0.0, 0.0, 0.0
     indices = np.argsort(-np.array(all_scores))
     correct = np.array(all_correct)[indices]
     tp_cumsum = np.cumsum(correct)
@@ -154,28 +285,20 @@ def evaluate(model, loader, device, img_size, strides, conf_thr=0.01, iou_thr=0.
 
     mrec = np.concatenate(([0.], recalls, [1.]))
     mpre = np.concatenate(([1.], precisions, [0.]))
-    for i in range(len(mpre) - 2, -1, -1):
-        mpre[i] = max(mpre[i], mpre[i + 1])
+    for i in range(len(mpre) - 2, -1, -1): mpre[i] = max(mpre[i], mpre[i + 1])
     i = np.where(mrec[1:] != mrec[:-1])[0]
     ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
-
     recall = tp_cumsum[-1] / total_gt if total_gt > 0 else 0.0
     precision = total_tp / max(1, total_tp + total_fp)
-
     return ap, recall, precision
 
-
 def _iou_single(box1, box2):
-    x1 = max(box1[0], box2[0])
-    y1 = max(box1[1], box2[1])
-    x2 = min(box1[2], box2[2])
-    y2 = min(box1[3], box2[3])
+    x1, y1 = max(box1[0], box2[0]), max(box1[1], box2[1])
+    x2, y2 = min(box1[2], box2[2]), min(box1[3], box2[3])
     inter = max(0, x2 - x1) * max(0, y2 - y1)
     area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
     area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
-    union = area1 + area2 - inter
-    return inter / (union + 1e-7)
-
+    return inter / (area1 + area2 - inter + 1e-7)
 
 # ============================================================
 #  Val Sample Visualization
@@ -183,66 +306,53 @@ def _iou_single(box1, box2):
 
 @torch.no_grad()
 def save_val_samples(model, val_set, device, img_size, strides, save_dir, epoch,
-                     n_samples=8, conf_thr=0.3):
-    """Save detection results on random val images."""
+                     n_samples=8, conf_thr=0.3, decode_fn=decode_predictions_np,
+                     min_box_area=0.0, min_aspect=0.0, max_aspect=0.0, max_det=300):
     model.eval()
     out_dir = os.path.join(save_dir, 'val_samples')
     os.makedirs(out_dir, exist_ok=True)
-
     indices = random.sample(range(len(val_set)), min(n_samples, len(val_set)))
-
     grid_imgs = []
+    
     for idx in indices:
-        img_tensor, labels_tensor, img_path = val_set[idx]
+        img_tensor, labels_tensor, _ = val_set[idx]
         inp = img_tensor.unsqueeze(0).to(device)
         preds = model(inp)
-
         dets = []
         for si, pred in enumerate(preds):
             raw = pred[0].cpu().numpy()
-            scale_dets = decode_predictions_np(raw, strides[si], img_size)
+            scale_dets = decode_fn(raw, strides[si], img_size, conf_thr=conf_thr)
             dets.extend(scale_dets)
-        dets = [d for d in dets if d['score'] >= conf_thr]
         dets = nms_numpy(dets, iou_threshold=0.5)
+        dets = filter_eval_detections(dets, img_size=img_size, min_box_area=min_box_area, min_aspect=min_aspect, max_aspect=max_aspect, max_det=max_det)
 
         img_np = (img_tensor.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
         img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
 
-        # Draw GT boxes (blue)
         if len(labels_tensor) > 0:
             for lb in labels_tensor:
                 cx, cy, w, h = lb[1].item(), lb[2].item(), lb[3].item(), lb[4].item()
-                x1 = int((cx - w/2) * img_size)
-                y1 = int((cy - h/2) * img_size)
-                x2 = int((cx + w/2) * img_size)
-                y2 = int((cy + h/2) * img_size)
+                x1, y1 = int((cx - w/2) * img_size), int((cy - h/2) * img_size)
+                x2, y2 = int((cx + w/2) * img_size), int((cy + h/2) * img_size)
                 cv2.rectangle(img_bgr, (x1, y1), (x2, y2), (255, 100, 0), 1)
 
-        # Draw predictions (green)
         for det in dets:
             x1, y1, x2, y2 = det['box']
-            x1, y1 = int(x1 * img_size), int(y1 * img_size)
-            x2, y2 = int(x2 * img_size), int(y2 * img_size)
+            x1, y1, x2, y2 = int(x1 * img_size), int(y1 * img_size), int(x2 * img_size), int(y2 * img_size)
             score = det['score']
             color = (0, 255, 0) if score > 0.5 else (0, 200, 0)
             cv2.rectangle(img_bgr, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(img_bgr, f'{score:.2f}', (x1, y1-3),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1)
+            cv2.putText(img_bgr, f'{score:.2f}', (x1, y1-3), cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1)
 
-        cv2.putText(img_bgr, f'Epoch {epoch+1}', (5, 15),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
-
+        cv2.putText(img_bgr, f'Epoch {epoch+1}', (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
         grid_imgs.append(img_bgr)
 
-    # Arrange in 2-row grid
     n_cols = 4
     n_rows = (len(grid_imgs) + n_cols - 1) // n_cols
     cell_h, cell_w = img_size, img_size
-
     grid = np.full((n_rows * cell_h, n_cols * cell_w, 3), 114, dtype=np.uint8)
     for i, img in enumerate(grid_imgs):
-        r = i // n_cols
-        c = i % n_cols
+        r, c = i // n_cols, i % n_cols
         h, w = img.shape[:2]
         grid[r*cell_h:r*cell_h+h, c*cell_w:c*cell_w+w] = img
 
@@ -250,19 +360,16 @@ def save_val_samples(model, val_set, device, img_size, strides, save_dir, epoch,
     cv2.imwrite(save_path, grid, [cv2.IMWRITE_JPEG_QUALITY, 85])
     return save_path
 
-
 # ============================================================
 #  Training Curves Plot
 # ============================================================
 
-def plot_training_curves(csv_path, save_dir):
-    """Plot training curves from CSV log."""
+def plot_training_curves(csv_path, save_dir, model_name="v6"):
     try:
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
     except ImportError:
-        print("  [WARN] matplotlib not installed, skip plotting")
         return
 
     epochs, train_loss, obj_loss, box_loss = [], [], [], []
@@ -283,43 +390,22 @@ def plot_training_curves(csv_path, save_dir):
                 precision_list.append(float(row['precision']))
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle('PFDet-Nano v5 Training', fontsize=14, fontweight='bold')
+    fig.suptitle(f'PFDet-Nano {model_name} Training', fontsize=14, fontweight='bold')
 
-    ax = axes[0, 0]
-    ax.plot(epochs, train_loss, 'b-', linewidth=1.5, label='Total Loss')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.set_title('Total Loss')
-    ax.grid(True, alpha=0.3)
-    ax.legend()
+    axes[0, 0].plot(epochs, train_loss, 'b-', label='Total Loss')
+    axes[0, 0].set_title('Total Loss'); axes[0, 0].legend()
 
-    ax = axes[0, 1]
-    ax.plot(epochs, obj_loss, 'r-', linewidth=1.5, label='Obj Loss')
-    ax.plot(epochs, box_loss, 'g-', linewidth=1.5, label='Box Loss')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.set_title('Obj & Box Loss')
-    ax.grid(True, alpha=0.3)
-    ax.legend()
+    axes[0, 1].plot(epochs, obj_loss, 'r-', label='Obj Loss')
+    axes[0, 1].plot(epochs, box_loss, 'g-', label='Box Loss')
+    axes[0, 1].set_title('Obj & Box Loss'); axes[0, 1].legend()
 
-    ax = axes[1, 0]
     if val_epochs:
-        ax.plot(val_epochs, ap_list, 'b-o', linewidth=2, markersize=4, label='AP@0.5')
-        ax.set_xlabel('Epoch')
-        ax.set_ylabel('AP@0.5')
-        ax.set_title(f'AP@0.5 (best: {max(ap_list):.4f})')
-        ax.grid(True, alpha=0.3)
-        ax.legend()
+        axes[1, 0].plot(val_epochs, ap_list, 'b-o', label='AP@0.5')
+        axes[1, 0].set_title(f'AP@0.5 (best: {max(ap_list):.4f})'); axes[1, 0].legend()
 
-    ax = axes[1, 1]
-    if val_epochs:
-        ax.plot(val_epochs, recall_list, 'g-o', linewidth=2, markersize=4, label='Recall')
-        ax.plot(val_epochs, precision_list, 'r-o', linewidth=2, markersize=4, label='Precision')
-        ax.set_xlabel('Epoch')
-        ax.set_ylabel('Score')
-        ax.set_title('Recall & Precision')
-        ax.grid(True, alpha=0.3)
-        ax.legend()
+        axes[1, 1].plot(val_epochs, recall_list, 'g-o', label='Recall')
+        axes[1, 1].plot(val_epochs, precision_list, 'r-o', label='Precision')
+        axes[1, 1].set_title('Recall & Precision'); axes[1, 1].legend()
 
     plt.tight_layout()
     plot_path = os.path.join(save_dir, 'training_curves.png')
@@ -327,167 +413,276 @@ def plot_training_curves(csv_path, save_dir):
     plt.close(fig)
     return plot_path
 
-
 # ============================================================
 #  Main
 # ============================================================
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/train_config.yaml")
+    parser.add_argument("--config", default="configs/train_config_v14_clean.yaml")
     parser.add_argument("--resume", default=None)
+    parser.add_argument("--model", default=None, choices=["v14", "v15", "v16"])
+    parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument("--num-workers", type=int, default=None)
+    parser.add_argument("--compile", action="store_true")
     args = parser.parse_args()
+
+    if not os.path.isfile(args.config):
+        raise FileNotFoundError(f"Config not found: {args.config}")
 
     with open(args.config, 'r', encoding='utf-8') as f:
         cfg = yaml.safe_load(f)
 
-    device = torch.device(cfg['train']['device'] if torch.cuda.is_available() else 'cpu')
-    print(f"Device: {device}")
+    train_cfg = cfg.setdefault('train', {})
+    if args.batch_size is not None: train_cfg['batch_size'] = int(args.batch_size)
+    if args.num_workers is not None: train_cfg['num_workers'] = int(args.num_workers)
 
-    img_size = cfg['model']['img_size']
-    base_c = cfg['model']['base_c']
-    model = PFDetNano(base_c=base_c).to(device)
+    device = torch.device(train_cfg.get('device', 'cuda') if torch.cuda.is_available() else 'cpu')
+    torch.set_float32_matmul_precision('high')
+
+    model_cfg = dict(cfg.get('model') or {})
+    # Model version: CLI arg overrides config; config overrides default 'v14'
+    cfg_version = model_cfg.get('version', 'v14')
+    model_name = normalize_model_version(args.model if args.model is not None else cfg_version)
+    img_size = model_cfg.get('img_size', 384)
+    model_kwargs = {k:v for k,v in model_cfg.items() if k not in ['img_size', 'version']}
+
+    model = build_model(model_name, **model_kwargs).to(device)
+    total_p, train_p = count_params(model)
+    loss_name = {
+        'v14': 'PFDetLossV14',
+        'v15': 'PFDetLossV15 (STAL+ProgLoss)',
+        'v16': 'PFDetLossV16 (STAL+ProgLoss)',
+    }.get(model_name, 'PFDetLossV14')
+    print(f"[MODEL] PFDet-Nano {model_name.upper()} | {train_p/1e6:.3f}M params | "
+          f"Loss: {loss_name}")
     if device.type == 'cuda':
         torch.backends.cudnn.benchmark = True
         torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cudnn.allow_tf32 = True
 
-    total_params, _ = count_params(model)
-    print(f"Model: PFDetNano v5 (base_c={base_c}), {total_params/1e6:.2f}M params")
-
-    # Dataset
+    decode_fn = decode_predictions_np
     data_root = cfg['data']['root']
-    train_set = VisDronePersonDataset(
+    data_aug_kwargs = _dataset_aug_kwargs(cfg['data'])
+    
+    # 1. Khởi tạo tập Drone (Base)
+    base_train_set = VisDronePersonDataset(
         os.path.join(data_root, cfg['data']['train_images']),
         os.path.join(data_root, cfg['data']['train_labels']),
-        img_size=img_size, augment=True,
-        mosaic_prob=cfg['data'].get('mosaic_prob', 0.5),
-        mixup_prob=cfg['data'].get('mixup_prob', 0.15),
-        cache_ram=False,
+        img_size=img_size, augment=True, **data_aug_kwargs,
+        cache_ram=bool(cfg['data'].get('cache_ram', False)),
     )
+    
+    # 2. Khởi tạo và TRỘN tập COCO (Extra) với tỷ lệ 30%
+    extra_set = None
+    if 'extra_images' in cfg['data'] and 'extra_labels' in cfg['data']:
+        extra_set = VisDronePersonDataset(
+            os.path.join(data_root, cfg['data']['extra_images']),
+            os.path.join(data_root, cfg['data']['extra_labels']),
+            img_size=img_size, augment=True, **data_aug_kwargs,
+            cache_ram=bool(cfg['data'].get('cache_ram', False))
+        )
+    
+    extra_enable_epoch  = int(cfg['data'].get('extra_enable_epoch', 0))
+    extra_disable_epoch = int(cfg['data'].get('extra_disable_epoch', 9999))
+    extra_ratio         = float(cfg['data'].get('extra_sample_ratio', 0.3))
+
+    # Train set khởi tạo: chưa có COCO (epoch 0 chưa biết sẽ enable chưa)
+    # Sẽ rebuild loader theo epoch trong vòng lặp train.
+    print("\n[INFO] Đang chuẩn bị dữ liệu Train...")
+    if extra_set is not None:
+        print(f"  -> COCO extra: {len(extra_set)} ảnh, enable epoch {extra_enable_epoch}-{extra_disable_epoch}")
+    train_set = base_train_set
+    _coco_active = False  # tracker trạng thái hiện tại
+
     val_set = VisDronePersonDataset(
         os.path.join(data_root, cfg['data']['val_images']),
         os.path.join(data_root, cfg['data']['val_labels']),
-        img_size=img_size, augment=False, cache_ram=False,
+        img_size=img_size, augment=False, cache_ram=bool(cfg['data'].get('cache_ram', False)),
     )
 
-    nw = min(cfg['train']['num_workers'], 4)
-    batch_size = cfg['train']['batch_size']
-    train_loader = DataLoader(
-        train_set, batch_size=batch_size, shuffle=True,
-        num_workers=nw, pin_memory=True,
-        persistent_workers=nw > 0,
-        prefetch_factor=2 if nw > 0 else None,
-        collate_fn=collate_fn, drop_last=True,
-    )
-    val_loader = DataLoader(
-        val_set, batch_size=max(1, batch_size // 2), shuffle=False,
-        num_workers=min(2, nw), pin_memory=True,
-        persistent_workers=min(2, nw) > 0,
-        prefetch_factor=2 if min(2, nw) > 0 else None,
-        collate_fn=collate_fn,
-    )
+    nw = train_cfg['num_workers']
+    batch_size = train_cfg['batch_size']
+    eval_cfg = cfg.get('eval', {})
+    train_loader = build_train_loader(train_set, batch_size, nw)
+    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=min(4, nw),
+                            pin_memory=True, collate_fn=collate_fn)
 
-    # Optimizer
-    decay_params, no_decay_params = [], []
-    for name, p in model.named_parameters():
-        if not p.requires_grad:
-            continue
-        if p.ndim == 1 or name.endswith('.bias') or 'bn' in name.lower():
-            no_decay_params.append(p)
-        else:
-            decay_params.append(p)
-    optimizer = torch.optim.AdamW([
-        {'params': decay_params, 'weight_decay': cfg['train']['weight_decay']},
-        {'params': no_decay_params, 'weight_decay': 0.0},
-    ], lr=cfg['train']['lr'])
+    optimizer_cfg = resolve_optimizer_cfg(train_cfg)
+    optimizer = build_optimizer(model, optimizer_cfg, device=device)
 
-    # Loss
-    criterion = PFDetLoss(
-        img_size=img_size, strides=model.strides,
-        obj_weight=cfg['loss']['obj_weight'],
-        box_weight=cfg['loss']['box_weight'],
+    lcfg = cfg.get('loss', {})
+    loss_common = dict(
+        img_size=img_size, strides=tuple(model.strides),
+        obj_weight=lcfg.get('obj_weight', 8.0),
+        box_weight=lcfg.get('box_weight', 4.0),
+        qfl_beta=lcfg.get('qfl_beta', 2.0),
+        hard_floor=lcfg.get('hard_floor', 0.0),
+        obj_warmup_epochs=lcfg.get('obj_warmup_epochs', 10),
+        prog_epochs=lcfg.get('prog_epochs', train_cfg['epochs']),
+        k_tiny=lcfg.get('k_tiny', 6),
+        k_normal=lcfg.get('k_normal', 3),
+        search_r_tiny=lcfg.get('search_r_tiny', 3),
+        search_r_normal=lcfg.get('search_r_normal', 2),
+        tal_alpha=lcfg.get('tal_alpha', 1.0),
+        tal_beta=lcfg.get('tal_beta', 6.0),
+        nwd_area_thr=lcfg.get('nwd_area_thr', 1024.0),
+        nwd_c=lcfg.get('nwd_c', 0.04),
+        asl_area_ref=lcfg.get('asl_area_ref', 0.004),
+        asl_max=lcfg.get('asl_max', 4.0),
+        tiny_area_px=lcfg.get('tiny_area_px', 576.0),
+        total_epochs=train_cfg['epochs'],
     )
+    if model_name == 'v15':
+        criterion = PFDetLossV15(
+            **loss_common,
+            stal_gamma=lcfg.get('stal_gamma', 2.0),
+            stal_area_ref=lcfg.get('stal_area_ref', 576.0),
+            stal_min_area_px=lcfg.get('stal_min_area_px', 64.0),
+            stal_k_min=lcfg.get('stal_k_min', 4),
+            prog_loss_factor=lcfg.get('prog_loss_factor', 2.0),
+        )
+    elif model_name == 'v16':
+        criterion = PFDetLossV16(
+            **loss_common,
+            stal_gamma=lcfg.get('stal_gamma', 2.0),
+            stal_area_ref=lcfg.get('stal_area_ref', 576.0),
+            stal_min_area_px=lcfg.get('stal_min_area_px', 64.0),
+            stal_k_min=lcfg.get('stal_k_min', 4),
+            prog_loss_factor=lcfg.get('prog_loss_factor', 2.0),
+        )
+    else:
+        criterion = PFDetLossV14(**loss_common)
 
-    # AMP
-    use_amp = cfg['train'].get('amp', True) and device.type == 'cuda'
+    use_amp = train_cfg.get('amp', True) and device.type == 'cuda'
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
+    ema = ModelEMA(model, decay=train_cfg.get('ema_decay', 0.999))
+    grad_accumulate = max(1, int(train_cfg.get('grad_accumulate', 1)))
 
-    # EMA
-    ema = ModelEMA(model, decay=cfg['train'].get('ema_decay', 0.999))
-
-    epochs = cfg['train']['epochs']
-    warmup_epochs = cfg['train'].get('warmup_epochs', 5)
-    lr_max = cfg['train']['lr']
-    lr_min = cfg['train'].get('lr_min', 1e-5)
-    save_dir = cfg['train']['save_dir']
+    epochs = train_cfg['epochs']
+    warmup_epochs = train_cfg.get('warmup_epochs', 5)
+    lr_max, lr_min = optimizer_cfg['lr'], optimizer_cfg['lr_min']
+    
+    save_dir = train_cfg.get('save_dir', f"./runs/train_{model_name}")
     os.makedirs(save_dir, exist_ok=True)
 
     start_epoch = 0
     best_ap = -1.0
-    best_epoch = 0
-
-    # CSV log
     csv_path = os.path.join(save_dir, 'training_log.csv')
-    csv_fields = ['epoch', 'lr', 'train_loss', 'obj_loss', 'box_loss',
-                  'n_pos', 'ap', 'recall', 'precision']
+    
+    # Pretrained weights (finetune: load weights only, reset optimizer/epoch)
+    pretrained_path = train_cfg.get('pretrained', None)
+    if pretrained_path and not args.resume:
+        print(f"\n[INFO] Loading pretrained weights from {pretrained_path}")
+        pt_ckpt = torch.load(pretrained_path, map_location=device, weights_only=False)
+        state_key = 'ema' if 'ema' in pt_ckpt else 'model'
+        model.load_state_dict(pt_ckpt[state_key])
+        ema = ModelEMA(model, decay=train_cfg.get('ema_decay', 0.999))  # re-init EMA from loaded weights
+        print(f"  -> Loaded {state_key.upper()} weights (AP={pt_ckpt.get('ap', '?')})")
+
+    # SWA setup
+    swa_cfg = train_cfg.get('swa', {})
+    swa_enabled = swa_cfg.get('enabled', False)
+    swa_start = swa_cfg.get('start_epoch', epochs)
+    swa_lr = swa_cfg.get('lr', 0.0005)
+    swa_model = None
+    swa_n = 0
+    if swa_enabled:
+        swa_model = copy.deepcopy(model)
+        swa_model.eval()
+        print(f"[INFO] SWA enabled: start_epoch={swa_start}, lr={swa_lr}")
 
     if args.resume:
+        print("\n[INFO] Đang Resume quá trình train...")
         ckpt = torch.load(args.resume, map_location=device, weights_only=False)
         model.load_state_dict(ckpt['model'])
-        if 'ema' in ckpt:
-            ema.ema.load_state_dict(ckpt['ema'])
-        if 'optimizer' in ckpt:
-            optimizer.load_state_dict(ckpt['optimizer'])
+        ema.ema.load_state_dict(ckpt['ema'])
+        optimizer.load_state_dict(ckpt['optimizer'])
         start_epoch = ckpt.get('epoch', 0) + 1
         best_ap = ckpt.get('ap', -1.0)
-        print(f"Resumed from epoch {start_epoch}, best AP={best_ap:.4f}")
-
-    # Init CSV (only if starting fresh)
-    if start_epoch == 0:
+    elif start_epoch == 0:
         with open(csv_path, 'w', newline='') as f:
-            csv.writer(f).writerow(csv_fields)
+            csv.writer(f).writerow([
+                'epoch', 'lr', 'train_loss', 'obj_loss', 'box_loss', 'iou_loss',
+                'n_pos', 'pos_s4', 'pos_s8', 'pos_s16', 'pos_s32',
+                'ap', 'recall', 'precision'
+            ])
 
-    mosaic_off_epoch = max(0, epochs - cfg['train'].get('mosaic_off_last', 15))
+    # Parse multiscale config
+    ms_cfg = train_cfg.get('multiscale', {})
+    ms_enabled = ms_cfg.get('enabled', False)
+    ms_sizes = []
+    ms_freq = 10
+    if ms_enabled:
+        ms_range = ms_cfg.get('range', [0.75, 1.25])
+        ms_step  = ms_cfg.get('step', 32)
+        ms_freq  = ms_cfg.get('freq', 10)
+        lo = round(img_size * ms_range[0] / ms_step) * ms_step
+        hi = round(img_size * ms_range[1] / ms_step) * ms_step
+        ms_sizes = list(range(lo, hi + ms_step, ms_step))
+        print(f"[INFO] Multi-scale training: {ms_sizes} (every {ms_freq} batches)")
 
-    print(f"\n{'='*60}")
-    print(f"Training: {epochs} epochs, img_size={img_size}, batch={batch_size}")
-    print(f"Train: {len(train_set)} images, Val: {len(val_set)} images")
-    print(f"Save dir: {save_dir}")
-    print(f"{'='*60}\n")
+    print(f"\nTraining started: {epochs} epochs, img_size={img_size}, batch={batch_size}")
 
     for epoch in range(start_epoch, epochs):
         model.train()
-        lr = cosine_lr(optimizer, epoch, epochs, warmup_epochs,
-                       lr_start=lr_max * 0.1, lr_max=lr_max, lr_min=lr_min)
+        # SWA phase: use fixed low LR instead of cosine schedule
+        if swa_enabled and epoch >= swa_start:
+            lr = swa_lr
+            for pg in optimizer.param_groups:
+                pg['lr'] = lr * pg.get('lr_ratio', 1.0)
+        else:
+            lr = cosine_lr(optimizer, epoch, epochs, warmup_epochs, lr_start=lr_max*0.1, lr_max=lr_max, lr_min=lr_min)
 
-        if epoch >= mosaic_off_epoch:
-            train_set.mosaic_prob = 0.0
-            train_set.mixup_prob = 0.0
+        # COCO enable / disable theo epoch schedule
+        if extra_set is not None:
+            want_coco = extra_enable_epoch <= epoch < extra_disable_epoch
+            if want_coco != _coco_active:
+                if want_coco:
+                    train_set, n_extra = build_mixed_train_set(base_train_set, extra_set, extra_ratio)
+                    print(f"  [DATA] Epoch {epoch+1}: BẬT COCO ({n_extra} ảnh, ratio={extra_ratio:.0%})")
+                else:
+                    train_set = base_train_set
+                    print(f"  [DATA] Epoch {epoch+1}: TẮT COCO → chỉ VisDrone ({len(base_train_set)} ảnh)")
+                train_loader = build_train_loader(train_set, batch_size, nw)
+                _coco_active = want_coco
+
+        if epoch >= max(0, epochs - train_cfg.get('mosaic_off_last', 15)):
+            disable_train_aug_mix(train_set)
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} (lr={lr:.6f})")
         loss_accum = defaultdict(float)
         n_iter = 0
 
-        for imgs, labels_list, _ in pbar:
+        for batch_idx, (imgs, labels_list, _) in enumerate(pbar):
             imgs = imgs.to(device, non_blocking=True)
-            optimizer.zero_grad(set_to_none=True)
+
+            # Multi-scale resize (thay đổi resolution mỗi ms_freq batch)
+            if ms_sizes and (batch_idx % ms_freq == 0):
+                sz = random.choice(ms_sizes)
+                if sz != imgs.shape[-1]:
+                    imgs = F.interpolate(imgs, size=(sz, sz), mode='bilinear', align_corners=False)
+                criterion.img_size = sz
+            else:
+                criterion.img_size = img_size
+
+            if batch_idx % grad_accumulate == 0:
+                optimizer.zero_grad(set_to_none=True)
 
             with torch.amp.autocast('cuda', enabled=use_amp):
                 preds = model(imgs)
-                loss, loss_dict = criterion(preds, labels_list)
+                loss, loss_dict = criterion(preds, labels_list, epoch=epoch)
+                loss = loss / grad_accumulate
 
-            if not torch.isfinite(loss):
-                print(f'  [WARN] skip non-finite loss')
-                optimizer.zero_grad(set_to_none=True)
-                continue
+            if not torch.isfinite(loss): continue
 
             scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10.0)
-            scaler.step(optimizer)
-            scaler.update()
-            ema.update(model)
+
+            if (batch_idx + 1) % grad_accumulate == 0:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10.0)
+                scaler.step(optimizer)
+                scaler.update()
+                ema.update(model)
 
             n_iter += 1
             for k, v in loss_dict.items():
@@ -497,72 +692,102 @@ def main():
                 loss=f"{loss_accum['total']/n_iter:.4f}",
                 obj=f"{loss_accum['obj']/n_iter:.4f}",
                 box=f"{loss_accum['box']/n_iter:.4f}",
-                pos=f"{loss_dict['n_pos']:.0f}",
+                pos=f"{loss_dict['n_pos']:.0f}"
             )
 
-        avg_loss = loss_accum['total'] / n_iter
-        avg_obj = loss_accum['obj'] / n_iter
-        avg_box = loss_accum['box'] / n_iter
-        avg_pos = loss_accum['n_pos'] / n_iter
+        # ==========================================
+        # SWA: accumulate model weights
+        if swa_enabled and swa_model is not None and epoch >= swa_start:
+            swa_n += 1
+            with torch.no_grad():
+                for swa_p, model_p in zip(swa_model.parameters(), model.parameters()):
+                    swa_p.data.mul_(1 - 1.0 / swa_n).add_(model_p.data, alpha=1.0 / swa_n)
+            if swa_n == 1:
+                print(f"  [SWA] Started averaging at epoch {epoch+1}")
+            elif (epoch + 1) % 10 == 0:
+                print(f"  [SWA] Averaged {swa_n} models")
 
-        print(f"  Epoch {epoch+1} avg loss: {avg_loss:.4f} "
-              f"(obj={avg_obj:.4f}, box={avg_box:.4f}, pos={avg_pos:.0f})")
-
-        # Validation
-        val_interval = cfg['train'].get('val_interval', 5)
+        # Validation & Visualization (ÉP CỨNG = 5)
+        # ==========================================
         ap, recall, precision = 0.0, 0.0, 0.0
+        
+        val_interval = int(train_cfg.get('val_interval', 5))
         do_val = (epoch + 1) % val_interval == 0 or epoch == epochs - 1
 
         if do_val:
-            print("  Validating...")
-            val_model = ema.ema if cfg['train'].get('val_use_ema', True) else model
-            ap, recall, precision = evaluate(val_model, val_loader, device, img_size, model.strides)
+            print("\n  [VAL] Đang chạy Validation và xuất ảnh...")
+            val_model = ema.ema if train_cfg.get('val_use_ema', True) else model
+            
+            ap, recall, precision = evaluate(
+                val_model, val_loader, device, img_size, model.strides,
+                conf_thr=eval_cfg.get('conf_thr', 0.01), iou_thr=eval_cfg.get('iou_thr', 0.5),
+                min_box_area=eval_cfg.get('min_box_area', 0.0), max_det=int(eval_cfg.get('max_det', 300)),
+            )
             print(f"  [VAL] AP@0.5={ap:.4f} | Recall={recall:.4f} | Precision={precision:.4f}")
 
-            # Save val sample images
             sample_path = save_val_samples(
-                val_model, val_set, device, img_size, model.strides,
-                save_dir, epoch, n_samples=8, conf_thr=0.3
+                val_model, val_set, device, img_size, model.strides, save_dir, epoch,
+                conf_thr=train_cfg.get('val_vis_conf', 0.25), decode_fn=decode_fn,
+                min_box_area=eval_cfg.get('min_box_area', 0.0), max_det=int(eval_cfg.get('max_det', 300))
             )
-            print(f"  [VIS] Val samples saved: {sample_path}")
+            print(f"  [VIS] Đã lưu ảnh Val tại: {sample_path}")
 
-            # Save checkpoints
+            plot_path = plot_training_curves(csv_path, save_dir, model_name)
+            if plot_path: print(f"  [PLOT] Cập nhật biểu đồ tại: {plot_path}")
+
             ckpt = {
-                'model': model.state_dict(),
-                'ema': ema.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'epoch': epoch, 'ap': ap, 'cfg': cfg,
+                'model': model.state_dict(), 'ema': ema.state_dict(),
+                'optimizer': optimizer.state_dict(), 'epoch': epoch, 'ap': ap,
+                'cfg': cfg, 'model_version': cfg.get('model', {}).get('version', 'v14'),
             }
             torch.save(ckpt, os.path.join(save_dir, 'last.pt'))
-
             if ap > best_ap:
                 best_ap = ap
-                best_epoch = epoch
                 torch.save(ckpt, os.path.join(save_dir, 'best.pt'))
-                print(f"  [SAVE] New best AP={best_ap:.4f} @ epoch {epoch+1}")
+                print(f"  [SAVE] 🔥 MỚI: Best AP@0.5={best_ap:.4f} (Lưu tại epoch {epoch+1})")
 
-        # Log to CSV
+        # Log CSV
         with open(csv_path, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                epoch + 1, f'{lr:.6f}', f'{avg_loss:.4f}', f'{avg_obj:.4f}',
-                f'{avg_box:.4f}', f'{avg_pos:.0f}',
-                f'{ap:.4f}' if do_val else '',
-                f'{recall:.4f}' if do_val else '',
-                f'{precision:.4f}' if do_val else '',
+            csv.writer(f).writerow([
+                epoch + 1, f'{lr:.6f}', f"{loss_accum['total']/n_iter:.4f}",
+                f"{loss_accum['obj']/n_iter:.4f}", f"{loss_accum['box']/n_iter:.4f}",
+                f"{loss_accum.get('iou', 0)/n_iter:.4f}", f"{loss_accum['n_pos']/n_iter:.0f}",
+                f"{loss_accum.get('pos_s4', 0)/n_iter:.0f}", f"{loss_accum.get('pos_s8', 0)/n_iter:.0f}",
+                f"{loss_accum.get('pos_s16', 0)/n_iter:.0f}", f"{loss_accum.get('pos_s32', 0)/n_iter:.0f}",
+                f'{ap:.4f}' if ap > 0 else '', f'{recall:.4f}' if recall > 0 else '', f'{precision:.4f}' if precision > 0 else ''
             ])
 
-        # Plot curves every val_interval
-        if do_val:
-            plot_path = plot_training_curves(csv_path, save_dir)
-            if plot_path:
-                print(f"  [PLOT] Training curves: {plot_path}")
+    # SWA final: update BN stats and evaluate
+    if swa_enabled and swa_model is not None and swa_n > 0:
+        print(f"\n[SWA] Finalizing: averaged {swa_n} models. Updating BN statistics...")
+        swa_model.train()
+        with torch.no_grad():
+            for batch_data in train_loader:
+                imgs = batch_data[0].to(device, non_blocking=True)
+                swa_model(imgs)
+        swa_model.eval()
 
-    print(f"\n{'='*60}")
-    print(f"Done! Best AP@0.5={best_ap:.4f} @ epoch {best_epoch+1}")
-    print(f"Weights: {save_dir}")
-    print(f"{'='*60}")
+        swa_ap, swa_recall, swa_precision = evaluate(
+            swa_model, val_loader, device, img_size, model.strides,
+            conf_thr=eval_cfg.get('conf_thr', 0.01), iou_thr=eval_cfg.get('iou_thr', 0.5),
+            min_box_area=eval_cfg.get('min_box_area', 0.0), max_det=int(eval_cfg.get('max_det', 300)),
+        )
+        print(f"[SWA] AP@0.5={swa_ap:.4f} | Recall={swa_recall:.4f} | Precision={swa_precision:.4f}")
+        print(f"[SWA] vs Best EMA: AP {swa_ap:.4f} vs {best_ap:.4f} ({'+' if swa_ap > best_ap else ''}{swa_ap - best_ap:.4f})")
 
+        swa_ckpt = {
+            'model': swa_model.state_dict(), 'ema': swa_model.state_dict(),
+            'epoch': epochs - 1, 'ap': swa_ap,
+            'cfg': cfg, 'model_version': cfg.get('model', {}).get('version', 'v14'),
+        }
+        torch.save(swa_ckpt, os.path.join(save_dir, 'swa.pt'))
+        print(f"[SWA] Saved to {save_dir}/swa.pt")
+        if swa_ap > best_ap:
+            torch.save(swa_ckpt, os.path.join(save_dir, 'best.pt'))
+            best_ap = swa_ap
+            print(f"[SWA] New best! Saved as best.pt")
+
+    print(f"\nTraining Complete! Best AP@0.5: {best_ap:.4f}")
 
 if __name__ == "__main__":
     main()
