@@ -51,6 +51,10 @@ configs/train_config.yaml
 utils_old/
 .claude/
 
+# Rebaseline workflow (không dùng cho v15 + follow)
+configs/rebaseline_candidates.yaml
+scripts/rebaseline_world_models.py
+
 # IDE / OS
 .vscode/
 .idea/
