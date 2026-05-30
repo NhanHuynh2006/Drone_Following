@@ -1,205 +1,156 @@
 # PFDet Drone Follow
 
-Lightweight person detection for drone footage, with a re-baselining workflow against modern Ultralytics detectors.
+Phát hiện người tí hon (tiny person detection) từ camera drone, kèm hệ thống điều khiển
+drone tự động bay theo người. Target: deploy lên Raspberry Pi 5 + Pixhawk 6C.
 
-The repo now has two parallel goals:
+## Kết quả
 
-1. Keep `PFDet-v14` as a research detector for tiny aerial persons.
-2. Re-benchmark it fairly against current strong baselines such as `YOLO26`, `YOLO11`, and `RT-DETR`.
+| | Giá trị |
+|---|---|
+| **Model** | PFDet-Nano v15 light + MuSGD |
+| **AP@0.5** (VisDrone person) | **0.5931** |
+| **Params** | ~1.0M |
+| **Tốc độ** | ~30 FPS trên Pi 5 @ 320px |
+| Baseline so sánh (v14) | 0.385 |
 
-## Current Model
+## Cấu trúc repo
 
-`PFDet-v14` is the active in-repo detector.
-
-- Backbone: `EdgeContextStem + UIB`
-- Pyramid: `P2/P3/P4/P5` with strides `[4, 8, 16, 32]`
-- Neck: `BiFPN`
-- Head: `RepConv` decoupled head
-- Optional: `AreaAttention`
-- Export/runtime contract: `output_p2`, `output_p3`, `output_p4`, `output_p5`
-
-## Config Roles
-
-Use the config role before training anything:
-
-- `configs/train_config_v14_clean.yaml`
-  Role: `research_baseline`
-  Purpose: clean PFDet baseline for ablation.
-  Keeps only the core architecture and simple loss.
-
-- `configs/train_config_v14.yaml`
-  Role: `research_enhanced`
-  Purpose: stronger PFDet config with extra assignment/loss/data tricks.
-  Use this only after `v14_clean` has been benchmarked.
-
-- `configs/train_config_v14_light.yaml`
-  Role: `edge_candidate`
-  Purpose: smaller PFDet profile for edge deployment.
-  `AreaAttention` is disabled here on purpose.
-
-## Training PFDet
-
-Clean baseline:
-
-```bash
-python train_v3.py --config configs/train_config_v14_clean.yaml --model v14
+```
+.
+├── models/
+│   ├── pfdet_nano_v15.py        # Model chính (CSPUIB + LSK + dual AreaAttention)
+│   ├── pfdet_nano_v14.py        # Baseline so sánh
+│   └── pfdet_nano_v16.py        # Biến thể stability-first
+├── utils/
+│   ├── losses_v15.py            # Loss v15 (QFL + NWD + CIoU + STAL + ProgLoss)
+│   ├── musgd.py                 # MuSGD optimizer (YOLO26-inspired)
+│   └── box_ops.py
+├── configs/
+│   ├── train_config_v15_light_musgd.yaml   # ⭐ Config bản chốt (AP 0.5931)
+│   ├── train_config_v15_light.yaml         # AdamW baseline
+│   ├── train_config_v14_light.yaml         # v14 baseline
+│   └── quick_eval_v15.yaml
+├── train_v3.py                  # Training script
+├── infer.py                     # Inference (ảnh / video / webcam)
+├── infer_pi5_sim.py             # Mô phỏng tốc độ trên Pi 5
+├── export.py                    # Export ONNX / TensorRT
+├── benchmark.py                 # Benchmark FPS + AP
+├── follow_drone/                # ⭐ Hệ thống điều khiển follow person
+│   └── README.md                #    (xem hướng dẫn riêng)
+├── ARCHITECTURE.md              # Phân tích chi tiết model (vì sao chọn kiến trúc)
+└── FOLLOW_CONTROL.md            # Phân tích chi tiết thuật toán điều khiển
 ```
 
-Enhanced research config:
+## Model v15 — kiến trúc
+
+- **Backbone:** `EdgeContextStem → P2 (UIB+LSK) → P3/P4/P5 (CSPUIBStage)`
+- **Attention:** `AreaAttention` ở P4 và P5, `LSKBlock` ở P2 + trước mỗi head
+- **Neck:** `BiFPN`
+- **Head:** `RepConv` decoupled head, anchor-free
+- **Pyramid:** `P2/P3/P4/P5` strides `[4, 8, 16, 32]`
+- **Loss:** QFL + NWD + CIoU + STAL + ProgLoss + ASL
+- **Optimizer:** MuSGD (Muon + SGD blend, YOLO26-style)
+
+Chi tiết đầy đủ + lý do chọn từng thành phần: xem [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Training
 
 ```bash
-python train_v3.py --config configs/train_config_v14.yaml --model v14
-```
+# Bản chốt — v15 light + MuSGD (AP 0.5931)
+python train_v3.py --config configs/train_config_v15_light_musgd.yaml
 
-Edge candidate:
+# AdamW baseline để so sánh
+python train_v3.py --config configs/train_config_v15_light.yaml
 
-```bash
+# v14 baseline (paper comparison)
 python train_v3.py --config configs/train_config_v14_light.yaml --model v14
 ```
 
-## PFDet Benchmarking
-
-`benchmark.py` now benchmarks the fused deploy graph by default. This matters because `RepConv` must be fused before export/speed measurement.
-
-Example:
+## Inference
 
 ```bash
-python benchmark.py \
-  --weights runs/train_v14_clean/best.pt \
-  --profile desktop_4060 \
-  --img-size 640 \
-  --scoreboard runs/rebaseline/scoreboard.csv \
-  --label pfdet_v14_clean
+# Webcam (camera USB rời thường là --source 1)
+python infer.py --weights runs/train_v15_light_musgd_v3/best.pt \
+                --source 0 --conf 0.5 --show --device cuda:0
+
+# Ảnh / thư mục / video
+python infer.py --weights runs/train_v15_light_musgd_v3/best.pt \
+                --source path/to/image.jpg --conf 0.5 --save out.jpg
 ```
 
-Reported fields include:
+## Mô phỏng tốc độ Pi 5 (trên desktop)
 
-- train params / deploy params
-- train FLOPs / deploy FLOPs
-- model-only FPS
-- end-to-end FPS
-- AP@0.5
-- focus AP / recall / precision
+```bash
+# PyTorch CPU + INT8 quantization @ 320px (giống điều kiện Pi 5)
+python infer_pi5_sim.py --weights runs/train_v15_light_musgd_v3/best.pt --source 1
+
+# ONNX Runtime backend (gần NCNN hơn)
+python infer_pi5_sim.py --weights runs/train_v15_light_musgd_v3/best.pt --source 1 --onnx
+```
 
 ## Export
 
-`export.py` now exports the fused deploy graph by default.
-
 ```bash
-python export.py --weights runs/train_v14_clean/best.pt --format onnx
+# Export ONNX (fused deploy graph mặc định) để deploy lên Pi 5
+python export.py --weights runs/train_v15_light_musgd_v3/best.pt --format onnx
 ```
 
-Use `--no-fuse` only if you intentionally want the training graph.
-
-## Re-Baselining Against World Models
-
-### 1. Prepare an Ultralytics-friendly dataset view
-
-PFDet labels can contain 7 columns (`cls cx cy w h fx fy`), while Ultralytics detectors expect 5 columns.
-
-Prepare a mirrored dataset:
+## Benchmark
 
 ```bash
-python scripts/prepare_ultralytics_dataset.py \
-  --src ./data/visdrone \
-  --dst ./data/visdrone_ultralytics
-```
-
-This writes labels compatible with:
-
-- `YOLO26n`
-- `YOLO26s`
-- `YOLO11n`
-- `RT-DETR-L`
-
-Dataset YAML:
-
-- `configs/visdrone_person_ultralytics.yaml`
-
-### 2. Fine-tune official pretrained baselines
-
-```bash
-python scripts/rebaseline_world_models.py train \
-  --models yolo26n.pt yolo26s.pt yolo11n.pt rtdetr-l.pt \
-  --data configs/visdrone_person_ultralytics.yaml \
-  --img-size 640 \
-  --epochs 100 \
-  --project runs/rebaseline
-```
-
-### 3. Benchmark full-frame and SAHI
-
-```bash
-python scripts/rebaseline_world_models.py benchmark \
-  --models \
-    runs/rebaseline/yolo26n_640/weights/best.pt \
-    runs/rebaseline/yolo26s_640/weights/best.pt \
-    runs/rebaseline/yolo11n_640/weights/best.pt \
-    runs/rebaseline/rtdetr-l_640/weights/best.pt \
-  --data configs/visdrone_person_ultralytics.yaml \
+python benchmark.py \
+  --weights runs/train_v15_light_musgd_v3/best.pt \
   --profile desktop_4060 \
-  --img-size 640 \
-  --slice-sizes 512 640 \
-  --scoreboard runs/rebaseline/scoreboard.csv
+  --img-size 640
 ```
 
-This produces standardized rows for:
+## Follow Drone — điều khiển tự động
 
-- `full_frame`
-- `sahi_512`
-- `sahi_640`
+Hệ thống điều khiển drone bay theo người, dùng detection của model trên.
 
-## Model Selection Rule
+Pipeline: `PFDet-Nano v15 → OC-SORT tracking → pinhole distance → hybrid 2.5D visual servoing → cascade PID → pymavlink → Pixhawk 6C (ArduPilot GUIDED)`.
 
-The decision rule is encoded in `configs/rebaseline_candidates.yaml`.
+```bash
+cd follow_drone
+# Đọc README.md trong follow_drone/ — có quy trình test 7 bước
+```
 
-Choose the winner by:
+Chi tiết thiết kế thuật toán + lý do chọn từng module: xem [FOLLOW_CONTROL.md](FOLLOW_CONTROL.md).
 
-1. `focus_ap50`
-2. `precision`
-3. `end_to_end_fps`
-
-That means the final production model does not have to remain PFDet if a baseline wins clearly.
-
-## Notes On PFDet-Clean
-
-`train_config_v14_clean.yaml` intentionally disables the confounding extras:
-
-- `AreaAttention`
-- `copy_paste`
-- `multiscale`
-- `NWD`
-- `ASL`
-- `OHEM`
-- progressive multi-positive assignment
-- COCO-person extra mixing
-
-This gives a baseline that is much easier to trust during ablation.
+⚠️ **An toàn:** test SITL trước, tether (cột dây) khi outdoor đầu tiên, geofence luôn bật.
+Xem [follow_drone/README.md](follow_drone/README.md) cho quy trình test đầy đủ.
 
 ## Requirements
 
-Core repo:
-
 ```bash
-pip install torch torchvision pyyaml tqdm opencv-python matplotlib
+# Core (training + inference)
+pip install torch torchvision pyyaml tqdm opencv-python matplotlib numpy
+
+# Follow drone control
+pip install pymavlink scipy
+
+# Export / Pi 5 deploy
+pip install onnx onnxruntime onnxsim
 ```
 
-Optional for full re-baselining:
+## Dataset
 
-```bash
-pip install ultralytics sahi thop onnxruntime onnxsim
+Dataset (VisDrone + COCO person) không được commit lên git vì nặng.
+Đặt trong `data/visdrone/` theo cấu trúc:
+
+```
+data/visdrone/
+├── train/images/   train/labels/
+└── val/images/     val/labels/
 ```
 
-## Important Caveat
+Convert VisDrone gốc sang format YOLO:
+```bash
+python scripts/convert_visdrone.py
+```
 
-Do not compare:
+## Tài liệu
 
-- PFDet at `320/384` full-frame
-- YOLO26/YOLO11/RT-DETR at `640`
-
-and then conclude one model is better.
-
-For tiny aerial persons, the comparison must be done at the same benchmark input strategy, and ideally with both:
-
-- full-frame inference
-- tiled / SAHI inference
+- [ARCHITECTURE.md](ARCHITECTURE.md) — phân tích chi tiết model v15 (kiến trúc, loss, optimizer, vì sao chọn vs alternatives)
+- [FOLLOW_CONTROL.md](FOLLOW_CONTROL.md) — phân tích chi tiết hệ thống điều khiển follow
+- [follow_drone/README.md](follow_drone/README.md) — hướng dẫn setup + test bay thật
