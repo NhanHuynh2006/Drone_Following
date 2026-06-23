@@ -60,3 +60,6 @@ scripts/rebaseline_world_models.py
 .idea/
 .DS_Store
 Thumbs.db
+
+# Ảnh demo webcam (riêng tư - mặt người)
+deploy/*.jpg

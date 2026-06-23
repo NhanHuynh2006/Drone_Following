@@ -36,7 +36,6 @@ from utils import (
     PFDetLossV14,
     PFDetLossV15,
     PFDetLossV16,
-    DualLossV17,
     decode_predictions_np,
     nms_numpy,
     xywh2xyxy,
@@ -523,7 +522,6 @@ def main():
             print("[AUX] Dùng density wrapper để lấy neck_feats (density LOSS tắt).")
     else:
         model = build_model(model_name, **model_kwargs).to(device)
-    use_nms_free = bool(getattr(model, 'nms_free', False))   # v17 NMS-free (head o2o)
     total_p, train_p = count_params(model)
     loss_name = {
         'v14': 'PFDetLossV14',
@@ -643,21 +641,6 @@ def main():
               f"({'BẬT' if crowd_alpha > 0 else 'TẮT'})")
     elif crowd_alpha > 0:
         print(f"[DGS] ⚠ criterion {type(criterion).__name__} không có crowd_alpha — bỏ qua crowd-loc.")
-
-    # ---- v17 NMS-free: bọc criterion thành DualLossV17 (o2m + o2o k=1) ----
-    if use_nms_free:
-        o2o_criterion = PFDetLossV15(
-            **{**loss_common, 'k_tiny': 1, 'k_normal': 1},
-            stal_gamma=lcfg.get('stal_gamma', 2.0),
-            stal_area_ref=lcfg.get('stal_area_ref', 576.0),
-            stal_min_area_px=lcfg.get('stal_min_area_px', 64.0),
-            stal_k_min=1,                       # one-to-one: đúng 1 anchor/GT
-            prog_loss_factor=lcfg.get('prog_loss_factor', 2.0),
-        )
-        criterion = DualLossV17(criterion, o2o_criterion,
-                                lambda_o2o=float(lcfg.get('lambda_o2o', 1.0)))
-        print(f"[NMS-FREE] BẬT — head o2o (k=1), lambda_o2o={lcfg.get('lambda_o2o', 1.0)}. "
-              f"Inference bỏ NMS.")
 
     # ---- DGS cơ chế 1: density head loss params ----
     lambda_density       = float(dgs_cfg.get('lambda_density', 0.5))
@@ -835,8 +818,6 @@ def main():
             with torch.amp.autocast('cuda', enabled=use_amp):
                 if need_aux:
                     preds, aux = model(imgs, return_aux=True)
-                elif use_nms_free:
-                    preds, aux = model.forward_dual(imgs), None   # (o2m, o2o) cho DualLossV17
                 else:
                     preds, aux = model(imgs), None
                 loss, loss_dict = criterion(preds, labels_list, epoch=epoch)

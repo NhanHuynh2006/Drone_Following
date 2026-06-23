@@ -35,7 +35,7 @@ import torch
 import torch.nn.functional as F
 
 from .box_ops import bbox_ciou, bbox_iou_xyxy
-
+from crowd_loc import crowd_density_weights
 
 def quality_focal_loss(pred_logits, targets, beta=2.0):
     p = torch.sigmoid(pred_logits)
@@ -223,6 +223,7 @@ class PFDetLossV15:
         self.stal_min_area_px  = stal_min_area_px
         self.stal_k_min        = stal_k_min
         self.prog_loss_factor  = prog_loss_factor
+        self.crowd_alpha = 1.0   # DGS cơ chế 2 ; =0 để tắt (cho ablation)
         self.total_epochs      = total_epochs
 
         self.scale_ranges = [
@@ -349,6 +350,9 @@ class PFDetLossV15:
                     # ASL: up-weight tiny objects (match v14 formula: area_ref in normalized units → pixel units)
                     asl_w = (self.asl_area_ref * self.img_size ** 2 / area_px).sqrt().clamp(1.0, self.asl_max)
                     box_loss_per = box_loss_per * asl_w
+                    if self.crowd_alpha > 0:
+                        cw = crowd_density_weights(gt_t, gi_t, self.img_size, alpha=self.crowd_alpha)
+                        box_loss_per = box_loss_per * cw
 
                     with torch.no_grad():
                         ix1 = torch.maximum(pred_xyxy[:, 0], gt_xyxy[:, 0])
