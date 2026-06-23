@@ -8,6 +8,7 @@ from .pfdet_nano_v14 import (
 )
 from .pfdet_nano_v15 import PFDetNanoV15
 from .pfdet_nano_v16 import PFDetNanoV16
+from .pfdet_nano_v17 import PFDetNanoV17
 
 
 def build_model(version='v14', **kwargs):
@@ -18,7 +19,9 @@ def build_model(version='v14', **kwargs):
         return PFDetNanoV15(**kwargs)
     if version in ('v16', '16'):
         return PFDetNanoV16(**kwargs)
-    raise ValueError(f"Unknown model version: {version!r}. Supported: 'v14', 'v15', 'v16'.")
+    if version in ('v17', '17'):
+        return PFDetNanoV17(**kwargs)
+    raise ValueError(f"Unknown model version: {version!r}. Supported: 'v14', 'v15', 'v16', 'v17'.")
 
 
 def normalize_model_version(v):
@@ -58,6 +61,7 @@ __all__ = [
     'PFDetNanoV14',
     'PFDetNanoV15',
     'PFDetNanoV16',
+    'PFDetNanoV17',
     'count_params',
     'build_model',
     'normalize_model_version',

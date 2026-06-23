@@ -7,6 +7,10 @@ Optimized for Drone Person Detection (VisDrone/UAVDT).
 """
 
 import os
+# Chống phân mảnh VRAM do multi-scale (11 size đổi qua hàng nghìn iter) -> tránh OOM tích lũy.
+# PHẢI set TRƯỚC khi import torch (đọc lúc khởi tạo CUDA). setdefault: không đè nếu user đã set.
+os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'expandable_segments:True')
+
 import sys
 import math
 import copy
@@ -26,16 +30,36 @@ import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import build_model, count_params, normalize_model_version
+from models import build_model, count_params, normalize_model_version, PFDetNanoV15
 from datasets import VisDronePersonDataset, collate_fn
 from utils import (
     PFDetLossV14,
     PFDetLossV15,
     PFDetLossV16,
+    DualLossV17,
     decode_predictions_np,
     nms_numpy,
     xywh2xyxy,
 )
+# DGS (Density-Guided Supervision) + KD + Vibration-consistency — train-time only, 0 chi phí inference
+from density_aux import PFDetNanoV15Density, build_density_targets, density_loss
+from distillation import load_teacher, DistillationLoss, TeacherFeatCapture
+from vib_consistency import corrupt_batch, VibConsistencyLoss
+
+
+def _labels_to_pixel_boxes(labels_list, img_size, person_class=0):
+    """labels (N,5)[cls,cx,cy,w,h] chuẩn hoá 0-1 -> list per-image box PIXEL [cx,cy,w,h] (chỉ person).
+
+    Dùng cho build_density_targets (cần toạ độ pixel ở kích thước img hiện tại)."""
+    out = []
+    for lb in labels_list:
+        if len(lb) == 0:
+            out.append(torch.zeros(0, 4)); continue
+        person = lb[lb[:, 0] == person_class]
+        if len(person) == 0:
+            out.append(torch.zeros(0, 4)); continue
+        out.append(person[:, 1:5].clone().float() * float(img_size))
+    return out
 
 # ============================================================
 #  EMA
@@ -222,17 +246,18 @@ def cosine_lr(optimizer, epoch, total_epochs, warmup_epochs=5, lr_start=1e-4, lr
 @torch.no_grad()
 def evaluate(model, loader, device, img_size, strides, conf_thr=0.01, iou_thr=0.5,
              decode_fn=decode_predictions_np, min_box_area=0.0, min_aspect=0.0,
-             max_aspect=0.0, max_det=300, min_gt_area=0.0, progress_desc=None):
+             max_aspect=0.0, max_det=300, min_gt_area=0.0, progress_desc=None,
+             coco=False):                                          # >>> COCO: thêm cờ
     model.eval()
     all_scores, all_correct = [], []
     total_gt, total_tp, total_fp = 0, 0, 0
+    pred_all, gt_all, ngt_all = [], [], []                        # >>> COCO: gom theo ảnh
 
     iterator = tqdm(loader, desc=progress_desc, leave=False, total=len(loader)) if progress_desc else loader
 
     for imgs, labels_list, _ in iterator:
         imgs = imgs.to(device, non_blocking=True)
         preds = model(imgs)
-
         for b in range(imgs.shape[0]):
             gt_labels = labels_list[b]
             gt_person = gt_labels[gt_labels[:, 0] == 0] if len(gt_labels) > 0 else gt_labels
@@ -248,15 +273,20 @@ def evaluate(model, loader, device, img_size, strides, conf_thr=0.01, iou_thr=0.
                 raw = pred[b].cpu().numpy()
                 scale_dets = decode_fn(raw, strides[si], img_size, conf_thr=conf_thr)
                 dets.extend(scale_dets)
-
             dets = nms_numpy(dets, iou_threshold=0.5)
-            dets = filter_eval_detections(dets, img_size=img_size, min_box_area=min_box_area, min_aspect=min_aspect, max_aspect=max_aspect, max_det=max_det)
+            dets = filter_eval_detections(dets, img_size=img_size, min_box_area=min_box_area,
+                                          min_aspect=min_aspect, max_aspect=max_aspect, max_det=max_det)
+
+            pred_all.append(dets)                                 # >>> COCO
+            gt_all.append(gt_boxes_xywh)                          # >>> COCO
+            ngt_all.append(n_gt)                                  # >>> COCO
 
             if n_gt == 0:
                 for d in dets:
                     all_scores.append(d['score']); all_correct.append(0); total_fp += 1
                 continue
-            if len(dets) == 0: continue
+            if len(dets) == 0:
+                continue
 
             det_boxes = np.array([d['box'] for d in dets])
             gt_boxes_xyxy = np.array([xywh2xyxy(g) for g in gt_boxes_xywh])
@@ -275,21 +305,43 @@ def evaluate(model, loader, device, img_size, strides, conf_thr=0.01, iou_thr=0.
                 else:
                     all_scores.append(dets[di]['score']); all_correct.append(0); total_fp += 1
 
-    if len(all_scores) == 0 or total_gt == 0: return 0.0, 0.0, 0.0
-    indices = np.argsort(-np.array(all_scores))
-    correct = np.array(all_correct)[indices]
-    tp_cumsum = np.cumsum(correct)
-    fp_cumsum = np.cumsum(1 - correct)
-    recalls = tp_cumsum / total_gt
-    precisions = tp_cumsum / (tp_cumsum + fp_cumsum)
+    # ---- AP@0.5 cũ (giữ nguyên) ----
+    if len(all_scores) == 0 or total_gt == 0:
+        ap = recall = precision = 0.0
+    else:
+        indices = np.argsort(-np.array(all_scores))
+        correct = np.array(all_correct)[indices]
+        tp_cumsum = np.cumsum(correct)
+        fp_cumsum = np.cumsum(1 - correct)
+        recalls = tp_cumsum / total_gt
+        precisions = tp_cumsum / (tp_cumsum + fp_cumsum)
+        mrec = np.concatenate(([0.], recalls, [1.]))
+        mpre = np.concatenate(([1.], precisions, [0.]))
+        for i in range(len(mpre) - 2, -1, -1):
+            mpre[i] = max(mpre[i], mpre[i + 1])
+        i = np.where(mrec[1:] != mrec[:-1])[0]
+        ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
+        recall = tp_cumsum[-1] / total_gt if total_gt > 0 else 0.0
+        precision = total_tp / max(1, total_tp + total_fp)
 
-    mrec = np.concatenate(([0.], recalls, [1.]))
-    mpre = np.concatenate(([1.], precisions, [0.]))
-    for i in range(len(mpre) - 2, -1, -1): mpre[i] = max(mpre[i], mpre[i + 1])
-    i = np.where(mrec[1:] != mrec[:-1])[0]
-    ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
-    recall = tp_cumsum[-1] / total_gt if total_gt > 0 else 0.0
-    precision = total_tp / max(1, total_tp + total_fp)
+    # ---- >>> COCO: AP@.5:.95 + AP_small/medium/large + theo mật độ ----
+    if coco:
+        try:
+            from eval_coco import coco_eval
+            overall = coco_eval(pred_all, gt_all, img_size, verbose=False)
+            print("\n[COCO] overall:", {k: round(v, 4) for k, v in overall.items()})
+            ngt_arr = np.array(ngt_all)
+            for lo, hi in [(0, 10), (10, 30), (30, 1e9)]:
+                idx = np.where((ngt_arr >= lo) & (ngt_arr < hi))[0]
+                tag = f"{lo}-{int(hi) if hi < 1e8 else 'inf'} người (n={len(idx)})"
+                if len(idx) == 0:
+                    print(f"[COCO] {tag}: (rỗng)"); continue
+                mm = coco_eval([pred_all[i] for i in idx], [gt_all[i] for i in idx], img_size, verbose=False)
+                print(f"[COCO] {tag}: AP50={mm['AP50']:.3f} AP={mm['AP']:.3f} "
+                      f"AP_s={mm['AP_s']:.3f} AR_s={mm['AR_s']:.3f}")
+        except Exception as e:
+            print(f"[COCO] bỏ qua (lỗi: {e})")
+
     return ap, recall, precision
 
 def _iou_single(box1, box2):
@@ -447,18 +499,47 @@ def main():
     img_size = model_cfg.get('img_size', 384)
     model_kwargs = {k:v for k,v in model_cfg.items() if k not in ['img_size', 'version']}
 
-    model = build_model(model_name, **model_kwargs).to(device)
+    # ---- DGS + KD + Vibration-consistency config ----
+    dgs_cfg = dict(cfg.get('dgs') or {})
+    kd_cfg  = dict(cfg.get('kd') or {})
+    vib_cfg = dict(cfg.get('vib') or {})
+    use_density       = bool(dgs_cfg.get('use_density', False))
+    use_kd            = bool(kd_cfg.get('use_kd', False))
+    use_vib           = bool(vib_cfg.get('use_vib', False))
+    density_scale_idx = int(dgs_cfg.get('density_scale_idx', 1))
+    kd_feat_on        = use_kd and bool(kd_cfg.get('use_feature_kd', True))
+    vib_feat_on       = use_vib and bool(vib_cfg.get('use_feature', True))
+
+    # neck_feats (forward return_aux) cần khi: density loss, KD-feature, hoặc vib-feature.
+    # -> dùng chung density wrapper; density LOSS chỉ bật khi use_density.
+    need_aux = use_density or kd_feat_on or vib_feat_on
+    if need_aux:
+        if model_name != 'v15':
+            raise ValueError("DGS / vib-feature / KD-feature hiện chỉ hỗ trợ model v15.")
+        model = PFDetNanoV15Density(density_scale_idx=density_scale_idx, **model_kwargs).to(device)
+        if use_density:
+            print(f"[DGS] Density head BẬT (scale_idx={density_scale_idx}, stride={model.density_stride})")
+        else:
+            print("[AUX] Dùng density wrapper để lấy neck_feats (density LOSS tắt).")
+    else:
+        model = build_model(model_name, **model_kwargs).to(device)
+    use_nms_free = bool(getattr(model, 'nms_free', False))   # v17 NMS-free (head o2o)
     total_p, train_p = count_params(model)
     loss_name = {
         'v14': 'PFDetLossV14',
         'v15': 'PFDetLossV15 (STAL+ProgLoss)',
         'v16': 'PFDetLossV16 (STAL+ProgLoss)',
+        'v17': 'PFDetLossV15 (FLOPs-efficient: P2 mỏng + LiteHead)',
     }.get(model_name, 'PFDetLossV14')
     print(f"[MODEL] PFDet-Nano {model_name.upper()} | {train_p/1e6:.3f}M params | "
           f"Loss: {loss_name}")
     if device.type == 'cuda':
-        torch.backends.cudnn.benchmark = True
+        # Multi-scale đổi 11 size khác nhau -> cudnn.benchmark sẽ re-benchmark + cache workspace
+        # mỗi size => phình VRAM và chậm lúc đổi size. Chỉ bật khi size CỐ ĐỊNH.
+        _ms_on = bool((train_cfg.get('multiscale') or {}).get('enabled', False))
+        torch.backends.cudnn.benchmark = not _ms_on
         torch.backends.cuda.matmul.allow_tf32 = True
+        print(f"[CUDNN] benchmark={not _ms_on} (tắt khi multi-scale để khỏi phình VRAM theo size)")
 
     decode_fn = decode_predictions_np
     data_root = cfg['data']['root']
@@ -532,7 +613,7 @@ def main():
         tiny_area_px=lcfg.get('tiny_area_px', 576.0),
         total_epochs=train_cfg['epochs'],
     )
-    if model_name == 'v15':
+    if model_name in ('v15', 'v17'):   # v17 dùng cùng contract head + loss v15
         criterion = PFDetLossV15(
             **loss_common,
             stal_gamma=lcfg.get('stal_gamma', 2.0),
@@ -552,6 +633,85 @@ def main():
         )
     else:
         criterion = PFDetLossV14(**loss_common)
+
+    # ---- DGS cơ chế 2: crowd-aware localization weighting ----
+    # crowd_alpha=0 -> tắt (ablation A/B). Mặc định lấy từ config dgs, fallback 1.0.
+    crowd_alpha = float(dgs_cfg.get('crowd_alpha', 0.0 if not use_density else 1.0))
+    if hasattr(criterion, 'crowd_alpha'):
+        criterion.crowd_alpha = crowd_alpha
+        print(f"[DGS] crowd-loc weighting alpha={crowd_alpha} "
+              f"({'BẬT' if crowd_alpha > 0 else 'TẮT'})")
+    elif crowd_alpha > 0:
+        print(f"[DGS] ⚠ criterion {type(criterion).__name__} không có crowd_alpha — bỏ qua crowd-loc.")
+
+    # ---- v17 NMS-free: bọc criterion thành DualLossV17 (o2m + o2o k=1) ----
+    if use_nms_free:
+        o2o_criterion = PFDetLossV15(
+            **{**loss_common, 'k_tiny': 1, 'k_normal': 1},
+            stal_gamma=lcfg.get('stal_gamma', 2.0),
+            stal_area_ref=lcfg.get('stal_area_ref', 576.0),
+            stal_min_area_px=lcfg.get('stal_min_area_px', 64.0),
+            stal_k_min=1,                       # one-to-one: đúng 1 anchor/GT
+            prog_loss_factor=lcfg.get('prog_loss_factor', 2.0),
+        )
+        criterion = DualLossV17(criterion, o2o_criterion,
+                                lambda_o2o=float(lcfg.get('lambda_o2o', 1.0)))
+        print(f"[NMS-FREE] BẬT — head o2o (k=1), lambda_o2o={lcfg.get('lambda_o2o', 1.0)}. "
+              f"Inference bỏ NMS.")
+
+    # ---- DGS cơ chế 1: density head loss params ----
+    lambda_density       = float(dgs_cfg.get('lambda_density', 0.5))
+    density_scale        = float(dgs_cfg.get('density_scale', 100.0))
+    density_sigma_factor = float(dgs_cfg.get('density_sigma_factor', 0.2))
+    density_count_weight = float(dgs_cfg.get('density_count_weight', 0.1))
+
+    # ---- Knowledge Distillation (booster, không phải đóng góp) ----
+    teacher, kd_loss_fn = None, None
+    lambda_kd = float(kd_cfg.get('lambda_kd', 1.0))
+    if use_kd:
+        teacher_ckpt = kd_cfg.get('teacher_ckpt')
+        if not teacher_ckpt or not os.path.isfile(teacher_ckpt):
+            raise FileNotFoundError(f"KD bật nhưng teacher_ckpt không hợp lệ: {teacher_ckpt!r}")
+        teacher = load_teacher(
+            PFDetNanoV15, teacher_ckpt,
+            profile=kd_cfg.get('teacher_profile', 'balanced'), device=device,
+        )
+        kd_loss_fn = DistillationLoss(
+            student_neck_c=model.model_config['neck_c'],
+            teacher_neck_c=teacher.model_config['neck_c'],
+            n_scales=len(model.strides),
+            use_feature_kd=kd_feat_on,           # need_aux đảm bảo có neck_feats
+            temperature=float(kd_cfg.get('temperature', 2.0)),
+            conf_thr=float(kd_cfg.get('conf_thr', 0.1)),
+            w_cls=float(kd_cfg.get('w_cls', 1.0)),
+            w_box=float(kd_cfg.get('w_box', 1.0)),
+            w_feat=float(kd_cfg.get('w_feat', 0.5)),
+        ).to(device)
+        # adapters CÓ tham số -> phải đưa vào optimizer
+        if kd_loss_fn.adapters is not None:
+            optimizer.add_param_group({
+                'params': list(kd_loss_fn.adapters.parameters()),
+                'weight_decay': optimizer_cfg['weight_decay'],
+            })
+        print(f"[KD] BẬT — teacher={kd_cfg.get('teacher_profile','balanced')} "
+              f"({sum(p.numel() for p in teacher.parameters())/1e6:.2f}M) | "
+              f"feature_kd={kd_feat_on} | lambda_kd={lambda_kd}")
+
+    # ---- Vibration-consistency (ĐÓNG GÓP CHÍNH): detector kháng rung/nhoè khi bay ----
+    vibloss_fn = None
+    lambda_vib = float(vib_cfg.get('lambda_vib', 0.5))
+    vib_warmup = int(vib_cfg.get('warmup_epochs', 15))
+    if use_vib:
+        vibloss_fn = VibConsistencyLoss(
+            temperature=float(vib_cfg.get('temperature', 2.0)),
+            conf_thr=float(vib_cfg.get('conf_thr', 0.1)),
+            w_cls=float(vib_cfg.get('w_cls', 1.0)),
+            w_box=float(vib_cfg.get('w_box', 1.0)),
+            w_feat=float(vib_cfg.get('w_feat', 0.5)),
+            use_feature=vib_feat_on,
+        ).to(device)
+        print(f"[VIB] Vibration-consistency BẬT | feature={vib_feat_on} | "
+              f"lambda_vib={lambda_vib} | warmup={vib_warmup} epoch")
 
     use_amp = train_cfg.get('amp', True) and device.type == 'cuda'
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
@@ -575,7 +735,10 @@ def main():
         print(f"\n[INFO] Loading pretrained weights from {pretrained_path}")
         pt_ckpt = torch.load(pretrained_path, map_location=device, weights_only=False)
         state_key = 'ema' if 'ema' in pt_ckpt else 'model'
-        model.load_state_dict(pt_ckpt[state_key])
+        # strict=False khi model là density wrapper (need_aux): checkpoint base không có density_head keys
+        miss, unexp = model.load_state_dict(pt_ckpt[state_key], strict=not need_aux)
+        if need_aux and miss:
+            print(f"  -> aux head (density wrapper) khởi tạo mới ({len(miss)} keys thiếu — OK)")
         ema = ModelEMA(model, decay=train_cfg.get('ema_decay', 0.999))  # re-init EMA from loaded weights
         print(f"  -> Loaded {state_key.upper()} weights (AP={pt_ckpt.get('ap', '?')})")
 
@@ -668,9 +831,59 @@ def main():
             if batch_idx % grad_accumulate == 0:
                 optimizer.zero_grad(set_to_none=True)
 
+            cur_img_size = criterion.img_size
             with torch.amp.autocast('cuda', enabled=use_amp):
-                preds = model(imgs)
+                if need_aux:
+                    preds, aux = model(imgs, return_aux=True)
+                elif use_nms_free:
+                    preds, aux = model.forward_dual(imgs), None   # (o2m, o2o) cho DualLossV17
+                else:
+                    preds, aux = model(imgs), None
                 loss, loss_dict = criterion(preds, labels_list, epoch=epoch)
+
+                # DGS cơ chế 1: density head loss (regularize feature, vá recall cảnh đông)
+                if use_density:
+                    boxes_px = _labels_to_pixel_boxes(labels_list, cur_img_size)
+                    gt_density = build_density_targets(
+                        boxes_px, img_size=cur_img_size, stride=model.density_stride,
+                        sigma_factor=density_sigma_factor, density_scale=density_scale,
+                        box_format="cxcywh", device=device, dtype=aux['density'].dtype,
+                    )
+                    d_loss = density_loss(aux['density'], gt_density,
+                                          density_scale=density_scale,
+                                          count_weight=density_count_weight)
+                    loss = loss + lambda_density * d_loss
+                    loss_dict['density'] = float(d_loss.detach())
+
+                # KD (booster): teacher balanced -> student
+                if use_kd:
+                    cap = TeacherFeatCapture(teacher)
+                    with torch.no_grad():
+                        t_outs = teacher(imgs)
+                    t_feats = list(cap.feats)
+                    cap.remove()
+                    s_feats = aux['neck_feats'] if aux is not None else None
+                    kd_val, kd_logs = kd_loss_fn(
+                        preds, t_outs,
+                        student_feats=s_feats,
+                        teacher_feats=t_feats if s_feats is not None else None,
+                    )
+                    loss = loss + lambda_kd * kd_val
+                    loss_dict['kd'] = kd_logs['kd_total']
+
+                # Vibration-consistency: forward ảnh RUNG, ép khớp dự đoán ảnh SẠCH (preds=anchor)
+                if use_vib and epoch >= vib_warmup:
+                    imgs_vib = corrupt_batch(imgs, severity=None)   # rung ngẫu nhiên sev 1-3
+                    if vib_feat_on:
+                        v_out, v_aux = model(imgs_vib, return_aux=True)
+                        v_feats, c_feats = v_aux['neck_feats'], aux['neck_feats']
+                    else:
+                        v_out = model(imgs_vib)
+                        v_feats, c_feats = None, None
+                    v_loss, v_logs = vibloss_fn(v_out, preds, v_feats, c_feats)
+                    loss = loss + lambda_vib * v_loss
+                    loss_dict['vib'] = v_logs['vib_total']
+
                 loss = loss / grad_accumulate
 
             if not torch.isfinite(loss): continue
@@ -688,12 +901,16 @@ def main():
             for k, v in loss_dict.items():
                 loss_accum[k] += v
 
-            pbar.set_postfix(
-                loss=f"{loss_accum['total']/n_iter:.4f}",
-                obj=f"{loss_accum['obj']/n_iter:.4f}",
-                box=f"{loss_accum['box']/n_iter:.4f}",
-                pos=f"{loss_dict['n_pos']:.0f}"
-            )
+            postfix = {
+                'loss': f"{loss_accum['total']/n_iter:.4f}",
+                'obj':  f"{loss_accum['obj']/n_iter:.4f}",
+                'box':  f"{loss_accum['box']/n_iter:.4f}",
+                'pos':  f"{loss_dict['n_pos']:.0f}",
+            }
+            if use_density: postfix['den'] = f"{loss_accum['density']/n_iter:.3f}"
+            if use_kd:      postfix['kd']  = f"{loss_accum['kd']/n_iter:.3f}"
+            if use_vib and loss_accum.get('vib', 0): postfix['vib'] = f"{loss_accum['vib']/n_iter:.3f}"
+            pbar.set_postfix(**postfix)
 
         # ==========================================
         # SWA: accumulate model weights
@@ -718,10 +935,14 @@ def main():
             print("\n  [VAL] Đang chạy Validation và xuất ảnh...")
             val_model = ema.ema if train_cfg.get('val_use_ema', True) else model
             
+            # COCO breakdown (AP@.5:.95, AP75, AP_s, AR_s theo mật độ) cho bảng ablation —
+            # luôn chạy ở epoch cuối; giữa chừng theo cờ eval.coco.
+            run_coco = bool(eval_cfg.get('coco', False)) or epoch == epochs - 1
             ap, recall, precision = evaluate(
                 val_model, val_loader, device, img_size, model.strides,
                 conf_thr=eval_cfg.get('conf_thr', 0.01), iou_thr=eval_cfg.get('iou_thr', 0.5),
                 min_box_area=eval_cfg.get('min_box_area', 0.0), max_det=int(eval_cfg.get('max_det', 300)),
+                coco=run_coco,
             )
             print(f"  [VAL] AP@0.5={ap:.4f} | Recall={recall:.4f} | Precision={precision:.4f}")
 
@@ -771,6 +992,7 @@ def main():
             swa_model, val_loader, device, img_size, model.strides,
             conf_thr=eval_cfg.get('conf_thr', 0.01), iou_thr=eval_cfg.get('iou_thr', 0.5),
             min_box_area=eval_cfg.get('min_box_area', 0.0), max_det=int(eval_cfg.get('max_det', 300)),
+            coco=True,
         )
         print(f"[SWA] AP@0.5={swa_ap:.4f} | Recall={swa_recall:.4f} | Precision={swa_precision:.4f}")
         print(f"[SWA] vs Best EMA: AP {swa_ap:.4f} vs {best_ap:.4f} ({'+' if swa_ap > best_ap else ''}{swa_ap - best_ap:.4f})")

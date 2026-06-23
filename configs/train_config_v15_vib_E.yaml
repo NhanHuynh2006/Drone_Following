@@ -1,0 +1,124 @@
+# PFDet-Nano v15 — E (NGÔI SAO): Vibration-consistency — detector kháng rung/nhoè khi bay drone
+# Đóng góp chính của paper. So sánh với A (baseline 0.235) và B (chỉ density).
+# Run QUAN TRỌNG NHẤT (xem BEST_PLAN_DATA_DRIVEN.md mục 6).
+
+meta:
+  role: vib_consistency
+  notes: "Đóng góp chính = vibration-consistency. Train-time only, 0 chi phí inference."
+
+model:
+  version: v15
+  profile: light
+  activation: silu
+  use_area_attention: true
+  area: 3
+  img_size: 640
+
+# ---- DGS (Density-Guided Supervision) ----
+dgs:
+  use_density: false         # E thuần vibration: tắt density LOSS (wrapper chỉ để lấy neck_feats)
+  density_scale_idx: 1       # 1=P3(stride8). Thử 0=P2 nếu regime gần như toàn tiny.
+  lambda_density: 0.5        # giữ density loss ~0.1–1× det loss
+  density_scale: 100.0
+  density_sigma_factor: 0.2
+  density_count_weight: 0.1
+  crowd_alpha: 0.0           # tắt crowd-loc cho run E thuần vibration
+
+# ---- Vibration-consistency (ĐÓNG GÓP CHÍNH) ----
+vib:
+  use_vib: true
+  use_feature: true          # khớp cả neck_feats (mạnh hơn) -> tự dùng density wrapper lấy feats
+  lambda_vib: 0.5            # box loss áp đảo -> giảm 0.3 ; robust yếu -> tăng 0.8
+  warmup_epochs: 3           # finetune từ A (det đã ổn) -> ép consistency sớm
+  temperature: 2.0
+  conf_thr: 0.1
+  w_cls: 1.0
+  w_box: 1.0
+  w_feat: 0.5
+
+data:
+  root: "./data/visdrone"
+  cache_ram: false
+  train_images: "train/images"
+  train_labels: "train/labels"
+  val_images: "val/images"
+  val_labels: "val/labels"
+
+  # COCO extra BỎ: đã chứng minh làm hại AP trên VisDrone (người COCO to/gần, lệch domain).
+  # extra_images / extra_labels cố tình không khai báo -> train_v3 sẽ không trộn COCO.
+
+  mosaic_prob: 0.50
+  mixup_prob: 0.10
+  hflip_prob: 0.5
+  affine_prob: 1.0
+  color_jitter_prob: 1.0
+  drone_aug_prob: 0.30
+  copy_paste_prob: 0.40
+
+train:
+  device: "cuda:0"
+  benchmark_profile: desktop_4060
+  channels_last: true
+  # FINETUNE từ baseline A: khởi từ detector đã train -> chỉ dạy thêm kháng rung. Nhanh + so sánh sạch A vs A+vib.
+  pretrained: "./runs/train_v15_light_musgd_v3/best.pt"   # BEST model thật: AP@0.5=0.5932 (MuSGD)
+  epochs: 120              # finetune nên ít epoch
+  batch_size: 6            # ĐO THẬT: batch 8 @640 2-forward = 7.65GB > trần 7.3 -> OOM. batch 6 = 5.76GB an toàn.
+  grad_accumulate: 16      # 6 × 16 = effective batch 96
+  num_workers:  6          # RAM laptop 14GB: 14 workers từng làm cạn RAM giết VS Code
+  optimizer:
+    name: musgd            # KHỚP recipe của musgd_v3 (model BEST). gốc train lr=0.01 từ đầu.
+    lr: 0.002             # finetune: hạ ~1/5 lr gốc để không phá weight đã hội tụ
+    lr_min: 0.00005
+    weight_decay: 0.0005
+    momentum: 0.9
+  warmup_epochs: 3
+  amp: true
+  ema_decay: 0.9998
+  seed: 42
+  val_interval: 5
+  val_vis_conf: 0.50
+  mosaic_off_last: 20
+  val_use_ema: true
+  save_dir: "./runs/train_v15_vib_E"
+  multiscale:
+    enabled: true
+    range: [0.5, 1.0]
+    step: 32
+    freq: 10
+
+loss:
+  obj_weight: 8.0
+  box_weight: 4.0
+  qfl_beta: 2.0
+  hard_floor: 0.0
+  obj_warmup_epochs: 10
+  prog_epochs: 1200
+  k_tiny: 6
+  k_normal: 3
+  search_r_tiny: 3
+  search_r_normal: 2
+  tiny_area_px: 576.0
+  asl_area_ref: 0.004
+  asl_max: 4.0
+  tal_alpha: 1.0
+  tal_beta: 8.0
+  nwd_area_thr: 1024.0
+  nwd_c: 0.019
+  ohem_ratio: 8.0
+  stal_gamma: 2.0
+  stal_area_ref: 576.0
+  stal_min_area_px: 64.0
+  stal_k_min: 4
+  prog_loss_factor: 2.0
+
+eval:
+  conf_thr: 0.01
+  iou_thr: 0.5
+  max_det: 300
+  min_box_area: 16.0
+  min_aspect: 0.0
+  max_aspect: 8.0
+  coco: false                # COCO breakdown luôn chạy ở epoch cuối; bật true để chạy mỗi val_interval
+
+export:
+  output_names: [output_p2, output_p3, output_p4, output_p5]

@@ -8,6 +8,7 @@ from .box_ops import (
 from .losses_v14 import PFDetLossV14
 from .losses_v15 import PFDetLossV15
 from .losses_v16 import PFDetLossV16
+from .losses_v17_e2e import DualLossV17
 from .musgd import MuSGD
 
 __all__ = [
@@ -19,5 +20,6 @@ __all__ = [
     'PFDetLossV14',
     'PFDetLossV15',
     'PFDetLossV16',
+    'DualLossV17',
     'MuSGD',
 ]
