@@ -94,6 +94,8 @@ demo_cam.py            # demo webcam real-time (vẽ box)
 jetson/                # build_trt_jetson.py + bench_trt.py (TensorRT) ; DEPLOY_GUIDE.md (PX4 params + bay)
 jetson/control/        # follow_px4.cpp — ĐIỀU KHIỂN bay-theo C++ MAVSDK/PX4 (Kalman+feedforward+50Hz, MƯỢT)
 jetson/detector_pub.py # detector ONNX -> đẩy target qua UDP cho follow_px4 (kiến trúc companion-computer)
+jetson/record_flight.py# CÔNG CỤ RIÊNG (độc lập): thu ảnh+video lúc bay -> làm val set 3-10m thật
+jetson/pfdet_v17_*.onnx # model deploy v17 (FP32 ONNX @320/512/640) — TensorRT tự build FP16 trên Jetson
 configs/               # train_config_v15_*.yaml, train_config_v17_*.yaml
 deploy/                # checkpoint sạch + ONNX để deploy
 runs/                  # các lần train (best.pt/last.pt/log/curves)
@@ -148,8 +150,8 @@ python demo_cam.py --onnx deploy/pfdet_E_320.onnx --img-size 320 --cam 0 --conf 
 ### ƯU TIÊN HIỆN TẠI: **DEPLOY TRƯỚC** (paper để sau)
 
 **A. Deploy (đang làm):**
-1. ⏳ **Train v17 deploy** (`train_config_v17_light.yaml`, CÓ COCO enable epoch 100, nhắm 3-10m) — đang chạy `runs/train_v17_light`.
-   *Sau khi train xong → ĐỔI TÊN `runs/train_v17_light` + config thành `_deploy` để đồng bộ.*
+1. ✅ **v17 deploy ĐÃ TRAIN + ĐỔI TÊN** → `runs/train_v17_deploy/best.pt` (epoch 194, **AP@0.5=0.5136**), config `train_config_v17_deploy.yaml` (COCO từ epoch 100, nhắm 3-10m). Dừng ở epoch 230 vì BÃO HOÀ.
+2. ✅ **ĐÃ EXPORT ONNX** (`deploy/` + `jetson/pfdet_v17_{320,512,640}.onnx`, FP32; ONNX==PyTorch chênh 2e-5). Test: @512 AP50 0.443 / 51FPS, @320 0.231 / 131FPS (CPU x86; VisDrone-val tí xíu, không phải metric 3-10m). **Sẵn scp lên Jetson** → build FP16 (`build_trt_jetson.py --fp16`).
 2. Export ONNX → **TensorRT FP16** + benchmark Jetson (`jetson/`). Cập nhật `build_deploy.py` cho v17 (hiện hardcode v15).
 3. Deploy lên drone.
 
@@ -160,7 +162,8 @@ python demo_cam.py --onnx deploy/pfdet_E_320.onnx --img-size 320 --cam 0 --conf 
 - Còn lại: cài MAVSDK trên Jetson, build, **test SITL trước**, calibrate camera (fx/fy), bay test. Xem DEPLOY_GUIDE.md.
 
 **B. Paper (LÀM SAU khi deploy xong) — hướng đã chốt: efficiency + robustness:**
-- v17 baseline **no-COCO** (số chuẩn VisDrone) → AP/FLOPs. (v17 thua v15 ~0.07 AP nhưng FLOPs 2.8× ít hơn.)
+- 3 config v17: `_light` (baseline no-COCO, head thường) / `_nms_free` (no-COCO, NMS-free) / `_deploy` (CÓ COCO, đã train cho deploy).
+- v17 baseline **`train_config_v17_light.yaml`** (no-COCO, số chuẩn VisDrone) → AP/FLOPs. (thua v15 ~0.07 AP nhưng FLOPs 2.8× ít hơn → bán efficiency.)
 - v17 **NMS-free** (`_nms_free.yaml`, no-COCO) → headline end-to-end nếu AP ~bằng, else ablation.
 - **+ Vibration finetune** → robustness = đóng góp chính.
 - Baselines: YOLOv8n/11n/26n + v15 → bảng so sánh + đường cong robustness.
