@@ -21,7 +21,7 @@ import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import PFDetNanoV15, count_params, DEFAULT_EXPORT_OUTPUT_NAMES
+from models import build_model, normalize_model_version, count_params, DEFAULT_EXPORT_OUTPUT_NAMES
 from export import export_onnx, prepare_export_model
 
 
@@ -31,38 +31,43 @@ def main():
     ap.add_argument("--name", default="pfdet_E", help="tên file output")
     ap.add_argument("--img-size", type=int, default=320, help="resolution deploy (Pi = 320)")
     ap.add_argument("--profile", default="light")
+    ap.add_argument("--version", default=None, help="v15/v17... (mặc định đọc từ checkpoint cfg)")
     ap.add_argument("--out-dir", default="deploy")
     ap.add_argument("--calib-images", default=None, help="ảnh calibrate INT8 (mặc định val)")
     ap.add_argument("--calib-labels", default=None)
     ap.add_argument("--use-ema", action="store_true", default=True)
+    ap.add_argument("--no-int8", action="store_true", help="bỏ INT8 (Jetson dùng FP16)")
     args = ap.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
     dev = torch.device("cpu")
 
-    # ---- 1) Nạp weight train vào model DEPLOY base (bỏ density_head) ----
+    # ---- 1) Nạp weight train vào model DEPLOY (tự nhận version) ----
     ck = torch.load(args.weights, map_location=dev, weights_only=False)
     state = ck.get("ema") if (args.use_ema and "ema" in ck) else ck.get("model", ck)
-    model = PFDetNanoV15(profile=args.profile).eval()
+    ver = args.version or ck.get("model_version") or ck.get("cfg", {}).get("model", {}).get("version", "v15")
+    ver = normalize_model_version(ver)
+    model = build_model(ver, profile=args.profile).eval()
     miss, unexp = model.load_state_dict(state, strict=False)
-    print(f"[load] {args.weights}")
-    print(f"  missing={len(miss)} (phải 0)  unexpected={len(unexp)} (density_head train-only, bỏ OK)")
+    print(f"[load] {args.weights}  (version={ver})")
+    print(f"  missing={len(miss)} (phải 0)  unexpected={len(unexp)} (head aux train-only, bỏ OK)")
     assert len(miss) == 0, f"THIẾU weight deploy: {miss[:5]}"
 
     total, _ = count_params(model)
-    print(f"[model] base v15 {args.profile}: {total/1e6:.3f}M params (deploy)")
+    print(f"[model] {ver} {args.profile}: {total/1e6:.3f}M params (deploy)")
 
     # ---- 2) Lưu checkpoint deploy SẠCH (.pt) ----
     cfg = ck.get("cfg", {})
     cfg = copy.deepcopy(cfg) if cfg else {"model": {}, "export": {}}
     cfg.setdefault("model", {})
-    cfg["model"]["version"] = "v15"
+    cfg["model"]["version"] = ver
     cfg["model"]["profile"] = args.profile
     cfg["model"]["img_size"] = args.img_size
+    cfg["model"].pop("nms_free", None)   # deploy dùng head thường
     cfg.setdefault("export", {})["output_names"] = list(DEFAULT_EXPORT_OUTPUT_NAMES)
     pt_path = os.path.join(args.out_dir, f"{args.name}.pt")
     torch.save({"model": model.state_dict(), "ema": model.state_dict(),
-                "cfg": cfg, "model_version": "v15",
+                "cfg": cfg, "model_version": ver,
                 "ap": ck.get("ap", None), "source": args.weights}, pt_path)
     print(f"[save] {pt_path} ({os.path.getsize(pt_path)/1e6:.2f}MB) — checkpoint deploy sạch")
 
@@ -73,7 +78,11 @@ def main():
     export_onnx(export_model, args.img_size, onnx_path,
                 list(DEFAULT_EXPORT_OUTPUT_NAMES), opset=13, simplify=True)  # 13: per-channel INT8 cần axis
 
-    # ---- 4) Quantize INT8 STATIC (QLinearConv — chạy được trên ORT CPU/Pi; dynamic ConvInteger thì KHÔNG) ----
+    # ---- 4) Quantize INT8 STATIC (Jetson Maxwell KHÔNG cần — dùng FP16; INT8 còn phá accuracy tiny) ----
+    if args.no_int8:
+        print("[int8] BỎ QUA (--no-int8). Jetson dùng FP16 qua TensorRT.")
+        print("\n✅ XONG. File deploy ở thư mục:", args.out_dir)
+        return
     try:
         from onnxruntime.quantization import quantize_static, QuantType, QuantFormat, CalibrationDataReader
         from datasets import VisDronePersonDataset
