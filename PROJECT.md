@@ -1,7 +1,7 @@
 # PROJECT.md — PFDet-Nano (phát hiện người từ drone)
 
 > File này là **bản đồ dự án**: đọc 1 lần hiểu ngay đang làm gì / đã làm gì, khỏi lội hết source.
-> **Quy ước: mỗi lần sửa gì đáng kể → cập nhật file này.** (Cập nhật gần nhất: 2026-06-23)
+> **Quy ước: mỗi lần sửa gì đáng kể → cập nhật file này.** (Cập nhật gần nhất: 2026-07-20)
 
 ---
 
@@ -14,7 +14,8 @@ Phát hiện **người** (1 class) từ **camera drone**.
 Train trên **VisDrone** (data drone có nhãn) + **COCO person** (người gần, hợp tầm thấp).
 Hai mục tiêu song song:
 1. **Paper hội nghị** — đóng góp chính = **vibration-consistency**. Chỉ viết về MODEL (không có phần deploy).
-2. **Deploy realtime** trên **Jetson Nano B01** (GPU Maxwell + **TensorRT FP16**) — sẽ là **DỰ ÁN KHÁC**.
+2. **Deploy realtime** — **DỰ ÁN KHÁC**. Phần cứng ĐÃ ĐỔI: **Hailo NPU trên Raspberry Pi 5** (AI Kit/HAT, INT8).
+   *(Trước tính Jetson Nano TensorRT FP16 — nay chuyển Hailo. Điều khiển bay follow_px4 vẫn chạy CPU Pi 5; chỉ đổi inference sang HailoRT.)*
 
 > **2 nhánh model độc lập:**
 > | | PAPER | DEPLOY (dự án khác) |
@@ -33,9 +34,10 @@ Có sẵn cả hệ thống **bay theo người** (follow drone) — xem `FOLLOW
 |---|---|
 | Model tốt nhất (clean AP) | **musgd_v3** — `runs/train_v15_light_musgd_v3/best.pt`, AP@0.5 **0.5932** |
 | Model đóng góp (vibration) | **E** — `runs/train_v15_vib_E/last.pt`, robustness **retain 34.3%** (baseline 22.4%) |
-| Kiến trúc mới (đang train) | **v17** — 1.17M / 4.6 GFLOPs@640 (nhỏ + ít FLOPs hơn YOLO26n, vẫn có P2). `runs/train_v17_light/` |
-| Plan B (sẵn, chưa train) | **v17 NMS-free** — flag OFF mặc định, config `train_config_v17_nms_free.yaml` |
-| Deploy | ONNX FP32 ở `deploy/` chạy đúng = PyTorch. Demo webcam OK. Jetson TensorRT: scripts ở `jetson/` (chờ benchmark thật) |
+| Model deploy v17 | `runs/train_v17_deploy/best.pt` (COCO 3-10m, AP@0.5 0.5136). Model Hailo (no-attention) `runs/train_v17_hailo/best.pt` |
+| **Deploy Hailo** | ✅ **HEF chạy trên Pi5+Hailo-8L, 186 FPS @320.** `pfdet_v17_hailo8l.hef` + `hailo_demo_cam.py`. Xem `README_HAILO.md` |
+| Điều khiển bay | ✅ C++ MAVSDK/PX4 (`jetson/control/follow_px4.cpp`, tự chọn setpoint mượt) + `DEPLOY_GUIDE.md` |
+| **PAPER — hàng chờ tự động ĐANG CHẠY** | `paper_queue.sh` + `yolo_queue.sh`: v17 baseline→vibration→nms_free→eval→6 baseline (YOLOv8n/11n/26n/v10n + RT-DETR). Kết quả → `runs/paper_queue/SUMMARY.txt` |
 
 ---
 
@@ -91,6 +93,13 @@ eval_coco.py / run_eval_coco.py   # eval chuẩn pycocotools (AP@.5:.95, AP75, b
 build_deploy.py        # đóng gói model → ONNX (FP32) [+ INT8 đã bỏ vì hỏng tiny]
 test_accuracy_onnx.py  # 1 FILE test accuracy model ONNX (chạy máy này hoặc Pi)
 demo_cam.py            # demo webcam real-time (vẽ box)
+README_HAILO.md        # convert v17 -> Hailo HEF (Pi 5 AI Kit) — HD từng bước
+export_onnx_hailo.py   # export ONNX sạch cho Hailo (fuse, static, opset11)
+compile_hef.py         # ONNX -> HEF (Hailo DFC, chạy trên x86 laptop)
+hailo_demo_cam.py      # TEST detect trên Pi5+Hailo (chỉ model+camera, KHÔNG control) — decode/nms nhúng sẵn
+paper_queue.sh         # HÀNG CHỜ tự động: train v17 baseline->vib->nms_free->eval (auto-resume crash, cron@reboot)
+yolo_queue.sh          # chờ v17 xong -> train baselines so sánh
+train_yolo_baselines.py# train YOLOv8n/11n/26n/v10n + RT-DETR (đa dạng họ) trên cùng split, xuất params/FLOPs/mAP
 jetson/                # build_trt_jetson.py + bench_trt.py (TensorRT) ; DEPLOY_GUIDE.md (PX4 params + bay)
 jetson/control/        # follow_px4.cpp — ĐIỀU KHIỂN bay-theo C++ MAVSDK/PX4 (Kalman+feedforward+50Hz, MƯỢT)
 jetson/detector_pub.py # detector ONNX -> đẩy target qua UDP cho follow_px4 (kiến trúc companion-computer)
@@ -147,26 +156,20 @@ python demo_cam.py --onnx deploy/pfdet_E_320.onnx --img-size 320 --cam 0 --conf 
 
 ## 9. Roadmap
 
-### ƯU TIÊN HIỆN TẠI: **DEPLOY TRƯỚC** (paper để sau)
+### A. DEPLOY (Hailo Pi5 + PX4) — CƠ BẢN XONG
+1. ✅ **v17 deploy** `runs/train_v17_deploy/best.pt` (AP@0.5 0.5136, COCO 3-10m). ONNX @320/512/640 (== PyTorch).
+2. ✅ **Model Hailo** `train_config_v17_hailo.yaml` (bỏ AreaAttention P5 = op Hailo chê → thuần conv). `runs/train_v17_hailo/best.pt` (0.875M).
+3. ✅ **HEF chạy trên Pi5+Hailo-8L**: `pfdet_v17_hailo8l.hef`, **186 FPS @320**. Convert bằng Hailo DFC 3.34 trên chính laptop (`compile_hef.py`). Test: `hailo_demo_cam.py`. Xem `README_HAILO.md`.
+4. ✅ **Điều khiển bay** C++ MAVSDK/PX4 (`jetson/control/follow_px4.cpp` — Kalman + feedforward + 50Hz, tự chọn setpoint mượt nhất; chạy CPU Pi5) + `jetson/DEPLOY_GUIDE.md` (param PX4 QGC).
+5. ⏳ **Còn lại (khi bay):** cài MAVSDK Pi, test SITL, calibrate fx/fy, bay. Cân nhắc HEF @640 cho accuracy (Hailo-8L thừa TOPS). Quay footage 3-10m thật (`jetson/record_flight.py`) làm val + finetune.
 
-**A. Deploy (đang làm):**
-1. ✅ **v17 deploy ĐÃ TRAIN + ĐỔI TÊN** → `runs/train_v17_deploy/best.pt` (epoch 194, **AP@0.5=0.5136**), config `train_config_v17_deploy.yaml` (COCO từ epoch 100, nhắm 3-10m). Dừng ở epoch 230 vì BÃO HOÀ.
-2. ✅ **ĐÃ EXPORT ONNX** (`deploy/` + `jetson/pfdet_v17_{320,512,640}.onnx`, FP32; ONNX==PyTorch chênh 2e-5). Test: @512 AP50 0.443 / 51FPS, @320 0.231 / 131FPS (CPU x86; VisDrone-val tí xíu, không phải metric 3-10m). **Sẵn scp lên Jetson** → build FP16 (`build_trt_jetson.py --fp16`).
-2. Export ONNX → **TensorRT FP16** + benchmark Jetson (`jetson/`). Cập nhật `build_deploy.py` cho v17 (hiện hardcode v15).
-3. Deploy lên drone.
-
-**A2. Điều khiển bay (PX4 + Jetson) — ĐÃ VIẾT XONG (`jetson/control/`, `jetson/DEPLOY_GUIDE.md`):**
-- Firmware đổi ArduPilot → **PX4**. Control viết lại bằng **C++ MAVSDK** (nhanh, mượt). Code cũ pymavlink/ArduPilot KHÔNG tái dùng.
-- Thuật toán: **Kalman vận-tốc-không-đổi (bù trễ) + PD + velocity feedforward + jerk-limit + 50Hz → PX4 jerk-limited smoothing.** Chống giật (vấn đề velocity-only 10Hz cũ).
-- Kiến trúc tách: `detector_pub.py` (ONNX, ~15-30Hz) → UDP → `follow_px4` (C++, 50Hz) → PX4.
-- Còn lại: cài MAVSDK trên Jetson, build, **test SITL trước**, calibrate camera (fx/fy), bay test. Xem DEPLOY_GUIDE.md.
-
-**B. Paper (LÀM SAU khi deploy xong) — hướng đã chốt: efficiency + robustness:**
-- 3 config v17: `_light` (baseline no-COCO, head thường) / `_nms_free` (no-COCO, NMS-free) / `_deploy` (CÓ COCO, đã train cho deploy).
-- v17 baseline **`train_config_v17_light.yaml`** (no-COCO, số chuẩn VisDrone) → AP/FLOPs. (thua v15 ~0.07 AP nhưng FLOPs 2.8× ít hơn → bán efficiency.)
-- v17 **NMS-free** (`_nms_free.yaml`, no-COCO) → headline end-to-end nếu AP ~bằng, else ablation.
-- **+ Vibration finetune** → robustness = đóng góp chính.
-- Baselines: YOLOv8n/11n/26n + v15 → bảng so sánh + đường cong robustness.
+### B. PAPER — hướng CHỐT: efficiency + robustness. **HÀNG CHỜ TỰ ĐỘNG ĐANG CHẠY**
+- `paper_queue.sh` (nohup + cron@reboot + auto-resume crash): v17 baseline → +vibration → nms_free → eval (COCO + robustness).
+- `yolo_queue.sh` (chờ v17 xong): train **6 baseline đa dạng** cùng split VisDrone-person @640 → `train_yolo_baselines.py`:
+  YOLOv8n/11n/26n (CNN) + **YOLOv10n** (NMS-free) + **RT-DETR** (Transformer) = 3 paradigm.
+- Kết quả gom ở **`runs/paper_queue/SUMMARY.txt`** (params/FLOPs/mAP + robustness). Marker: `1_light_done...FINAL_ALL_DONE`.
+- **TODO sau (cần debug cùng user):** thêm classic non-YOLO qua **mmdetection** (RetinaNet/FCOS/EfficientDet) + NanoDet — mmcv hay vỡ nên làm supervised. Còn RemDet/PicoDet/MobileNet-SSD → **CITE số công bố**.
+- Venue nhắm: **Drones (MDPI, IF 4.8)** / IEEE Access / J. Real-Time Image Processing. TRÁNH predatory. **Rủ thầy đồng tác giả** (kinh phí APC + review).
 
 ---
 

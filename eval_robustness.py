@@ -74,19 +74,20 @@ def main():
     ap.add_argument("--val-labels", required=True)
     ap.add_argument("--img-size", type=int, default=640)
     ap.add_argument("--profile", default="light")
+    ap.add_argument("--version", default=None, help="v15/v17... (mặc định đọc từ checkpoint cfg)")
     ap.add_argument("--device", default="cuda:0")
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--workers", type=int, default=4)
     args = ap.parse_args()
 
     device = torch.device(args.device if "cpu" in args.device or torch.cuda.is_available() else "cpu")
-    try:
-        from models.pfdet_nano_v15 import PFDetNanoV15
-        model = PFDetNanoV15(profile=args.profile)
-    except Exception:
-        from models import build_model
-        model = build_model("v15", profile=args.profile)
-    ckpt = torch.load(args.weights, map_location="cpu")
+    from models import build_model, normalize_model_version
+    ckpt = torch.load(args.weights, map_location="cpu", weights_only=False)
+    ver = args.version or (ckpt.get("model_version") if isinstance(ckpt, dict) else None) \
+          or (ckpt.get("cfg", {}).get("model", {}).get("version", "v15") if isinstance(ckpt, dict) else "v15")
+    ver = normalize_model_version(ver)
+    model = build_model(ver, profile=args.profile)
+    print(f"[model] {ver} profile={args.profile}")
     state = ckpt.get("ema", ckpt.get("model", ckpt.get("state_dict", ckpt))) if isinstance(ckpt, dict) else ckpt
     if hasattr(state, "state_dict"):
         state = state.state_dict()

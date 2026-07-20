@@ -63,3 +63,10 @@ Thumbs.db
 
 # Ảnh demo webcam (riêng tư - mặt người)
 deploy/*.jpg
+
+# Hailo artifacts + queue logs (nặng/tạm)
+*.hef
+*.har
+*.qlog
+runs/paper_queue/
+runs/yolo/

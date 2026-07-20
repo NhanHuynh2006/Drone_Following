@@ -151,9 +151,12 @@ class PFDetNanoV17(nn.Module):
         hs = [self.head_p2_o2o, self.head_p3_o2o, self.head_p4_o2o, self.head_p5_o2o]
         return [h(f) for h, f in zip(hs, feats)]
 
-    def forward(self, x):
-        """Mặc định: o2m outputs (giống v17 thường). NMS-free inference -> dùng o2o (ít trùng)."""
+    def forward(self, x, return_aux=False):
+        """Mặc định: o2m outputs (giống v17 thường). NMS-free inference -> dùng o2o (ít trùng).
+        return_aux=True -> (o2m_det, {'neck_feats': feats}) cho VIBRATION / KD feature consistency."""
         feats = self._feats(x)
+        if return_aux:
+            return self._o2m(feats), {"neck_feats": feats}
         if self.nms_free and not self.training:
             return self._o2o(feats)        # eval NMS-free: dùng head one-to-one (decode KHÔNG cần NMS)
         return self._o2m(feats)

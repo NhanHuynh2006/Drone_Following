@@ -513,14 +513,19 @@ def main():
     # neck_feats (forward return_aux) cần khi: density loss, KD-feature, hoặc vib-feature.
     # -> dùng chung density wrapper; density LOSS chỉ bật khi use_density.
     need_aux = use_density or kd_feat_on or vib_feat_on
-    if need_aux:
-        if model_name != 'v15':
-            raise ValueError("DGS / vib-feature / KD-feature hiện chỉ hỗ trợ model v15.")
+    if need_aux and model_name == 'v15':
         model = PFDetNanoV15Density(density_scale_idx=density_scale_idx, **model_kwargs).to(device)
         if use_density:
             print(f"[DGS] Density head BẬT (scale_idx={density_scale_idx}, stride={model.density_stride})")
         else:
             print("[AUX] Dùng density wrapper để lấy neck_feats (density LOSS tắt).")
+    elif need_aux and model_name == 'v17':
+        if use_density:
+            raise ValueError("density head chưa hỗ trợ v17; v17 chỉ dùng aux cho vibration/KD feature.")
+        model = build_model('v17', **model_kwargs).to(device)   # v17.forward(return_aux=True) có neck_feats
+        print("[AUX] v17 dùng return_aux (neck_feats) cho vibration/KD feature consistency.")
+    elif need_aux:
+        raise ValueError(f"aux (density/vib-feat/KD-feat) chỉ hỗ trợ v15/v17, không phải {model_name}.")
     else:
         model = build_model(model_name, **model_kwargs).to(device)
     use_nms_free = bool(getattr(model, 'nms_free', False))   # v17 NMS-free (head o2o)
@@ -735,10 +740,14 @@ def main():
         print(f"\n[INFO] Loading pretrained weights from {pretrained_path}")
         pt_ckpt = torch.load(pretrained_path, map_location=device, weights_only=False)
         state_key = 'ema' if 'ema' in pt_ckpt else 'model'
-        # strict=False khi model là density wrapper (need_aux): checkpoint base không có density_head keys
-        miss, unexp = model.load_state_dict(pt_ckpt[state_key], strict=not need_aux)
-        if need_aux and miss:
-            print(f"  -> aux head (density wrapper) khởi tạo mới ({len(miss)} keys thiếu — OK)")
+        # LUÔN strict=False: finetune/transfer cho phép lệch keys
+        #   - density wrapper: checkpoint thiếu density_head (missing)
+        #   - config hailo (bỏ attention): checkpoint THỪA bottleneck_p5.* (unexpected)
+        miss, unexp = model.load_state_dict(pt_ckpt[state_key], strict=False)
+        if miss:
+            print(f"  -> {len(miss)} keys thiếu, khởi tạo mới (vd aux head) — OK")
+        if unexp:
+            print(f"  -> {len(unexp)} keys thừa trong checkpoint, bỏ qua (vd attention đã gỡ) — OK")
         ema = ModelEMA(model, decay=train_cfg.get('ema_decay', 0.999))  # re-init EMA from loaded weights
         print(f"  -> Loaded {state_key.upper()} weights (AP={pt_ckpt.get('ap', '?')})")
 

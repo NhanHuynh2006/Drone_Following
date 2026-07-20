@@ -35,10 +35,10 @@ data:
 train:
   device: "cuda:0"
   channels_last: true
-  epochs: 400
-  batch_size: 12             # v17 nhẹ hơn v15 -> batch 12 ổn. OOM thì hạ 8.
-  grad_accumulate: 8         # effective batch = 96
-  num_workers: 6             # RAM laptop 14GB
+  epochs: 300
+  batch_size: 16
+  grad_accumulate: 6
+  num_workers: 8
   optimizer:
     name: musgd
     lr: 0.01

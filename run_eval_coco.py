@@ -67,6 +67,7 @@ def main():
     ap.add_argument("--val-labels", required=True)
     ap.add_argument("--img-size", type=int, default=640)
     ap.add_argument("--profile", default="light")
+    ap.add_argument("--version", default=None, help="v15/v17... (mặc định đọc từ checkpoint cfg)")
     ap.add_argument("--device", default="cuda:0")
     ap.add_argument("--conf", type=float, default=0.01)
     ap.add_argument("--batch", type=int, default=8)
@@ -75,15 +76,16 @@ def main():
 
     device = torch.device(args.device if torch.cuda.is_available() or "cpu" in args.device else "cpu")
 
-    # ---- model ----
-    try:
-        from models.pfdet_nano_v15 import PFDetNanoV15
-        model = PFDetNanoV15(profile=args.profile)
-    except Exception:
-        from models import build_model
-        model = build_model("v15", profile=args.profile)
+    # ---- model (tự nhận version từ checkpoint, hoặc --version) ----
+    import torch as _t
+    from models import build_model, normalize_model_version
+    _ck = _t.load(args.weights, map_location="cpu", weights_only=False)
+    ver = args.version or (_ck.get("model_version") if isinstance(_ck, dict) else None) \
+          or (_ck.get("cfg", {}).get("model", {}).get("version", "v15") if isinstance(_ck, dict) else "v15")
+    ver = normalize_model_version(ver)
+    model = build_model(ver, profile=args.profile)
     model = load_weights(model, args.weights, device)
-    print(f"[model] v15 profile={args.profile} params={sum(p.numel() for p in model.parameters())/1e6:.2f}M")
+    print(f"[model] {ver} profile={args.profile} params={sum(p.numel() for p in model.parameters())/1e6:.2f}M")
 
     # ---- data ----
     from datasets import VisDronePersonDataset, collate_fn
