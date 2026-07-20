@@ -25,6 +25,10 @@ for i in $(seq 1 40); do
 done
 touch "$Q/BASELINES_DONE"   # đảm bảo có marker dù retry cạn (model lỗi không chặn hoàn tất)
 
-# 3) marker hoàn tất TOÀN BỘ
-log "========== TOÀN BỘ PIPELINE PAPER HOÀN TẤT (v17 + vibration + nms_free + YOLO) =========="
+# 3) TỰ ĐỘNG so no-COCO vs COCO(deploy) -> ghi DECISION.md (khuyến nghị model-only vs system)
+log "========== TỰ QUYẾT ĐỊNH HƯỚNG PAPER =========="
+$PY paper_decision.py >> "$Q/decision.log" 2>&1
+
+# 4) marker hoàn tất TOÀN BỘ
+log "========== TOÀN BỘ PIPELINE PAPER HOÀN TẤT (v17 + vibration + nms_free + YOLO + decision) =========="
 touch "$Q/FINAL_ALL_DONE"

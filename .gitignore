@@ -70,3 +70,7 @@ deploy/*.jpg
 *.qlog
 runs/paper_queue/
 runs/yolo/
+
+# Paper draft/decision — KHÔNG public trước khi nộp
+PAPER_DRAFT.md
+DECISION.md
