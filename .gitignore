@@ -74,3 +74,10 @@ runs/yolo/
 # Paper draft/decision — KHÔNG public trước khi nộp
 PAPER_DRAFT.md
 DECISION.md
+runs/paper_queue/DECISION.md
+
+# File nặng/tạm — KHÔNG đẩy GitHub (>100MB bị chặn / không cần cho viết báo)
+*.mkv
+*.nohup
+runs/_stray_wrongpath/
+runs/detect/

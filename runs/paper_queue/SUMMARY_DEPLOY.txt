@@ -1,0 +1,9 @@
+SUMMARY DEPLOY (phase 2) — bắt đầu Thu Jul 23 12:21:31 AM +07 2026
+
+===== BASELINES DEPLOY (COCO-mix train, VisDrone-val @640 đồng nhất deploy; đa dạng họ) =====
+yolov8n: params=0.00M  GFLOPs=0.0  mAP50=0.6114  mAP50-95=0.2711
+yolo11n: params=0.00M  GFLOPs=0.0  mAP50=0.6098  mAP50-95=0.2725
+yolo26n: params=0.00M  GFLOPs=0.0  mAP50=0.5979  mAP50-95=0.2677
+
+===== BASELINES DEPLOY (COCO-mix train, VisDrone-val @640 đồng nhất deploy; đa dạng họ) =====
+yolov10n: params=2.71M  GFLOPs=8.4  mAP50=0.6002  mAP50-95=0.2660

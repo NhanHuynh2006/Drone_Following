@@ -25,6 +25,12 @@ Hai mục tiêu song song:
 > | đóng góp | vibration-consistency | — |
 > Lưu ý: NMS-free có thể cho AP thấp hơn (head o2o khó train) → phải train thử; nếu tụt thì làm ablation, dùng v17 thường làm headline.
 
+> **⭐ QUYẾT ĐỊNH PAPER (2026-07-21): HYBRID — 1 bài, model + system.**
+> - **Bảng chính** = VisDrone-CHUẨN (light + vibration + baselines) → so công bằng với prior work, AN TOÀN.
+> - **Section "Real-world Deployment"** = model `deploy` (COCO variant) + Hailo 186fps + PX4 follow (định tính; định lượng khi có footage 3-5m).
+> - **KHÔNG** lấy deploy làm model chính vì chưa có val set 3-5m → không chứng minh được COCO có ích (VisDrone-val làm COCO trông "hại"). Lý do bỏ full-pivot: buộc retrain 5 baseline trên COCO-mix + refinetune lại vib từ deploy + phải đi quay/gán nhãn val 3-5m trước.
+> - Hệ quả: pipeline hiện tại (paper_queue + yolo_queue trên VisDrone-chuẩn) ĐÚNG hướng, không đổi. Nếu sau này quay được footage 3-5m thật → nâng cấp thành full-pivot.
+
 Có sẵn cả hệ thống **bay theo người** (follow drone) — xem `FOLLOW_CONTROL.md`, `follow_drone/`.
 
 ---
@@ -37,7 +43,7 @@ Có sẵn cả hệ thống **bay theo người** (follow drone) — xem `FOLLOW
 | Model deploy v17 | `runs/train_v17_deploy/best.pt` (COCO 3-10m, AP@0.5 0.5136). Model Hailo (no-attention) `runs/train_v17_hailo/best.pt` |
 | **Deploy Hailo** | ✅ **HEF chạy trên Pi5+Hailo-8L, 186 FPS @320.** `pfdet_v17_hailo8l.hef` + `hailo_demo_cam.py`. Xem `README_HAILO.md` |
 | Điều khiển bay | ✅ C++ MAVSDK/PX4 (`jetson/control/follow_px4.cpp`, tự chọn setpoint mượt) + `DEPLOY_GUIDE.md` |
-| **PAPER — hàng chờ tự động ĐANG CHẠY** | `paper_queue.sh` + `yolo_queue.sh`: v17 baseline→vibration→nms_free→eval→6 baseline (YOLOv8n/11n/26n/v10n + RT-DETR). Kết quả → `runs/paper_queue/SUMMARY.txt` |
+| **PAPER — hàng chờ tự động ĐANG CHẠY** | `paper_queue.sh` + `yolo_queue.sh`: v17 baseline→vibration→nms_free→eval→5 baseline (YOLOv8n/11n/26n/v10n + RT-DETR). Kết quả → `runs/paper_queue/SUMMARY.txt` |
 
 ---
 
@@ -150,6 +156,17 @@ python demo_cam.py --onnx deploy/pfdet_E_320.onnx --img-size 320 --cam 0 --conf 
 - **FLOPs > params** mới là vấn đề: P2 ở độ phân giải cao ăn FLOPs khủng → làm P2 mỏng.
 - **Resolution là vật lý:** người tí xíu @320 mất nửa AP (0.235→0.089). Deploy nên 512.
 - **Loss (từ v12/v13):** focal gamma=2 → precision≈0; hard target=1 → FP nhiều; **cls bias init -5.5..-6.0**; obj_weight ≫ box_weight lúc đầu.
+- **RT-DETR KHÔNG được để `optimizer=auto`.** Ultralytics auto chọn **MuSGD(lr=0.01)** (công thức CNN) → Transformer/DETR
+  **sập ngay epoch 2-4** (mAP50 0.47→0.07), bò lại không kịp vượt epoch 1 → early-stop ở ep21 = **số RÁC**
+  (RT-DETR-l 32M mà thua yolov8n 3M). Phải ép `optimizer="AdamW", lr0=1e-4`, và `patience` lớn (50) vì DETR hội tụ chậm.
+  → Bài học chung: **early-stopping patience phải theo từng họ model**, không dùng chung 1 giá trị.
+- **`model.info(verbose=False)` trả `None`** ở ultralytics 8.4.x (hàm `model_info` return sớm khi không verbose)
+  → code `info[1] if info else 0.0` nuốt lỗi, ghi **params=0.00M GFLOPs=0.0** cho mọi baseline. Tính trực tiếp bằng
+  `sum(p.numel() for p in m.model.parameters())` + `get_flops(m.model, imgsz=640)`. Xem `summarize_baselines.py`.
+- **Ultralytics `project` PHẢI là đường dẫn TUYỆT ĐỐI.** Đưa relative (`"runs/yolo"`) thì ultralytics ghép vào `runs_dir/task`
+  → ghi thật vào `runs/detect/runs/yolo/...`, lệch chỗ script đi tìm `best.pt` → train xong mới crash ở bước eval, rồi
+  hàng chờ train lại từ đầu (vòng lặp đốt GPU). Đã fix bằng `os.path.join(os.path.dirname(__file__), "runs", ...)`.
+- **`pkill -f <tên script>` tự giết chính shell đang chạy lệnh** (vì `-f` khớp cả command line của mình). Dùng `pkill -f "[t]ên"` hoặc kill theo PID.
 - **Hạ tầng train (laptop 8GB GPU / 14GB RAM):** `PYTORCH_CUDA_ALLOC_CONF=expandable_segments` + tắt `cudnn.benchmark` khi multiscale (đã baked vào train_v3) để khỏi OOM tích lũy; `num_workers ≤ 6` để khỏi cạn RAM giết VS Code; batch nhỏ (v15 batch 6-8 @640, v17 nhẹ hơn batch 12 OK).
 
 ---
@@ -165,9 +182,14 @@ python demo_cam.py --onnx deploy/pfdet_E_320.onnx --img-size 320 --cam 0 --conf 
 
 ### B. PAPER — hướng CHỐT: efficiency + robustness. **HÀNG CHỜ TỰ ĐỘNG ĐANG CHẠY**
 - `paper_queue.sh` (nohup + cron@reboot + auto-resume crash): v17 baseline → +vibration → nms_free → eval (COCO + robustness).
-- `yolo_queue.sh` (chờ v17 xong): train **6 baseline đa dạng** cùng split VisDrone-person @640 → `train_yolo_baselines.py`:
+- `yolo_queue.sh` (chờ v17 xong): train **5 baseline đa dạng** cùng split VisDrone-person @640 → `train_yolo_baselines.py`:
   YOLOv8n/11n/26n (CNN) + **YOLOv10n** (NMS-free) + **RT-DETR** (Transformer) = 3 paradigm.
 - Kết quả gom ở **`runs/paper_queue/SUMMARY.txt`** (params/FLOPs/mAP + robustness). Marker: `1_light_done...FINAL_ALL_DONE`.
+- **PHASE 2 (nhánh DEPLOY, tự động sau no-COCO):** `deploy_queue.sh` (nohup + cron@reboot, flock) CHỜ `FINAL_ALL_DONE` rồi:
+  (1) vib finetune từ deploy `train_config_v17_vib_deploy.yaml` → `runs/train_v17_vib_deploy`;
+  (2) 6 YOLO baseline trên **COCO-mix** `train_yolo_baselines_deploy.py` (`configs/visdrone_coco_ultralytics.yaml`, val=**VisDrone-val 548 ĐỒNG NHẤT deploy**);
+  (3) eval các model pfdet trên **`data/flight_val`** (held-out THẬT 3-6m, 92 frame — chỉ để tham chiếu domain, KHÔNG dùng làm val lúc train vì quá ít). Kết quả → `runs/paper_queue/SUMMARY_DEPLOY.txt`, marker `DEPLOY_ALL_DONE`.
+  Bằng chứng mở khoá: deploy(+COCO) AP@0.5 **0.762** vs light(no-COCO) **0.143** trên flight_val (xem `RESULTS_FLIGHT_VAL.md`).
 - **TODO sau (cần debug cùng user):** thêm classic non-YOLO qua **mmdetection** (RetinaNet/FCOS/EfficientDet) + NanoDet — mmcv hay vỡ nên làm supervised. Còn RemDet/PicoDet/MobileNet-SSD → **CITE số công bố**.
 - Venue nhắm: **Drones (MDPI, IF 4.8)** / IEEE Access / J. Real-Time Image Processing. TRÁNH predatory. **Rủ thầy đồng tác giả** (kinh phí APC + review).
 

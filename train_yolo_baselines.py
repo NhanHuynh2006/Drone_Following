@@ -8,18 +8,25 @@ Chạy: python train_yolo_baselines.py   (tự lặp 3 model)
 """
 import os
 from ultralytics import YOLO, RTDETR
+from ultralytics.utils.torch_utils import get_flops
 
 DATA = "configs/visdrone_person_ultralytics.yaml"
 SUMMARY = "runs/paper_queue/SUMMARY.txt"
-PROJ = "runs/yolo"
+# PHẢI tuyệt đối: ultralytics ghép project tương đối vào runs_dir của nó
+# -> "runs/yolo" biến thành runs/detect/runs/yolo (lệch chỗ script đi tìm best.pt).
+PROJ = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs", "yolo")
 EPOCHS = 150
 # (tên, loại, batch) — ĐA DẠNG HỌ: CNN 1-stage / NMS-free / Transformer(DETR)
+# (tên, loại, batch, kwargs riêng) — kwargs ghi đè mặc định patience=20
 MODELS = [
-    ("yolov8n",  "yolo",   16),   # CNN 1-stage — baseline kinh điển
-    ("yolo11n",  "yolo",   16),   # CNN 1-stage — chuẩn hiện hành
-    ("yolo26n",  "yolo",   16),   # CNN NMS-free — mới nhất
-    ("yolov10n", "yolo",   16),   # NMS-free end-to-end (NeurIPS 2024)
-    ("rtdetr-l", "rtdetr",  4),   # Transformer/DETR — khác hẳn YOLO (batch nhỏ vì model to)
+    ("yolov8n",  "yolo",   16, {}),   # CNN 1-stage — baseline kinh điển
+    ("yolo11n",  "yolo",   16, {}),   # CNN 1-stage — chuẩn hiện hành
+    ("yolo26n",  "yolo",   16, {}),   # CNN NMS-free — mới nhất
+    ("yolov10n", "yolo",   16, {}),   # NMS-free end-to-end (NeurIPS 2024)
+    # RT-DETR = Transformer. 'optimizer=auto' chọn MuSGD(lr=0.01) -> SẬP ngay epoch 2-4
+    # (mAP 0.47->0.07), rồi bò lại nhưng không kịp vượt ep1 -> early-stop ở ep21 = số RÁC.
+    # DETR phải dùng AdamW lr~1e-4, và hội tụ CHẬM nên patience phải lớn.
+    ("rtdetr-l", "rtdetr",  4, {"optimizer": "AdamW", "lr0": 1e-4, "patience": 50}),
 ]
 
 
@@ -40,7 +47,7 @@ def train_done(name):
 
 def main():
     append("\n===== BASELINES (VisDrone-person @640, từ COCO-pretrained; đa dạng họ) =====")
-    for name, typ, bs in MODELS:
+    for name, typ, bs, extra in MODELS:
         donemark = f"{PROJ}/{name}/PAPER_DONE"
         if os.path.exists(donemark):
             print(f"[base] {name} đã xong, bỏ qua"); continue
@@ -52,13 +59,17 @@ def main():
                 if os.path.exists(last):
                     print(f"[base] {name}: RESUME"); Cls(last).train(resume=True)
                 else:
-                    print(f"[base] {name}: train mới (batch {bs})")
+                    kw = dict(patience=20); kw.update(extra)   # mặc định 20, model đặc biệt tự ghi đè
+                    print(f"[base] {name}: train mới (batch {bs}, {kw})")
                     Cls(f"{name}.pt").train(data=DATA, imgsz=640, epochs=EPOCHS, batch=bs,
-                                            workers=8, name=name, project=PROJ, exist_ok=True, patience=0)
+                                            workers=8, name=name, project=PROJ, exist_ok=True, **kw)
             model = Cls(best)
-            info = model.info(verbose=False)      # (layers, params, gradients, flops)
-            params = info[1] / 1e6 if info else 0.0
-            flops = info[3] if info else 0.0
+            # model.info(verbose=False) trả None ở ultralytics 8.4.x -> tính trực tiếp cho chắc
+            params = sum(p.numel() for p in model.model.parameters()) / 1e6
+            try:
+                flops = get_flops(model.model, imgsz=640)
+            except Exception:
+                flops = 0.0
             metrics = model.val(data=DATA, imgsz=640, split="val", verbose=False)
             append(f"{name}: params={params:.2f}M  GFLOPs={flops:.1f}  "
                    f"mAP50={metrics.box.map50:.4f}  mAP50-95={metrics.box.map:.4f}")

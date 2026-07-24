@@ -1,0 +1,12 @@
+# COCO-mix cho YOLO baselines (nhánh DEPLOY) — so công bằng với v17_deploy(+COCO).
+# train = VisDrone-person + COCO-person ; val = VisDrone-val (ĐỒNG NHẤT với cách deploy được val).
+# flight_val (92 tấm) KHÔNG dùng làm val lúc train (quá ít) -> giữ làm held-out eval "để sau".
+# ultralytics tự tìm labels bằng cách đổi '/images' -> '/labels' ở mỗi thư mục.
+path: /home/nolan/Documents/pfdet_drone_follow
+train:
+  - data/visdrone_ultralytics/train/images
+  - data/coco_person/images
+val: data/visdrone_ultralytics/val/images
+
+names:
+  0: person
