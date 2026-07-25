@@ -26,13 +26,24 @@
 
 Robustness đường cong (clean→sev1→sev2→sev3): trong SUMMARY.txt, dòng `[robust]`. Vibration ~**1.8× retain**.
 
-### 2b. YOLO baselines — VisDrone-val @640, ultralytics.val (`SUMMARY.txt` / `SUMMARY_DEPLOY.txt`)
-Phase-1 (train VisDrone-only): yolov8n 0.6158 / yolo11n 0.6212 / yolo26n 0.6087 / yolov10n 0.6228 (mAP50).
-Phase-2 (train VisDrone+COCO): yolov8n 0.6114 / yolov10n 0.6002 (2.71M, 8.4G) … (RT-DETR chưa xong).
+### 2b. YOLO baselines — params/GFLOPs/mAP (`runs/paper_queue/BASELINES_TABLE.md`, ĐÃ XONG)
+VisDrone-val @640, ultralytics.val. So với **PFDet v17 = 1.17M / 4.6 GFLOPs** (nhỏ nhất, ít FLOPs nhất).
 
-> ⚠️ **CẢNH BÁO ĐO LƯỜNG:** số YOLO đo bằng `ultralytics.val()`, số pfdet đo bằng `pycocotools` — **giao thức
-> KHÁC nhau (conf/max_det/area), KHÔNG so trực tiếp được.** `summarize_baselines.py` đo lại thống nhất →
-> `BASELINES_TABLE.md`. **Bảng cuối của paper phải dùng cùng 1 thước đo.**
+| model | params | GFLOPs | mAP50 P1(no-COCO) | mAP50 P2(+COCO) |
+|---|---|---|---|---|
+| **PFDet v17** | **1.17M** | **4.6** | 0.513* | 0.502* (deploy) |
+| yolo26n | 2.50M | 5.8 | 0.6087 | 0.5979 |
+| yolo11n | 2.59M | 6.4 | 0.6212 | 0.6098 |
+| yolov10n | 2.71M | 8.4 | 0.6228 | 0.6002 |
+| yolov8n | 3.01M | 8.2 | 0.6158 | 0.6114 |
+| rtdetr-l | 32.81M | 108.0 | 0.6856 | 0.6930 |
+
+*(P2 +COCO nano thấp hơn P1 — khớp bài học "COCO hại VisDrone-val người tí xíu". RT-DETR thì +COCO nhỉnh hơn.)*
+
+> ⚠️ **CẢNH BÁO ĐO LƯỜNG (CHƯA giải quyết):** `*` = số v17 (0.513/0.502) đo bằng **pycocotools**, còn số YOLO đo
+> bằng **ultralytics.val()** — **giao thức KHÁC nhau (conf/max_det/area), KHÔNG so mAP trực tiếp được.**
+> So **params/GFLOPs thì OK** (đo cùng cách). Trước khi lên bảng cuối paper: phải eval v17 bằng ultralytics HOẶC
+> eval YOLO bằng pycocotools để **1 thước đo duy nhất**. (Efficiency v17 thắng rõ; AP cần đồng nhất mới kết luận.)
 
 ### 2c. Deployment — val THẬT 3-6m (`RESULTS_FLIGHT_VAL.md`, 92 frame bay thật)
 | model | data | **AP50** | AP@.5:.95 |

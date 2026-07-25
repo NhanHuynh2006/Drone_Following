@@ -99,3 +99,59 @@ rtdetr-l: params=0.00M  GFLOPs=0.0  mAP50=0.4724  mAP50-95=0.1726
 ## 🎯 KHUYẾN NGHỊ: **SYSTEM PAPER (model COCO + deploy). Gap NHỎ trên val, mà COCO tốt hơn cho 3-10m -> dùng model COCO cho cả paper lẫn bay, thêm phần Hailo + PX4 control + bay thật.**
 
 > Lưu ý: VisDrone-val toàn người tí xíu (lợi cho no-COCO). Deploy thật 3-10m người to -> COCO tốt hơn. Nếu gap val nhỏ, COCO là lựa chọn rõ ràng tốt hơn cho hệ thống.
+
+===== BASELINES (VisDrone-person @640, từ COCO-pretrained; đa dạng họ) =====
+
+===== v17_BASELINE =====
+[weights] runs/train_v17_light/best.pt
+
+===== BASELINES (VisDrone-person @640, từ COCO-pretrained; đa dạng họ) =====
+[COCO] overall: {'AP': 0.1892, 'AP50': 0.5127, 'AP75': 0.0811, 'AP_s': 0.1872, 'AP_m': 0.3615, 'AP_l': 0.0, 'AR_100': 0.3146, 'AR_s': 0.3131, 'AR_m': 0.4365, 'AR_l': 0.0}
+
+# QUYẾT ĐỊNH HƯỚNG PAPER (tự động 2026-07-25 07:35)
+
+## Số liệu (VisDrone-val @640, AP@.5:.95 / AP50 / AP75)
+- **no-COCO (paper baseline)**: AP=0.1892  AP50=0.5127  AP75=0.0811
+- **COCO (deploy)**: AP=0.1781  AP50=0.5016  AP75=0.0719
+- **no-COCO + vibration**: AP=0.1746  AP50=0.4837  AP75=0.0728
+
+## Gap (no-COCO trừ COCO): ΔAP=+0.0111  ΔAP50=+0.0111
+
+## 🎯 KHUYẾN NGHỊ: **SYSTEM PAPER (model COCO + deploy). Gap NHỎ trên val, mà COCO tốt hơn cho 3-10m -> dùng model COCO cho cả paper lẫn bay, thêm phần Hailo + PX4 control + bay thật.**
+
+> Lưu ý: VisDrone-val toàn người tí xíu (lợi cho no-COCO). Deploy thật 3-10m người to -> COCO tốt hơn. Nếu gap val nhỏ, COCO là lựa chọn rõ ràng tốt hơn cho hệ thống.
+[robust] clean: AP=0.1892 AP50=0.5127 AP75=0.0811 AP_s=0.1872
+[robust] sev1: AP=0.0772 AP50=0.2572 AP75=0.0220 AP_s=0.0753
+[robust] sev2: AP=0.0110 AP50=0.0439 AP75=0.0026 AP_s=0.0109
+[robust] sev3: AP=0.0081 AP50=0.0167 AP75=0.0099 AP_s=0.0081
+[robust] mCP=0.0321  giữ được 17.0% so với sạch
+
+===== v17_VIBRATION =====
+[weights] runs/train_v17_vib/best.pt
+[COCO] overall: {'AP': 0.1746, 'AP50': 0.4837, 'AP75': 0.0728, 'AP_s': 0.1728, 'AP_m': 0.338, 'AP_l': 0.0, 'AR_100': 0.3016, 'AR_s': 0.3, 'AR_m': 0.4269, 'AR_l': 0.0}
+[robust] clean: AP=0.1746 AP50=0.4837 AP75=0.0728 AP_s=0.1728
+[robust] sev1: AP=0.1160 AP50=0.3559 AP75=0.0400 AP_s=0.1133
+[robust] sev2: AP=0.0412 AP50=0.1384 AP75=0.0159 AP_s=0.0388
+[robust] sev3: AP=0.0090 AP50=0.0298 AP75=0.0040 AP_s=0.0090
+[robust] mCP=0.0554  giữ được 31.7% so với sạch
+
+===== v17_NMSFREE =====
+[weights] runs/train_v17_nms_free/best.pt
+[COCO] overall: {'AP': 0.1954, 'AP50': 0.5213, 'AP75': 0.0878, 'AP_s': 0.1939, 'AP_m': 0.3508, 'AP_l': 0.2, 'AR_100': 0.3179, 'AR_s': 0.3165, 'AR_m': 0.4298, 'AR_l': 0.2}
+[robust] clean: AP=0.1954 AP50=0.5213 AP75=0.0878 AP_s=0.1939
+[robust] sev1: AP=0.1074 AP50=0.3318 AP75=0.0358 AP_s=0.1053
+[robust] sev2: AP=0.0279 AP50=0.0886 AP75=0.0124 AP_s=0.0273
+[robust] sev3: AP=0.0057 AP50=0.0164 AP75=0.0003 AP_s=0.0057
+[robust] mCP=0.0470  giữ được 24.1% so với sạch
+
+===== v15_musgd_v3_(mốc so) =====
+[weights] runs/train_v15_light_musgd_v3/best.pt
+[COCO] overall: {'AP': 0.2349, 'AP50': 0.58, 'AP75': 0.1305, 'AP_s': 0.2324, 'AP_m': 0.4629, 'AP_l': 0.8, 'AR_100': 0.3611, 'AR_s': 0.3587, 'AR_m': 0.5433, 'AR_l': 0.8}
+[robust] clean: AP=0.2349 AP50=0.5800 AP75=0.1305 AP_s=0.2324
+[robust] sev1: AP=0.1287 AP50=0.3854 AP75=0.0457 AP_s=0.1246
+[robust] sev2: AP=0.0308 AP50=0.0984 AP75=0.0130 AP_s=0.0294
+[robust] sev3: AP=0.0030 AP50=0.0101 AP75=0.0004 AP_s=0.0035
+[robust] mCP=0.0542  giữ được 23.1% so với sạch
+
+ALL DONE Sat Jul 25 07:42:11 AM +07 2026
+rtdetr-l: params=32.81M  GFLOPs=108.0  mAP50=0.6856  mAP50-95=0.3340

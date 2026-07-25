@@ -7,3 +7,40 @@ yolo26n: params=0.00M  GFLOPs=0.0  mAP50=0.5979  mAP50-95=0.2677
 
 ===== BASELINES DEPLOY (COCO-mix train, VisDrone-val @640 đồng nhất deploy; đa dạng họ) =====
 yolov10n: params=2.71M  GFLOPs=8.4  mAP50=0.6002  mAP50-95=0.2660
+rtdetr-l: params=32.81M  GFLOPs=108.0  mAP50=0.6930  mAP50-95=0.3377
+
+===== v17_DEPLOY(+COCO) (flight_val THẬT @640) =====
+[weights] runs/train_v17_deploy/best.pt
+[COCO] overall: {'AP': 0.3369, 'AP50': 0.7613, 'AP75': 0.1448, 'AP_s': -1.0, 'AP_m': 0.4202, 'AP_l': 0.3759, 'AR_100': 0.5076, 'AR_s': -1.0, 'AR_m': 0.5042, 'AR_l': 0.52}
+
+===== v17_LIGHT(no-COCO) (flight_val THẬT @640) =====
+[weights] runs/train_v17_light/best.pt
+[COCO] overall: {'AP': 0.0547, 'AP50': 0.1435, 'AP75': 0.0166, 'AP_s': -1.0, 'AP_m': 0.2902, 'AP_l': 0.3585, 'AR_100': 0.4315, 'AR_s': -1.0, 'AR_m': 0.4375, 'AR_l': 0.41}
+
+===== v17_VIB_DEPLOY(+COCO+vib) (flight_val THẬT @640) =====
+[weights] runs/train_v17_vib_deploy/best.pt
+[COCO] overall: {'AP': 0.3885, 'AP50': 0.8798, 'AP75': 0.262, 'AP_s': -1.0, 'AP_m': 0.4161, 'AP_l': 0.417, 'AR_100': 0.5087, 'AR_s': -1.0, 'AR_m': 0.5069, 'AR_l': 0.515}
+
+===== v17_VIB(no-COCO) (flight_val THẬT @640) =====
+[weights] runs/train_v17_vib/best.pt
+[COCO] overall: {'AP': 0.0283, 'AP50': 0.0909, 'AP75': 0.0093, 'AP_s': -1.0, 'AP_m': 0.1922, 'AP_l': 0.2824, 'AR_100': 0.3772, 'AR_s': -1.0, 'AR_m': 0.3903, 'AR_l': 0.33}
+
+DEPLOY ALL DONE Fri Jul 24 08:39:07 PM +07 2026
+
+===== v17_DEPLOY(+COCO) (flight_val THẬT @640) =====
+[weights] runs/train_v17_deploy/best.pt
+[COCO] overall: {'AP': 0.3369, 'AP50': 0.7613, 'AP75': 0.1448, 'AP_s': -1.0, 'AP_m': 0.4202, 'AP_l': 0.3759, 'AR_100': 0.5076, 'AR_s': -1.0, 'AR_m': 0.5042, 'AR_l': 0.52}
+
+===== v17_LIGHT(no-COCO) (flight_val THẬT @640) =====
+[weights] runs/train_v17_light/best.pt
+[COCO] overall: {'AP': 0.0547, 'AP50': 0.1435, 'AP75': 0.0166, 'AP_s': -1.0, 'AP_m': 0.2902, 'AP_l': 0.3585, 'AR_100': 0.4315, 'AR_s': -1.0, 'AR_m': 0.4375, 'AR_l': 0.41}
+
+===== v17_VIB_DEPLOY(+COCO+vib) (flight_val THẬT @640) =====
+[weights] runs/train_v17_vib_deploy/best.pt
+[COCO] overall: {'AP': 0.3885, 'AP50': 0.8798, 'AP75': 0.262, 'AP_s': -1.0, 'AP_m': 0.4161, 'AP_l': 0.417, 'AR_100': 0.5087, 'AR_s': -1.0, 'AR_m': 0.5069, 'AR_l': 0.515}
+
+===== v17_VIB(no-COCO) (flight_val THẬT @640) =====
+[weights] runs/train_v17_vib/best.pt
+[COCO] overall: {'AP': 0.0283, 'AP50': 0.0909, 'AP75': 0.0093, 'AP_s': -1.0, 'AP_m': 0.1922, 'AP_l': 0.2824, 'AR_100': 0.3772, 'AR_s': -1.0, 'AR_m': 0.3903, 'AR_l': 0.33}
+
+DEPLOY ALL DONE Sat Jul 25 07:34:12 AM +07 2026
