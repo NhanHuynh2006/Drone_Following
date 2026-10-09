@@ -1,0 +1,37 @@
+\babel@toc {vietnamese}{}\relax 
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Ba nguồn dữ liệu của đề tài và nhãn bounding box tương ứng: VisDrone-person chụp từ trên cao (trái), COCO-person ở cự ly gần (giữa) và khung hình bay thật ở độ cao khoảng 6\,m (phải)}}{16}{figure.caption.11}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Minh hoạ ba mức rung VisDrone-Shake trên một ảnh VisDrone (hàng trên) và một khung bay thật (hàng dưới); hướng nhoè cố định $35^\circ $ để dễ so sánh}}{19}{figure.caption.14}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Kiến trúc SteadyDet-N; độ phân giải giảm dần từ trên xuống. Chi phí được phân bổ không đối xứng: nhánh $P_2$ (nét đứt) chỉ có một khối, số kênh bằng một nửa và head tách được, còn các khối CSP hai tầng và phép self-attention nằm ở những mức có bản đồ nhỏ}}{25}{figure.caption.16}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Hàm mất mát huấn luyện (trái, thang log) và AP@0,5 trên tập kiểm định ảnh sạch (phải) của SteadyDet-N nhánh chuẩn: 300 epoch huấn luyện gốc (xám) và 120 epoch tinh chỉnh nhận biết rung (xanh). Hàm mất mát tăng vọt khi bắt đầu tinh chỉnh vì một nửa số lô là ảnh đã bị làm rung}}{29}{figure.caption.18}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces (a) Huấn luyện nhận biết rung: một nửa số lô được thay bằng bản đã làm rung và tính hàm mất mát phát hiện thông thường. (b) Biến thể ràng buộc nhất quán: truyền xuôi cả hai bản và kéo dự đoán trên ảnh rung về phía dự đoán trên ảnh sạch đã dừng gradient. Cả hai chỉ tồn tại khi huấn luyện}}{30}{figure.caption.19}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces AP@[.50:.95] theo mức rung. Mô hình gốc (nét đứt) có AP sạch cao hơn nhưng giảm nhanh nhất; sau huấn luyện nhận biết rung (nét liền xanh), SteadyDet-N vượt YOLO11-n và RT-DETR-l từ mức rung 2. Thanh sai số: độ lệch chuẩn qua 3 hạt giống}}{35}{figure.caption.21}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Tỷ lệ giữ độ chính xác khi rung của mọi mô hình. Bốn thế hệ YOLO bản nano nằm sát nhau ở 19--20\% dù khác nhau về kiến trúc; hai mô hình của đề tài sau huấn luyện nhận biết rung đứng đầu}}{38}{figure.caption.23}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces AP trên ảnh sạch và mCP khi rung, mỗi điểm là một mô hình. Mũi tên xanh: tác dụng của huấn luyện nhận biết rung trên hai mô hình của đề tài}}{39}{figure.caption.24}%
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Kết quả trên dữ liệu bay thật theo nhóm dữ liệu huấn luyện. Nhóm có COCO-person (trái) chính xác gấp nhiều lần nhóm chỉ VisDrone (phải); trong nhóm có COCO, cả hai cách xử lý rung làm AP@0,75 tăng gần gấp đôi}}{40}{figure.caption.26}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Quy trình đưa mô hình lên NPU: biên dịch một lần trên máy tính x86 (trên) và chuỗi xử lý mỗi khung hình trên Raspberry Pi~5 (dưới)}}{43}{figure.caption.27}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Độ chính xác FP32 và INT8 trên hai miền dữ liệu. Trên người rất nhỏ, INT8 làm hộp kém khít (AP@0,75 giảm 25\%); trên người ở độ cao bay thực tế, hai bản gần như trùng nhau}}{46}{figure.caption.30}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces F1 của mô hình triển khai theo ngưỡng tin cậy trên 92 khung bay thật}}{47}{figure.caption.31}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces Trái: tốc độ SteadyDet-N và YOLO26-n trên cùng Hailo-8L. Phải: độ trễ phần cứng tăng theo batch size dù thông lượng tăng}}{49}{figure.caption.34}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces Tốc độ khung thực tế của chuỗi xử lý với bốn cấu hình camera}}{50}{figure.caption.35}%
+\contentsline {figure}{\numberline {5.6}{\ignorespaces Phân bổ độ trễ trung vị theo chặng so với ngân sách 33,3\,ms của vòng lặp 30\,Hz}}{51}{figure.caption.37}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Kiến trúc tổng thể hệ thống. Toàn bộ khối xử lý nằm trên Raspberry Pi~5; bảng giám sát chỉ đọc (trừ nút đổi mục tiêu); tay điều khiển RC luôn có quyền ưu tiên cao nhất}}{52}{figure.caption.38}%
+\contentsline {figure}{\numberline {6.2}{\ignorespaces Lưu đồ một vòng lặp điều khiển 30\,Hz trong \texttt {main.py}}}{54}{figure.caption.39}%
+\contentsline {figure}{\numberline {6.3}{\ignorespaces Máy trạng thái của thang mất mục tiêu; phần mềm không bao giờ tự đổi chế độ bay}}{59}{figure.caption.43}%
+\contentsline {figure}{\numberline {6.4}{\ignorespaces Độ trễ từ ảnh tới lệnh theo nhịp gửi}}{60}{figure.caption.45}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {7.1}{\ignorespaces Ba khung hình trích từ video bay thử (hộp xanh: phát hiện của SteadyDet-N; dấu thập: tâm khung hình). Giây 15 và 45: phát hiện đúng. Giây 80: người bị cắt ở mép trái bị bỏ sót và có một hộp sai nhỏ}}{65}{figure.caption.48}%
+\contentsline {figure}{\numberline {7.2}{\ignorespaces Vòng bám người trên video bay thử: hộp xanh lá là mục tiêu đang khoá kèm mã định danh, mũi tên nối tâm khung hình với mục tiêu, vệt vàng là quỹ đạo; bảng góc trái hiển thị trạng thái, sai số hướng và lệnh quay hướng tính được}}{65}{figure.caption.49}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {D.1}{\ignorespaces Phần 1 của video bay thử: SteadyDet-N phát hiện người trên các khung hình của chuyến bay 21/07/2026}}{88}{figure.caption.63}%
+\contentsline {figure}{\numberline {D.2}{\ignorespaces Phần 2 của video bay thử: vòng bám người khoá mục tiêu, hiển thị trạng thái, sai số hướng và lệnh quay hướng}}{88}{figure.caption.64}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }

@@ -24,7 +24,7 @@ def build_student(profile="light", density_scale_idx=1, **kw):
 
 
 def build_teacher(ckpt_path, profile="balanced", device="cuda"):
-    """Teacher = PFDet balanced (cùng kiến trúc). Freeze sẵn."""
+    """Teacher = SteadyDet balanced (cùng kiến trúc). Freeze sẵn."""
     return load_teacher(PFDetNanoV15, ckpt_path, profile=profile, device=device)
 
 

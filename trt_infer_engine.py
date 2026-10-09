@@ -1,5 +1,5 @@
 """
-TensorRT runtime for PFDet-Nano v14.
+TensorRT runtime for SteadyDet v14.
 
 Expected engine contract:
   input -> output_p2, output_p3, output_p4, output_p5
@@ -17,7 +17,7 @@ from utils import decode_predictions_np, nms_numpy
 
 class TRTEngine:
     """
-    TensorRT engine wrapper for PFDet-Nano.
+    TensorRT engine wrapper for SteadyDet-N.
     Handles memory allocation, inference, and output parsing.
     """
     def __init__(self, engine_path, img_size=384):
@@ -161,7 +161,7 @@ def run_trt_camera(engine_path, camera_source=0, img_size=384,
                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
 
         if show:
-            cv2.imshow("PFDet-Nano TRT", frame)
+            cv2.imshow("SteadyDet-N TRT", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 

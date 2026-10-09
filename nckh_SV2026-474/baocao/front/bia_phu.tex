@@ -1,0 +1,46 @@
+% ---------------- Mẫu PL02: Trang bìa phụ ----------------
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \draw[line width=2.2pt] ($(current page.north west)+(2.6cm,-1.6cm)$) rectangle ($(current page.south east)+(-1.6cm,1.6cm)$);
+  \draw[line width=0.6pt] ($(current page.north west)+(2.75cm,-1.75cm)$) rectangle ($(current page.south east)+(-1.75cm,1.75cm)$);
+\end{tikzpicture}
+\begin{center}
+\setstretch{1.2}
+{\large BỘ GIÁO DỤC VÀ ĐÀO TẠO}\\[2pt]
+{\large\bfseries \TRUONG}\\[-2pt]
+\rule{5cm}{0.6pt}
+
+\vspace{1.6cm}
+{\LARGE\bfseries BÁO CÁO TỔNG KẾT}\\[14pt]
+{\Large\bfseries ĐỀ TÀI NGHIÊN CỨU KHOA HỌC CỦA SINH VIÊN}
+
+\vspace{1.4cm}
+\begin{minipage}{0.9\textwidth}\centering\setstretch{1.25}
+{\LARGE\bfseries \TENDETAI}
+\end{minipage}
+
+\vspace{0.6cm}
+{\Large\bfseries Mã số: \madetai}
+\end{center}
+
+\vspace{1.2cm}
+\begin{center}
+\setstretch{1.5}
+\begin{tabular}{@{}p{0.92\textwidth}@{}}
+\textbf{Thuộc nhóm ngành khoa học:} \nhomnganh\\
+\textbf{SV thực hiện:} \chunhiem \hfill \textbf{Nam, Nữ:} \gioitinh\\
+\textbf{Dân tộc:} \dantoc\\
+\textbf{Lớp, khoa:} \lopchunhiem, Khoa \khoa\\
+\textbf{Năm thứ:} \namthu\,/\,\textbf{Số năm đào tạo:} \sonamdaotao\\
+\textbf{Ngành học:} \nganhhoc\\[2pt]
+\textit{(SV chịu trách nhiệm chính thực hiện đề tài: \chunhiem)}\\[6pt]
+\textbf{Thành viên:} \thanhvien{} (MSSV \mssvthanhvien)\\[6pt]
+\textbf{Người hướng dẫn:} Phó Giáo sư, Tiến sĩ Lê Mỹ Hà
+\end{tabular}
+\end{center}
+
+\vfill
+\begin{center}
+{\large\bfseries TP Hồ Chí Minh, \thangnam}
+\end{center}
+\clearpage

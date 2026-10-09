@@ -1,4 +1,4 @@
-# PFDet-Nano v17 NMS-FREE (Plan B) — FLOPs-efficient (1.17M / 4.6 GFLOPs@640), giữ P2 cho người nhỏ
+# SteadyDet-N NMS-FREE (Plan B) — FLOPs-efficient (1.17M / 4.6 GFLOPs@640), giữ P2 cho người nhỏ
 # Backbone P2 mỏng + LiteHead depthwise-sep -> cắt FLOPs 2.8× so v15, nhỏ hơn YOLO26n.
 # Train CLEAN trước (xác nhận accuracy kiến trúc), vibration finetune sau.
 # Recipe = MuSGD (đã cho best v15 0.5932). BỎ COCO (đã chứng minh hại VisDrone).
@@ -24,7 +24,7 @@ data:
   val_images: "val/images"
   val_labels: "val/labels"
 
-  # PAPER = số CHUẨN: chỉ VisDrone, KHÔNG COCO (để so sánh công bằng với các paper VisDrone khác).
+  # NHÁNH CHUẨN: chỉ VisDrone, KHÔNG COCO (để so sánh công bằng với các paper VisDrone khác).
   # (Bản deploy 3-10m dùng config v17_light.yaml — có COCO.)
 
   mosaic_prob: 0.50

@@ -1,0 +1,95 @@
+% ---------------- Mẫu PL03: Thông tin kết quả nghiên cứu ----------------
+\clearpage
+\thispagestyle{plain}
+\phantomsection\addcontentsline{toc}{chapter}{THÔNG TIN KẾT QUẢ NGHIÊN CỨU CỦA ĐỀ TÀI}
+\begin{center}
+\setstretch{1.15}
+{BỘ GIÁO DỤC VÀ ĐÀO TẠO}\\
+{\bfseries \TRUONG}\\[-3pt]
+\rule{4.5cm}{0.5pt}\\[10pt]
+{\large\bfseries THÔNG TIN KẾT QUẢ NGHIÊN CỨU CỦA ĐỀ TÀI}
+\end{center}
+\begin{spacing}{1.3}
+\noindent\textbf{1. Thông tin chung:}
+
+\noindent -- Tên đề tài: \tendetai.
+
+\noindent -- Mã số: \madetai.
+
+\noindent -- Chủ nhiệm đề tài: \chunhiem \hfill Mã số SV: \mssvchunhiem
+
+\noindent -- Lớp: \lopchunhiem \hfill Khoa: \khoa
+
+\noindent -- Thành viên đề tài:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|c|l|c|c|c|}
+\hline
+\textbf{STT} & \textbf{Họ và tên} & \textbf{MSSV} & \textbf{Lớp} & \textbf{Khoa}\\\hline
+1 & \chunhiem & \mssvchunhiem & \lopchunhiem & \khoa\\\hline
+2 & \thanhvien & \mssvthanhvien & \lopthanhvien & \khoa\\\hline
+\end{tabular}
+\end{center}
+
+\noindent -- Người hướng dẫn: \gvhd{} (\emailgvhd).
+
+\noindent\textbf{2. Mục tiêu đề tài:}
+\begin{itemize}
+\item Xây dựng mô hình trí tuệ nhân tạo phát hiện và nhận dạng con người theo thời gian thực từ camera gắn trên máy bay không người lái, đạt độ chính xác từ 70\% trở lên.
+\item Thiết kế thuật toán theo dõi chuyển động để máy bay giữ khoảng cách và hướng bay phù hợp với người được theo.
+\item Tích hợp camera -- khối xử lý ảnh -- bộ điều khiển bay thành một hệ thống hoạt động ổn định trong môi trường thực tế.
+\end{itemize}
+
+\noindent\textbf{3. Tính mới và sáng tạo:}
+\begin{itemize}
+\item Đề xuất mạng phát hiện người \sd{} chỉ \hl{1,17 triệu tham số và 4,6 GFLOPs}, giữ nhánh độ phân giải cao P2 (bước 4) để thấy được người ở xa, nhưng làm mỏng nhánh này để chạy được trên thiết bị biên.
+\item Chỉ ra bằng đo đạc có đối chứng rằng rung động của khung máy bay làm mọi bộ phát hiện nhỏ mất 74--83\% độ chính xác, và đề xuất \hl{huấn luyện nhận biết rung}: đưa mô hình vật lý của motion blur, nhiễu cảm biến và dao động phơi sáng vào dữ liệu huấn luyện. Tỷ lệ giữ độ chính xác khi rung tăng từ \hl{16,8\% lên 36,2\%} mà \hl{không tốn thêm chi phí suy luận}; khi rung, \sd{} vượt cả bốn mô hình YOLO bản nano.
+\item Xây dựng giao thức đánh giá rung VisDrone-Shake \hl{cố định seed ngẫu nhiên, lặp 3 lần và báo cáo độ lệch chuẩn}, dùng một chương trình chấm điểm duy nhất cho mọi mô hình.
+\item Chứng minh trên phần cứng thật rằng tốc độ trên NPU Hailo-8L phụ thuộc vào \hl{số context} của mô hình chứ không chỉ số phép tính: \sd{} chạy \hl{nhanh hơn YOLO26-n 1,70 lần} trên cùng một chip.
+\item Thiết kế lớp an toàn theo nguyên tắc \hl{người lái luôn giữ quyền chọn chế độ bay}: phần mềm chỉ đề xuất vận tốc khi máy bay đang ở chế độ GUIDED, mất mục tiêu thì đứng yên chờ, và nguyên tắc được khoá bằng kiểm thử tự động.
+\end{itemize}
+
+\noindent\textbf{4. Kết quả nghiên cứu:}
+\begin{itemize}
+\item Mô hình chạy INT8 trên NPU Hailo-8L đạt \hl{AP@0,5 = 0,917} (tức 91,7\%, vượt chỉ tiêu 70\%) và \hl{F1 = 0,880} (recall 0,837, precision 0,928) trên 92 khung hình bay thật ở độ cao khoảng 6\,m.
+\item Toàn bộ chuỗi xử lý camera -- tiền xử lý -- suy luận -- hậu xử lý chạy \hl{30,0 khung hình/giây} trên Raspberry Pi 5 (trung vị 32,04\,ms; p99 36,15\,ms), nhiệt độ 48,5\,°C, không giảm xung.
+\item Chương trình máy tính điều khiển bám người hoàn chỉnh: theo vết OC-SORT, khoá mục tiêu, ước lượng khoảng cách, bộ điều khiển PID ba kênh, thang an toàn khi mất mục tiêu, gửi lệnh MAVLink tới ArduPilot ở chế độ GUIDED với nhịp 30\,Hz (khứ hồi lệnh p50 4,75\,ms, 0\% mất gói), cùng bảng giám sát web; 2 bộ kiểm thử tự động với 25/25 phép kiểm tra đều đạt. Chạy trên video bay thử, vòng bám người giữ được mục tiêu trong 83,5\% thời gian, sai số hướng trung vị 5,5$^\circ$.
+\item Báo cáo phân tích gồm các bảng so sánh với 5 mô hình đối chứng (YOLOv8-n, YOLOv10-n, YOLO11-n, YOLO26-n, RT-DETR-l) dưới một giao thức đo thống nhất.
+\end{itemize}
+
+\noindent\textbf{5. Đóng góp về mặt giáo dục và đào tạo, kinh tế -- xã hội, an ninh, quốc phòng và khả năng áp dụng của đề tài:}
+
+Hệ thống xử lý hoàn toàn trên máy bay, không cần kết nối Internet, nên dùng được cho tìm kiếm cứu nạn ở vùng mất sóng, giám sát an ninh khu vực, hỗ trợ tuần tra và quay phim tự động. Kỹ thuật huấn luyện nhận biết rung chỉ thay đổi dữ liệu huấn luyện, áp dụng được cho các mô hình phát hiện khác trên thiết bị bay mà không cần gimbal chống rung đắt tiền. Về đào tạo, đề tài cung cấp một quy trình trọn vẹn và tái lập được từ dữ liệu, huấn luyện, lượng tử hoá, triển khai trên NPU tới điều khiển bay, dùng làm học liệu cho các học phần thị giác máy tính, hệ thống nhúng và điều khiển tự động. Sản phẩm được thử nghiệm tại \truong.
+
+\noindent\textbf{6. Công bố khoa học của SV từ kết quả nghiên cứu của đề tài:}
+
+Không có.
+\end{spacing}
+
+\vspace{6pt}
+\noindent\begin{minipage}[t]{0.45\textwidth}\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}\centering\setstretch{1.1}
+\textit{Ngày \makebox[0.8cm]{\dotfill} tháng \makebox[0.8cm]{\dotfill} năm 2026}\\
+\textbf{SV chịu trách nhiệm chính}\\\textbf{thực hiện đề tài}\\
+\textit{(ký, họ và tên)}\\[1.6cm]
+\chunhiem
+\end{minipage}
+
+\vspace{10pt}
+\noindent\textbf{Nhận xét của người hướng dẫn về những đóng góp khoa học của SV thực hiện đề tài} \textit{(phần này do người hướng dẫn ghi)}:
+
+\noindent\makebox[\textwidth]{\dotfill}\\
+\makebox[\textwidth]{\dotfill}\\
+\makebox[\textwidth]{\dotfill}\\
+\makebox[\textwidth]{\dotfill}
+
+\vspace{4pt}
+\noindent\begin{minipage}[t]{0.45\textwidth}\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}\centering\setstretch{1.1}
+\textit{Ngày \makebox[0.8cm]{\dotfill} tháng \makebox[0.8cm]{\dotfill} năm 2026}\\
+\textbf{Người hướng dẫn}\\
+\textit{(ký, họ và tên)}\\[1.6cm]
+\gvhd
+\end{minipage}
+\clearpage

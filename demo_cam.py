@@ -102,7 +102,7 @@ def main():
                 writer = cv2.VideoWriter(args.save, cv2.VideoWriter_fourcc(*"mp4v"), 20, (w, h))
             writer.write(frame)
         else:
-            cv2.imshow("PFDet-E webcam (q=thoat, +/- conf)", frame)
+            cv2.imshow("SteadyDet-E webcam (q=thoat, +/- conf)", frame)
             k = cv2.waitKey(1) & 0xFF
             if k == ord("q"): break
             elif k == ord("+"): conf = min(0.9, conf + 0.05)

@@ -1,0 +1,69 @@
+DANH SÁCH TRANG CẦN IN LẠI — báo cáo tổng kết SV2026-474
+(sau khi đổi thuật ngữ chuyên ngành sang tiếng Anh, 27/09/2026)
+
+Tổng: 53 trang / 111 trang của cuốn báo cáo.
+Tệp kèm theo: trang_in_lai.pdf — đúng 53 trang này, xếp theo thứ tự.
+
+Cách đối chiếu: 'trang PDF' là thứ tự tờ khi in cả cuốn main.pdf;
+'số trang in' là số đang in ở chân trang của tờ đó (i, ii... cho phần đầu; 1, 2... cho phần nội dung).
+
+STT  Trang PDF   Số trang in ở chân trang  
+---------------------------------------------
+1    3           i                         
+2    4           ii                        
+3    5           iii                       
+4    7           v                         
+5    9           vii                       
+6    10          viii                      
+7    13          xi                        
+8    14          xii                       
+9    17          2                         
+10   21          6                         
+11   22          7                         
+12   23          8                         
+13   24          9                         
+14   25          10                        
+15   27          12                        
+16   29          14                        
+17   30          15                        
+18   31          16                        
+19   33          18                        
+20   34          19                        
+21   35          20                        
+22   36          21                        
+23   37          22                        
+24   38          23                        
+25   39          24                        
+26   40          25                        
+27   41          26                        
+28   42          27                        
+29   43          28                        
+30   44          29                        
+31   45          30                        
+32   46          31                        
+33   47          32                        
+34   48          33                        
+35   50          35                        
+36   52          37                        
+37   55          40                        
+38   56          41                        
+39   57          42                        
+40   58          43                        
+41   59          44                        
+42   60          45                        
+43   62          47                        
+44   63          48                        
+45   64          49                        
+46   70          55                        
+47   71          56                        
+48   76          61                        
+49   81          66                        
+50   82          67                        
+51   84          69                        
+52   85          70                        
+53   95          80                        
+
+Lưu ý:
+- Cuốn báo cáo in một mặt (oneside), nên chỉ cần thay đúng những tờ trên.
+- Nếu đã in hai mặt thì phải in lại cả tờ chứa trang đó (mặt trước + mặt sau).
+- Bìa chính, bìa phụ, trang PL03 ký tên, phụ lục poster và thuyết minh KHÔNG đổi, giữ nguyên bản đã in.

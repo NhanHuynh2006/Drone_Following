@@ -81,3 +81,27 @@ runs/paper_queue/DECISION.md
 *.nohup
 runs/_stray_wrongpath/
 runs/detect/
+
+# Python venv (17k file thu vien, khong phai ma nguon du an)
+hailo_env/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# ===== Dọn repo trước khi public (2026-10-09) =====
+# Đề tài khác (xe tự hành SV2026-439) — có repo riêng, không đẩy chung vào đây
+nckh_SV2026-439/
+# Repo git độc lập nằm lồng trong thư mục này
+Segmentation-Depth-Fusion-in-the-Frenet-Frame/
+# Dump dự đoán COCO (40MB, sinh lại bằng run_eval_coco.py)
+fp32_coco_preds.json
+hef_coco_preds.json
+# External data của ONNX (sinh lại bằng export_onnx_hailo.py)
+*.onnx.data
+# Logo gốc tải rời — bản dùng để biên dịch đã nằm trong nckh_SV2026-474/hinh/
+LOGO FAE FINAL-02.jpg
+Logo HCM-UTE_ 1 (1).png
+# Biểu mẫu trắng tải từ phòng KHCN (không phải sản phẩm đề tài)
+Hướng dẫn định dạng tóm tắt đề tài.docx
+Mẫu tóm tắt đề tài.docx
+Phụ lục_HD_QT_PKHCN_NCKHSV.docx

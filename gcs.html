@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SteadyDet-N GCS</title>
+<style>
+:root{
+  --bg:#0a0e14; --panel:#111823; --panel2:#161f2d; --line:#243040;
+  --txt:#e4ecf5; --dim:#7e8fa3; --dim2:#54677d;
+  --ok:#3ddc84; --warn:#ffb020; --bad:#ff4d5e; --info:#38bdf8; --accent:#8b7dff;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+/* Khoá chiều cao đúng bằng màn hình: khung hình camera phải thấy TRỌN VẸN mà không
+   phải cuộn. Panel bên phải tự cuộn riêng bên trong nó. */
+body{background:var(--bg);color:var(--txt);
+     font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+     height:100%;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── thanh tren ── */
+header{display:flex;align-items:center;gap:18px;padding:10px 16px;flex:none;
+       background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-weight:700;letter-spacing:.4px;font-size:15px}
+.brand span{color:var(--dim);font-weight:400;margin-left:8px;font-size:12px}
+.chips{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+      background:var(--panel2);border:1px solid var(--line);font-size:12px;
+      font-family:var(--mono)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim2);flex:none}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.dot.warn{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+#clock{font-family:var(--mono);color:var(--dim);font-size:12px}
+
+/* ── canh bao ── */
+#alerts{display:flex;flex-direction:column;flex:none;max-height:20vh;overflow-y:auto}
+.alert{padding:7px 16px;font-size:13px;font-weight:600;display:flex;gap:10px;
+       align-items:center;border-bottom:1px solid rgba(0,0,0,.3)}
+.alert.bad{background:#3a1218;color:#ffb3bb}
+.alert.warn{background:#3a2c10;color:#ffd894}
+
+/* ── bo cuc ── */
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 350px;
+      gap:12px;padding:12px}
+
+/* Ô video CHIẾM TRỌN chiều cao còn lại. Trước đây grid kéo giãn ô này theo chiều cao
+   của cột telemetry (rất dài) nên ảnh bị căn giữa trong khung cao gấp đôi, thừa ra
+   hai dải đen to. min-height:0 là bắt buộc — không có nó thì phần tử grid không chịu
+   co lại nhỏ hơn nội dung. */
+.video{position:relative;background:var(--panel);border:1px solid var(--line);
+       border-radius:10px;overflow:hidden;display:flex;align-items:center;
+       justify-content:center;min-height:0;height:100%}
+.video img{max-width:100%;max-height:100%;width:auto;height:auto;display:block}
+.video.fill img{width:100%;height:100%;object-fit:cover}   /* lấp đầy, chấp nhận cắt rìa */
+
+/* nút chuyển vừa-khung / lấp-đầy, nằm góc dưới trái khung hình */
+.fitbtn{position:absolute;left:10px;bottom:10px;padding:4px 10px;border-radius:6px;
+        background:rgba(10,14,20,.78);border:1px solid var(--line);color:var(--dim);
+        font:12px var(--mono);cursor:pointer;backdrop-filter:blur(4px)}
+.fitbtn:hover{color:var(--txt);border-color:var(--dim2)}
+
+@media(max-width:900px){
+  body{overflow:auto}
+  main{grid-template-columns:minmax(0,1fr);grid-auto-rows:min-content}
+  .video{height:auto;max-height:56vh}
+  aside{height:auto;overflow:visible;padding-right:0}
+}
+.vtag{position:absolute;top:10px;left:10px;padding:4px 10px;border-radius:6px;
+      background:rgba(10,14,20,.78);font-family:var(--mono);font-size:12px;
+      border:1px solid var(--line);backdrop-filter:blur(4px)}
+.vtag.r{left:auto;right:10px}
+
+aside{display:flex;flex-direction:column;gap:12px;min-width:0;
+      min-height:0;height:100%;overflow-y:auto;padding-right:5px}
+aside::-webkit-scrollbar{width:8px}
+aside::-webkit-scrollbar-track{background:transparent}
+aside::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+aside::-webkit-scrollbar-thumb:hover{background:var(--dim2)}
+aside{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:12px}
+.card h2{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;
+         color:var(--dim);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h2::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* ── ARM + MODE ── */
+.status2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.big{border-radius:8px;padding:12px 10px;text-align:center;border:1px solid var(--line);
+     background:var(--panel2)}
+.big .lbl{font-size:10px;letter-spacing:1.2px;color:var(--dim);text-transform:uppercase}
+.big .val{font-size:21px;font-weight:800;letter-spacing:.5px;margin-top:3px;
+          font-family:var(--mono);line-height:1.1;word-break:break-all}
+.big.armed{background:#12301f;border-color:#1f6b3f}
+.big.armed .val{color:var(--ok)}
+.big.disarmed .val{color:var(--dim)}
+.big.nolink{background:#2a1216;border-color:#5c2129}
+.big.nolink .val{color:var(--bad);font-size:16px}
+.big.m-auto{background:#101f33;border-color:#1d4e78}
+.big.m-auto .val{color:var(--info)}
+.big.m-assist .val{color:var(--txt)}
+.big.m-manual{background:#2a2410;border-color:#6b5a1f}
+.big.m-manual .val{color:var(--warn)}
+.big.m-safety{background:#301620;border-color:#7a2a45}
+.big.m-safety .val{color:#ff8fb0}
+#modeDesc{font-size:11px;color:var(--dim);margin-top:8px;text-align:center;
+          min-height:15px;line-height:1.35}
+
+/* ── so lieu ── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.kv{display:flex;flex-direction:column;gap:1px;min-width:0}
+.kv .k{font-size:10px;letter-spacing:.7px;color:var(--dim);text-transform:uppercase}
+.kv .v{font-family:var(--mono);font-size:15px;font-weight:600;
+       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v.ok{color:var(--ok)} .v.warn{color:var(--warn)} .v.bad{color:var(--bad)}
+.v.dim{color:var(--dim2)}
+
+.bar{height:5px;border-radius:3px;background:var(--panel2);overflow:hidden;margin-top:4px}
+.bar>i{display:block;height:100%;background:var(--ok);transition:width .3s,background .3s}
+
+/* ── chan troi nhan tao ── */
+.adi{display:flex;gap:12px;align-items:center}
+.adi svg{flex:none;border-radius:50%;border:1px solid var(--line);background:#0d1420}
+.adi .grid{flex:1}
+
+/* ── dieu khien ── */
+.row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.row:last-child{margin-bottom:0}
+.row label{font-size:11px;color:var(--dim);letter-spacing:.6px;
+           text-transform:uppercase;width:52px;flex:none}
+input[type=range]{flex:1;accent-color:var(--accent);height:4px}
+select{flex:1;background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+       border-radius:6px;padding:5px 8px;font-family:var(--mono);font-size:12px}
+.pill{font-family:var(--mono);font-size:12px;color:var(--accent);width:38px;
+      text-align:right;flex:none}
+.toggle{display:flex;gap:6px}
+.toggle button{flex:1;background:var(--panel2);color:var(--dim);border:1px solid var(--line);
+               border-radius:6px;padding:5px;font-size:12px;cursor:pointer;
+               font-family:inherit}
+.toggle button.on{background:#1a2740;color:var(--info);border-color:#2b4a6e}
+
+.retarget{width:100%;margin-top:10px;padding:9px;border-radius:7px;cursor:pointer;
+          background:#2a2410;color:var(--warn);border:1px solid #6b5a1f;
+          font:600 13px/1 inherit;letter-spacing:.3px}
+.retarget:hover{background:#3a3216}
+.retarget:disabled{opacity:.4;cursor:default}
+.note{font-size:11px;color:var(--dim2);line-height:1.45;margin-top:9px;
+      padding-top:9px;border-top:1px solid var(--line)}
+.lat{display:grid;grid-template-columns:auto 1fr auto;gap:4px 8px;align-items:center;
+     font-family:var(--mono);font-size:11px}
+.lat .n{color:var(--dim)}
+.lat .b{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden}
+.lat .b>i{display:block;height:100%;background:var(--accent)}
+.lat .t{text-align:right}
+
+/* ── sẵn sàng bay ── */
+.ready{border-radius:8px;padding:10px;text-align:center;border:1px solid var(--line);
+       background:var(--panel2);margin-bottom:10px}
+.ready .val{font-size:15px;font-weight:800;font-family:var(--mono);letter-spacing:.5px}
+.ready.go{background:#12301f;border-color:#1f6b3f} .ready.go .val{color:var(--ok)}
+.ready.no{background:#2a1216;border-color:#5c2129} .ready.no .val{color:var(--bad)}
+.ready .why{font-size:11px;color:var(--dim);margin-top:5px;line-height:1.35}
+
+/* ── rung ── */
+.vib{display:grid;grid-template-columns:auto 1fr auto;gap:5px 9px;align-items:center;
+     font-family:var(--mono);font-size:12px}
+.vib .ax{color:var(--dim)}
+.vib .b{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;position:relative}
+.vib .b>i{display:block;height:100%;background:var(--ok);transition:width .3s,background .3s}
+.vib .b::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;
+               background:var(--dim2);opacity:.6}
+.vib .t{text-align:right;font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">SteadyDet-N · GCS<span>Pi 5 + Hailo-8L · ArduPilot Copter</span></div>
+  <div class="chips">
+    <div class="chip"><i class="dot" id="dCam"></i>CAMERA <b id="vCam">–</b></div>
+    <div class="chip"><i class="dot" id="dNpu"></i>HAILO <b id="vNpu">–</b></div>
+    <div class="chip"><i class="dot" id="dMav"></i>MAVLINK <b id="vMav">–</b></div>
+    <div class="chip"><i class="dot" id="dTmp"></i><b id="vTmp">–</b></div>
+  </div>
+  <div id="clock">--:--:--</div>
+</header>
+
+<div id="alerts"></div>
+
+<main>
+  <div class="video">
+    <img id="feed" src="/stream" alt="camera">
+    <div class="vtag" id="tagL">–</div>
+    <div class="vtag r" id="tagR">–</div>
+    <button class="fitbtn" id="bFit" title="Chuyển giữa vừa-khung và lấp-đầy">vừa khung</button>
+  </div>
+
+  <aside>
+    <div class="card">
+      <h2>Trạng thái bay</h2>
+      <div class="status2">
+        <div class="big" id="armBox"><div class="lbl">Arm</div><div class="val" id="vArm">–</div></div>
+        <div class="big" id="modeBox"><div class="lbl">Chế độ</div><div class="val" id="vMode">–</div></div>
+      </div>
+      <div id="modeDesc"></div>
+    </div>
+
+    <div class="card">
+      <h2>Telemetry</h2>
+      <div class="grid">
+        <div class="kv"><span class="k">Cao (AGL)</span><span class="v" id="vAlt">–</span></div>
+        <div class="kv"><span class="k">Lên/xuống</span><span class="v" id="vClimb">–</span></div>
+        <div class="kv"><span class="k">Tốc độ đất</span><span class="v" id="vGs">–</span></div>
+        <div class="kv"><span class="k">Hướng</span><span class="v" id="vHdg">–</span></div>
+        <div class="kv"><span class="k">GPS</span><span class="v" id="vGps">–</span></div>
+        <div class="kv"><span class="k">Vệ tinh / HDOP</span><span class="v" id="vSat">–</span></div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="k">Pin</span><span class="v" id="vBat">–</span></div>
+        <div class="bar"><i id="batBar" style="width:0"></i></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="kv"><span class="k">Dòng</span><span class="v" id="vAmp">–</span></div>
+        <div class="kv"><span class="k">Đã dùng</span><span class="v" id="vMah">–</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tư thế</h2>
+      <div class="adi">
+        <svg id="adi" width="104" height="104" viewBox="-52 -52 104 104">
+          <defs><clipPath id="cir"><circle cx="0" cy="0" r="50"/></clipPath></defs>
+          <g clip-path="url(#cir)">
+            <g id="adiG">
+              <rect x="-160" y="-160" width="320" height="160" fill="#1d4f7a"/>
+              <rect x="-160" y="0" width="320" height="160" fill="#6b4a24"/>
+              <line x1="-160" y1="0" x2="160" y2="0" stroke="#e4ecf5" stroke-width="1.6"/>
+              <g stroke="#c9d6e4" stroke-width="1">
+                <line x1="-16" y1="-20" x2="16" y2="-20"/><line x1="-9" y1="-10" x2="9" y2="-10"/>
+                <line x1="-9" y1="10" x2="9" y2="10"/><line x1="-16" y1="20" x2="16" y2="20"/>
+              </g>
+            </g>
+          </g>
+          <g stroke="#ffb020" stroke-width="2.2" fill="none">
+            <path d="M-26 0 L-10 0 M10 0 L26 0 M0 -3 L0 3"/>
+          </g>
+          <polygon points="0,-50 -4,-43 4,-43" fill="#ffb020"/>
+        </svg>
+        <div class="grid" style="grid-template-columns:1fr">
+          <div class="kv"><span class="k">Roll</span><span class="v" id="vRoll">–</span></div>
+          <div class="kv"><span class="k">Pitch</span><span class="v" id="vPitch">–</span></div>
+          <div class="kv"><span class="k">Yaw</span><span class="v" id="vYaw">–</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sẵn sàng bay</h2>
+      <div class="ready" id="readyBox">
+        <div class="val" id="vReady">–</div>
+        <div class="why" id="vWhy"></div>
+      </div>
+      <div class="grid">
+        <div class="kv"><span class="k">EKF vận tốc</span><span class="v" id="vEkfV">–</span></div>
+        <div class="kv"><span class="k">EKF vị trí ngang</span><span class="v" id="vEkfH">–</span></div>
+        <div class="kv"><span class="k">EKF vị trí đứng</span><span class="v" id="vEkfZ">–</span></div>
+        <div class="kv"><span class="k">EKF la bàn</span><span class="v" id="vEkfM">–</span></div>
+        <div class="kv"><span class="k">CPU máy bay</span><span class="v" id="vCpu">–</span></div>
+        <div class="kv"><span class="k">Gói MAVLink</span><span class="v" id="vRate">–</span></div>
+        <div class="kv"><span class="k">Nguồn board</span><span class="v" id="vVcc">–</span></div>
+        <div class="kv"><span class="k">Kênh RC</span><span class="v" id="vRc">–</span></div>
+      </div>
+      <div class="note" id="sensNote"></div>
+    </div>
+
+    <div class="card">
+      <h2>Rung — trục nghiên cứu của đề tài</h2>
+      <div class="vib" id="vibBox"></div>
+      <div class="grid" style="margin-top:10px">
+        <div class="kv"><span class="k">Clipping</span><span class="v" id="vClip">–</span></div>
+        <div class="kv"><span class="k">Đánh giá</span><span class="v" id="vVibJudge">–</span></div>
+      </div>
+      <div class="note">ArduPilot đo rung từ gia tốc kế. Ngưỡng: <b>&lt;30</b> tốt,
+        <b>30–60</b> cảnh báo, <b>&gt;60</b> xấu (m/s²). <b>Clipping phải bằng 0</b> — khác 0
+        nghĩa là gia tốc kế đã bão hoà, EKF sẽ trôi. Vạch giữa thanh là mốc 30.</div>
+    </div>
+
+    <div class="card" id="cardFollow" style="display:none">
+      <h2>Bám mục tiêu</h2>
+      <div class="ready" id="followBox">
+        <div class="val" id="vFollow">–</div>
+        <div class="why" id="vFollowWhy"></div>
+      </div>
+      <div class="grid">
+        <div class="kv"><span class="k">Mục tiêu khoá</span><span class="v" id="vTid">–</span></div>
+        <div class="kv"><span class="k">Số vết bám</span><span class="v" id="vTrk">–</span></div>
+        <div class="kv"><span class="k">Khoảng cách</span><span class="v" id="vDist">–</span></div>
+        <div class="kv"><span class="k">Cự ly giữ</span><span class="v" id="vHold">–</span></div>
+      </div>
+      <div class="grid" style="margin-top:10px">
+        <div class="kv"><span class="k">Lệnh tiến/lùi</span><span class="v" id="vCvx">–</span></div>
+        <div class="kv"><span class="k">Lệnh ngang</span><span class="v" id="vCvy">–</span></div>
+        <div class="kv"><span class="k">Lệnh lên/xuống</span><span class="v" id="vCvz">–</span></div>
+        <div class="kv"><span class="k">Lệnh xoay</span><span class="v" id="vCyaw">–</span></div>
+      </div>
+      <button class="retarget" id="bRetarget">ĐỔI MỤC TIÊU</button>
+      <div class="note" id="retargetNote">Bỏ khoá người đang bám và chọn lại ngay khung
+        sau (theo chiến lược <b>hộp to nhất</b> = người gần nhất). Đây là thứ duy nhất
+        trang này tác động được — <b>không</b> arm, <b>không</b> đổi chế độ bay,
+        <b>không</b> gửi lệnh vận tốc.</div>
+    </div>
+
+    <div class="card">
+      <h2>Phát hiện người</h2>
+      <div class="grid">
+        <div class="kv"><span class="k">Số người</span><span class="v" id="vDet">–</span></div>
+        <div class="kv"><span class="k">Conf cao nhất</span><span class="v" id="vBest">–</span></div>
+      </div>
+      <div class="row" style="margin-top:11px">
+        <label>Model</label>
+        <select id="selModel"></select>
+      </div>
+      <div class="row">
+        <label>Conf</label>
+        <input type="range" id="rConf" min="5" max="90" value="30">
+        <span class="pill" id="pConf">0.30</span>
+      </div>
+      <div class="row">
+        <label>Vẽ box</label>
+        <div class="toggle">
+          <button id="bOn" class="on">Bật</button><button id="bOff">Tắt</button>
+        </div>
+      </div>
+      <div class="note" id="confNote"></div>
+    </div>
+
+    <div class="card">
+      <h2>Hệ thống</h2>
+      <div class="lat" id="latBox"></div>
+      <div class="grid" style="margin-top:11px">
+        <div class="kv"><span class="k">FPS camera</span><span class="v" id="vFps">–</span></div>
+        <div class="kv"><span class="k">Nhiệt SoC</span><span class="v" id="vTemp">–</span></div>
+        <div class="kv"><span class="k">Throttle</span><span class="v" id="vThr">–</span></div>
+        <div class="kv"><span class="k">Exp / Gain</span><span class="v" id="vExp">–</span></div>
+      </div>
+      <div class="note">Trang này <b>chỉ đọc</b> telemetry — không arm, không đổi chế độ,
+        không gửi setpoint. Điều khiển bay nằm ở <code>follow_drone/</code>.</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const nn = v => (v === null || v === undefined) ? null : v;
+const fmt = (v, d = 1, u = '') => v === null || v === undefined ? '–' : v.toFixed(d) + u;
+
+/* ngưỡng conf: số đo thật trên 92 frame bay 3-6m (data/flight_val) */
+const CONF_NOTE = [
+  [0.00, 0.17, 'Rất nhiễu — mỗi khung vài chục box rác. Chỉ dùng để soi model.'],
+  [0.17, 0.24, 'Bắt được nhiều người nhưng ~1 box rác/khung.'],
+  [0.24, 0.34, 'Điểm cân bằng tốt nhất đo được trên flight_val (F1 ≈ 0.70–0.75).'],
+  [0.34, 1.01, 'Rất sạch nhưng bỏ sót nhiều — recall tụt nhanh trên 0.35.']
+];
+
+let lastSeen = 0;
+
+function setDot(el, cls){ el.className = 'dot' + (cls ? ' ' + cls : ''); }
+
+function alerts(list){
+  const box = $('alerts');
+  box.innerHTML = list.map(a =>
+    `<div class="alert ${a[0]}">⚠ ${a[1]}</div>`).join('');
+}
+
+async function tick(){
+  let s;
+  try { s = await (await fetch('/api/state', {cache:'no-store'})).json(); }
+  catch(e){ setDot($('dCam'),'bad'); $('vCam').textContent='mất kết nối'; return; }
+
+  const al = [];
+
+  /* ── camera + NPU ── */
+  const fps = nn(s.cam_fps);
+  $('vCam').textContent = fps === null ? '–' : fps.toFixed(1) + ' fps';
+  setDot($('dCam'), fps > 25 ? 'ok' : fps > 12 ? 'warn' : 'bad');
+  if (fps !== null && fps < 20) al.push(['warn', `Camera chỉ ${fps.toFixed(1)} fps (mong đợi 30).`]);
+
+  const ms = s.ms || {};
+  $('vNpu').textContent = ms.inference ? ms.inference.toFixed(1) + ' ms' : '–';
+  setDot($('dNpu'), ms.inference ? 'ok' : 'bad');
+
+  const t = nn(s.temp_C);
+  $('vTmp').textContent = t === null ? '–' : t.toFixed(0) + '°C';
+  setDot($('dTmp'), t === null ? '' : t < 70 ? 'ok' : t < 80 ? 'warn' : 'bad');
+  $('vTemp').textContent = fmt(t, 1, ' °C');
+  const thr = s.throttled || '–';
+  $('vThr').textContent = thr;
+  $('vThr').className = 'v ' + (thr === '0x0' ? 'ok' : 'bad');
+  if (thr !== '0x0' && thr !== '–') al.push(['warn', `Pi đang throttle (${thr}) — kiểm tra nguồn/tản nhiệt.`]);
+  $('vFps').textContent = fmt(fps, 1, ' fps');
+  $('vExp').textContent = (s.exposure ?? '–') + ' / ' + (s.gain ?? '–');
+
+  /* ── latency từng chặng ── */
+  const stages = [['preprocess','tiền xử lý'],['inference','NPU'],['decode_nms','decode+NMS']];
+  const tot = ms.total || 1;
+  $('latBox').innerHTML = stages.map(([k,label]) => {
+    const v = ms[k] || 0;
+    return `<span class="n">${label}</span>
+            <span class="b"><i style="width:${Math.min(100, v/tot*100)}%"></i></span>
+            <span class="t">${v.toFixed(2)}ms</span>`;
+  }).join('') + `<span class="n">tổng</span><span class="b"></span>
+                 <span class="t"><b>${tot.toFixed(2)}ms</b></span>`;
+
+  /* ── detect ── */
+  $('vDet').textContent = s.dets ?? '–';
+  $('vDet').className = 'v ' + (s.dets > 0 ? 'ok' : 'dim');
+  $('vBest').textContent = s.best_conf ? s.best_conf.toFixed(2) : '–';
+  $('tagL').textContent = `${s.model || '–'} @${s.img_size || '?'} · conf ${(s.conf||0).toFixed(2)}`;
+  $('tagR').textContent = `${s.dets ?? 0} người · ${fmt(fps,1)} fps · ${fmt(t,0,'°C')}`;
+
+  if (s.models && s.models.length === 0) $('selModel').closest('.row').style.display = 'none';
+  if (s.models && s.models.length && $('selModel').options.length !== s.models.length){
+    $('selModel').innerHTML = s.models.map((m,i) =>
+      `<option value="${i}">${m}</option>`).join('');
+  }
+  if (s.model_idx !== undefined) $('selModel').value = s.model_idx;
+
+  /* ── vòng bám (chỉ có khi chạy follow_drone/main.py) ── */
+  const F = s.follow;
+  if (F){
+    $('cardFollow').style.display = '';
+    const STATE = {
+      FOLLOW: ['go',  'Đang bám mục tiêu.'],
+      COAST:  ['',    'Mất phát hiện — đang bám theo dự đoán Kalman.'],
+      HOVER:  ['',    'Mất mục tiêu — treo tại chỗ.'],
+      LOITER: ['no',  'Đã chuyển sang giữ vị trí, ngừng bám.'],
+      RTL:    ['no',  'Đang tự bay về nhà.'],
+      SEARCH: ['',    'Chưa khoá được mục tiêu nào.'],
+    };
+    const st = STATE[F.state] || ['', ''];
+    $('followBox').className = 'ready ' + st[0];
+    $('vFollow').textContent = F.state || '–';
+    $('vFollowWhy').textContent = st[1];
+    if (F.state === 'COAST' || F.state === 'HOVER')
+      al.push(['warn', 'Vòng bám: ' + st[1]]);
+
+    $('vTid').textContent = F.target_id ?? 'chưa khoá';
+    $('vTid').className   = 'v ' + (F.target_id ? 'ok' : 'dim');
+    $('vTrk').textContent = F.tracks ?? '–';
+    $('vDist').textContent = F.distance_m ? F.distance_m.toFixed(2) + ' m' : '–';
+    $('vHold').textContent = F.hold_distance_m ? F.hold_distance_m.toFixed(1) + ' m' : '–';
+    if (F.distance_m && F.hold_distance_m){
+      const err = F.distance_m - F.hold_distance_m;
+      $('vDist').className = 'v ' + (Math.abs(err) < 1.0 ? 'ok' : Math.abs(err) < 3 ? 'warn' : 'bad');
+    }
+    const c = F.cmd;
+    $('vCvx').textContent  = c ? c[0].toFixed(2) + ' m/s' : '–';
+    $('vCvy').textContent  = c ? c[1].toFixed(2) + ' m/s' : '–';
+    $('vCvz').textContent  = c ? c[2].toFixed(2) + ' m/s' : '–';
+    $('vCyaw').textContent = c ? c[3].toFixed(2) + ' rad/s' : '–';
+
+    $('bRetarget').disabled = !s.allow_retarget;
+    if (F.awaiting_operator){
+      $('followBox').className = 'ready no';
+      $('vFollow').textContent = 'CHỜ CHỌN MỤC TIÊU';
+      $('vFollowWhy').textContent = 'Đã mất người đang bám. Bấm ĐỔI MỤC TIÊU để chọn lại.';
+      al.push(['warn', 'Vòng bám đang chờ bạn chọn mục tiêu mới.']);
+    }
+  }
+
+  /* ── MAVLink / ArduPilot ── */
+  const m = s.mav || {};
+  const armBox = $('armBox'), modeBox = $('modeBox');
+  if (!m.enabled){
+    setDot($('dMav')); $('vMav').textContent = 'tắt';
+    armBox.className = 'big'; $('vArm').textContent = 'N/A';
+    modeBox.className = 'big'; $('vMode').textContent = 'N/A';
+    $('modeDesc').textContent = 'Chạy lại với --mavlink /dev/serial0 để thấy trạng thái bay.';
+  } else if (!m.connected){
+    setDot($('dMav'),'bad'); $('vMav').textContent = 'mất link';
+    armBox.className = 'big nolink'; $('vArm').textContent = 'NO LINK';
+    modeBox.className = 'big nolink'; $('vMode').textContent = 'NO LINK';
+    $('modeDesc').textContent = m.err ? m.err : 'Chưa nhận được heartbeat từ máy bay.';
+    al.push(['bad', 'Mất MAVLink với máy bay — telemetry không cập nhật.']);
+  } else {
+    setDot($('dMav'),'ok');
+    $('vMav').textContent = (m.heartbeat_age ?? 0).toFixed(1) + 's';
+    armBox.className = 'big ' + (m.armed ? 'armed' : 'disarmed');
+    $('vArm').textContent = m.armed ? 'ARMED' : 'DISARMED';
+    modeBox.className = 'big m-' + (m.mode_class || 'other');
+    $('vMode').textContent = m.mode || '–';
+    $('modeDesc').textContent = m.mode_desc || '';
+
+    $('vAlt').textContent   = fmt(nn(m.alt_agl), 2, ' m');
+    $('vClimb').textContent = fmt(nn(m.climb), 2, ' m/s');
+    $('vGs').textContent    = fmt(nn(m.groundspeed), 2, ' m/s');
+    $('vHdg').textContent   = m.heading === null || m.heading === undefined ? '–' : m.heading + '°';
+    $('vGps').textContent   = m.gps_fix_txt || '–';
+    $('vGps').className     = 'v ' + (m.gps_fix >= 3 ? 'ok' : 'bad');
+    $('vSat').textContent   = (m.gps_sats ?? '–') + ' / ' + (m.gps_hdop ?? '–');
+    $('vRoll').textContent  = fmt(nn(m.roll), 1, '°');
+    $('vPitch').textContent = fmt(nn(m.pitch), 1, '°');
+    $('vYaw').textContent   = fmt(nn(m.yaw), 1, '°');
+
+    if (m.roll !== null && m.pitch !== null && m.roll !== undefined)
+      $('adiG').setAttribute('transform',
+        `rotate(${-m.roll}) translate(0 ${Math.max(-45, Math.min(45, m.pitch * 1.6))})`);
+
+    const pct = nn(m.batt_pct), volt = nn(m.volt);
+    $('vBat').textContent = (volt === null ? '–' : volt.toFixed(2) + ' V') +
+                            (pct === null ? '' : '  ·  ' + pct + '%');
+    if (pct !== null){
+      $('batBar').style.width = Math.max(0, Math.min(100, pct)) + '%';
+      $('batBar').style.background = pct > 40 ? 'var(--ok)' : pct > 20 ? 'var(--warn)' : 'var(--bad)';
+      $('vBat').className = 'v ' + (pct > 40 ? '' : pct > 20 ? 'warn' : 'bad');
+      if (pct <= 20) al.push(['bad', `Pin còn ${pct}% — hạ cánh ngay.`]);
+      else if (pct <= 35) al.push(['warn', `Pin còn ${pct}%.`]);
+    }
+    if (m.armed && m.gps_fix < 3 && ['LOITER','GUIDED','RTL','AUTO','POSHOLD'].includes(m.mode))
+      al.push(['bad', `Chế độ ${m.mode} cần GPS mà fix đang là ${m.gps_fix_txt}.`]);
+
+    $('vAmp').textContent = m.batt_current === null || m.batt_current === undefined
+                            ? '–' : m.batt_current.toFixed(2) + ' A';
+    $('vMah').textContent = m.batt_used_mah === null || m.batt_used_mah === undefined
+                            ? '–' : m.batt_used_mah + ' mAh';
+
+    /* ── sẵn sàng bay ── */
+    const rb = $('readyBox');
+    if (m.prearm_ok === true){
+      rb.className = 'ready go'; $('vReady').textContent = 'SẴN SÀNG ARM';
+      $('vWhy').textContent = 'ArduPilot báo mọi kiểm tra trước khi arm đã qua.';
+    } else if (m.prearm_ok === false){
+      rb.className = 'ready no'; $('vReady').textContent = 'CHƯA ARM ĐƯỢC';
+      $('vWhy').textContent = m.prearm_msg || 'Máy bay từ chối arm, chưa rõ lý do.';
+      al.push(['warn', m.prearm_msg || 'Chưa arm được.']);
+    } else {
+      rb.className = 'ready'; $('vReady').textContent = '–'; $('vWhy').textContent = '';
+    }
+
+    const ev = m.ekf_var || {};
+    const ekf = (id, v) => {
+      const el = $(id);
+      el.textContent = (v === null || v === undefined) ? '–' : v.toFixed(3);
+      el.className = 'v ' + (v === null || v === undefined ? 'dim'
+                            : v < 0.5 ? 'ok' : v < 0.8 ? 'warn' : 'bad');
+      return v;
+    };
+    const evs = [ekf('vEkfV', ev.vel), ekf('vEkfH', ev.pos_h),
+                 ekf('vEkfZ', ev.pos_v), ekf('vEkfM', ev.mag)];
+    if (evs.some(v => v !== undefined && v !== null && v >= 0.8))
+      al.push(['bad', 'Phương sai EKF vượt 0,8 — ước lượng trạng thái không tin được.']);
+
+    $('vCpu').textContent  = m.cpu_load === null || m.cpu_load === undefined ? '–' : m.cpu_load + '%';
+    $('vCpu').className    = 'v ' + (m.cpu_load > 85 ? 'bad' : m.cpu_load > 70 ? 'warn' : '');
+    $('vRate').textContent = m.msg_rate ? m.msg_rate + '/s' : '–';
+    $('vVcc').textContent  = m.vcc ? m.vcc.toFixed(2) + ' V' : '–';
+    $('vVcc').className    = 'v ' + (m.vcc && (m.vcc < 4.6 || m.vcc > 5.6) ? 'bad' : '');
+    $('vRc').textContent   = m.rc_channels ? m.rc_channels + ' kênh' : 'không có';
+    $('vRc').className     = 'v ' + (m.rc_channels ? '' : 'bad');
+    if (!m.rc_channels)
+      al.push(['warn', 'Không có tín hiệu RC — người lái không giành lại quyền được.']);
+
+    const sb = m.sensors_bad || [];
+    $('sensNote').textContent = sb.length
+      ? '⚠ Cảm biến lỗi: ' + sb.join(', ')
+      : 'Mọi cảm biến đang bật đều báo lành mạnh.';
+    if (sb.length) al.push(['bad', 'Cảm biến lỗi: ' + sb.join(', ')]);
+
+    /* ── rung ── */
+    const vb = m.vibe;
+    if (vb){
+      const col = v => v < 30 ? 'var(--ok)' : v < 60 ? 'var(--warn)' : 'var(--bad)';
+      $('vibBox').innerHTML = ['X','Y','Z'].map((ax,i) => {
+        const v = vb[i];
+        return `<span class="ax">${ax}</span>
+                <span class="b"><i style="width:${Math.min(100, v/60*100)}%;
+                     background:${col(v)}"></i></span>
+                <span class="t" style="color:${col(v)}">${v.toFixed(2)}</span>`;
+      }).join('');
+      const worst = Math.max(...vb);
+      $('vVibJudge').textContent = worst < 30 ? 'tốt' : worst < 60 ? 'cảnh báo' : 'xấu';
+      $('vVibJudge').className = 'v ' + (worst < 30 ? 'ok' : worst < 60 ? 'warn' : 'bad');
+      if (worst >= 60) al.push(['bad', `Rung ${worst.toFixed(1)} m/s² — quá ngưỡng 60, EKF sẽ trôi.`]);
+      else if (worst >= 30) al.push(['warn', `Rung ${worst.toFixed(1)} m/s² — vượt ngưỡng 30.`]);
+    } else {
+      $('vibBox').innerHTML = '<span class="ax">–</span><span class="b"></span><span class="t">chưa có</span>';
+    }
+    const cl = m.clipping;
+    if (cl){
+      const tot = cl[0] + cl[1] + cl[2];
+      $('vClip').textContent = cl.join(' / ');
+      $('vClip').className = 'v ' + (tot === 0 ? 'ok' : 'bad');
+      if (tot > 0) al.push(['bad', `Gia tốc kế clipping ${tot} lần — rung vượt dải đo.`]);
+    }
+
+    if (m.statustext && (Date.now()/1000 - (m.statustext_ts||0)) < 20
+        && !(m.statustext || '').startsWith('PreArm:'))
+      al.push([(m.statustext_sev !== undefined && m.statustext_sev <= 3) ? 'bad' : 'warn',
+               'Máy bay báo: ' + m.statustext]);
+  }
+
+  alerts(al);
+  $('clock').textContent = new Date().toLocaleTimeString('vi-VN');
+}
+
+/* ── điều khiển ── */
+$('rConf').oninput = () => {
+  const v = ($('rConf').value / 100);
+  $('pConf').textContent = v.toFixed(2);
+  const n = CONF_NOTE.find(x => v >= x[0] && v < x[1]);
+  $('confNote').textContent = n ? n[2] : '';
+  fetch('/api/conf?v=' + v.toFixed(2));
+};
+$('selModel').onchange = () => {
+  fetch('/api/model?i=' + $('selModel').value);
+  $('tagL').textContent = 'đang nạp model…';
+};
+const vwrap = document.querySelector('.video');
+if (localStorage.getItem('gcsFill') === '1') vwrap.classList.add('fill');
+const syncFit = () => $('bFit').textContent =
+  vwrap.classList.contains('fill') ? 'lấp đầy' : 'vừa khung';
+$('bFit').onclick = () => {
+  vwrap.classList.toggle('fill');
+  try { localStorage.setItem('gcsFill', vwrap.classList.contains('fill') ? '1' : '0'); }
+  catch (e) {}
+  syncFit();
+};
+syncFit();
+
+$('bRetarget').onclick = async () => {
+  const b = $('bRetarget');
+  b.disabled = true; b.textContent = 'đang đổi…';
+  try { await fetch('/api/retarget'); } catch (e) {}
+  setTimeout(() => { b.textContent = 'ĐỔI MỤC TIÊU'; b.disabled = false; }, 900);
+};
+
+$('bOn').onclick  = () => { fetch('/api/draw?v=1'); $('bOn').classList.add('on');  $('bOff').classList.remove('on'); };
+$('bOff').onclick = () => { fetch('/api/draw?v=0'); $('bOff').classList.add('on'); $('bOn').classList.remove('on'); };
+
+$('rConf').oninput();
+tick(); setInterval(tick, 500);
+</script>
+</body>
+</html>

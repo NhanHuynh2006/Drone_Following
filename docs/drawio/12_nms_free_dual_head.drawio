@@ -1,0 +1,47 @@
+<mxfile host="app.diagrams.net" agent="pfdet-drone-follow" type="device">
+  <diagram id="Nhánh_NMS-free_của_SteadyDet-N" name="Nhánh NMS-free của SteadyDet-N">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="820"
+        math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="SteadyDet-N NMS-free — hai head song song trên CÙNG đặc trưng" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=22;fontFamily=Helvetica;fontColor=#102A43;fontStyle=1" vertex="1" parent="1"><mxGeometry x="60" y="25" width="1150" height="34" as="geometry"/></mxCell>
+        <mxCell id="t2" value="models/pfdet_nano_v17.py:113-119 &amp; forward_dual · bật bằng nms_free=True (configs/train_config_v17_nms_free.yaml)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#627D98;fontStyle=0" vertex="1" parent="1"><mxGeometry x="60" y="55" width="1150" height="40" as="geometry"/></mxCell>
+        <mxCell id="n3" value="Đặc trưng neck
+n2, n3, n4, n5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#EF6C00;fontColor=#E65100;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="80" y="300" width="230" height="70" as="geometry"/></mxCell>
+        <mxCell id="g4" value="Head o2m — một người ↔ NHIỀU ô" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBF4FD;strokeColor=#6A1B9A;fontColor=#4A148C;dashed=1;dashPattern=8 6;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;arcSize=6;fontStyle=1" vertex="1" parent="1"><mxGeometry x="390" y="130" width="480" height="200" as="geometry"/></mxCell>
+        <mxCell id="n5" value="head_p2..p5
+LiteHead ×4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="415" y="175" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="n6" value="k = 6 / 3 ô dương
+mỗi người" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="650" y="175" width="195" height="60" as="geometry"/></mxCell>
+        <mxCell id="t7" value="Học nhanh, tín hiệu dày → đây là head dùng khi TRAIN
+và cũng là head mặc định lúc suy luận (cần NMS)." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=12;fontFamily=Helvetica;fontColor=#4A148C;fontStyle=0" vertex="1" parent="1"><mxGeometry x="415" y="250" width="430" height="60" as="geometry"/></mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n5" target="n6"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="g9" value="Head o2o — một người ↔ ĐÚNG 1 ô" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F9F2;strokeColor=#2E7D32;fontColor=#1B5E20;dashed=1;dashPattern=8 6;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;arcSize=6;fontStyle=1" vertex="1" parent="1"><mxGeometry x="390" y="380" width="480" height="200" as="geometry"/></mxCell>
+        <mxCell id="n10" value="head_p2..p5_o2o
+LiteHead ×4 (bản sao)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="415" y="425" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="n11" value="k = 1 ô dương
+stal_k_min = 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="650" y="425" width="195" height="60" as="geometry"/></mxCell>
+        <mxCell id="t12" value="Không sinh hộp trùng → suy luận KHÔNG cần NMS.
+Khó train hơn vì tín hiệu thưa." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=12;fontFamily=Helvetica;fontColor=#1B5E20;fontStyle=0" vertex="1" parent="1"><mxGeometry x="415" y="500" width="430" height="60" as="geometry"/></mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n10" target="n11"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#6A1B9A;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n3" target="n5"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2E7D32;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#2E7D32;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n3" target="n10"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n16" value="LÚC TRAIN — forward_dual(x)
+loss = loss_o2m + λ · loss_o2o  (λ = 1.0)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="950" y="175" width="380" height="60" as="geometry"/></mxCell>
+        <mxCell id="n17" value="LÚC EVAL nms_free=True
+chỉ chạy head o2o, bỏ hẳn NMS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="950" y="425" width="380" height="60" as="geometry"/></mxCell>
+        <mxCell id="e18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#F9A825;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n6" target="n16"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4527A0;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#4527A0;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n11" target="n17"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#B0BEC5;strokeWidth=2;dashed=1;fontSize=11;fontFamily=Helvetica;fontColor=#B0BEC5;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n6" target="n17"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="t21" value="KẾT QUẢ ĐO ĐƯỢC (VisDrone-val, 3 seed)
+• SteadyDet-N thường:      AP sạch 0.1892  ·  retain khi rung 16.8 ± 0.7 %
+• SteadyDet-N NMS-free:  AP sạch 0.1954  ·  retain 23.4 ± 0.8 %   → head o2o KHÔNG làm tụt AP, còn nhỉnh hơn một chút.
+• Gradient của head o2o đi ngược vào CHUNG backbone/neck với o2m → nó hoạt động như một ràng buộc phụ,
+  ép đặc trưng phải đủ sắc để một ô duy nhất tự tin. Đây là lý do khả năng chịu rung tăng dù không hề train rung.
+• Giá: thêm 4 LiteHead lúc train (rẻ, tổng &lt; 2 % compute) và tăng thời gian train; lúc deploy chỉ giữ một trong hai." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#455A64;fontStyle=0" vertex="1" parent="1"><mxGeometry x="80" y="620" width="1250" height="180" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

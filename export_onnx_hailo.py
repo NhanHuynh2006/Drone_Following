@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BƯỚC 1 — Export ONNX "sạch" cho Hailo từ checkpoint PFDet-Nano v15.
+BƯỚC 1 — Export ONNX "sạch" cho Hailo từ checkpoint SteadyDet-W.
 
 Khác export.py gốc ở chỗ:
   - KHÔNG dùng dynamic_axes (Hailo cần static shape, batch=1)
@@ -53,13 +53,25 @@ def main():
     output_names = list(DEFAULT_EXPORT_OUTPUT_NAMES)
 
     # QUAN TRỌNG: không truyền dynamic_axes -> graph hoàn toàn static
-    torch.onnx.export(
-        model, dummy, args.output,
+    #
+    # dynamo=False là BẮT BUỘC cho Hailo. Từ torch 2.6 trở đi torch.onnx.export mặc
+    # định dùng bộ export mới (dynamo). Bộ đó bỏ thuộc tính `kernel_shape` của node
+    # Conv — hợp lệ theo chuẩn ONNX vì suy ra được từ shape của kernel, nhưng parser
+    # Hailo lại đọc thẳng thuộc tính đó và chết:
+    #     onnx_graph.py:987 get_kernel_shape -> IndexError: list index out of range
+    # Nó cũng không hạ nổi opset xuống 11 (thiếu adapter cho Resize) nên ra opset 18.
+    # Bộ export cũ (TorchScript) giữ đủ thuộc tính và hạ đúng opset. Đo 2026-08-27.
+    export_kwargs = dict(
         opset_version=args.opset,
         input_names=['input'],
         output_names=output_names,
         do_constant_folding=True,
     )
+    try:
+        torch.onnx.export(model, dummy, args.output, dynamo=False, **export_kwargs)
+    except TypeError:
+        # torch cũ chưa có tham số dynamo -> vốn đã dùng bộ TorchScript
+        torch.onnx.export(model, dummy, args.output, **export_kwargs)
     print(f'[export] ONNX saved: {args.output} ({os.path.getsize(args.output)/1e6:.2f}MB)')
 
     if not args.no_simplify:

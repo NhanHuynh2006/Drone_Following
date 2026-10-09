@@ -2,8 +2,35 @@
 # Đọc kỹ trước khi chạy thật. Các giá trị conservative cho an toàn.
 
 model:
+  # "hailo" = chạy HEF trên NPU (17.7 ms/khung, đo thật) -> DÙNG CÁI NÀY KHI BAY.
+  # "torch" = PyTorch, chỉ để chạy thử trên máy bàn có GPU. Trên CPU Pi 5 quá chậm,
+  #           dùng nó thì ngân sách 30 Hz ở runs/control_rate_2026-08-27.md không còn đúng.
+  backend: "hailo"
+
+  # ĐO TRÊN PI 2026-08-28 — cả ba HEF, cùng 92 khung bay thật, cùng đường decode:
+  #   pfdet_v17_640_coco       F1 0.880 @conf 0.25  (recall 0.837, prec 0.928)  56.9 FPS
+  #   pfdet_v17_640_coco_c512  F1 0.812 @conf 0.25  (recall 0.750)              62.9 FPS
+  #   pfdet_v17_640_fair (cũ)  F1 0.745 @conf 0.30  (recall 0.620)              63.7 FPS
+  #
+  # Chọn bản đầu: chậm hơn 2 ms nhưng bắt được người ở 84% số khung thay vì 62%.
+  # 17.6 ms vẫn dư xa ngân sách 33.3 ms của vòng 30 Hz.
+  #
+  # Bản này sinh từ runs/train_v17_hailo_coco/best.pt — checkpoint đã sửa lỗi
+  # extra_enable_epoch làm COCO không bao giờ được bật. Calib lấy từ tập TRAIN,
+  # trộn đúng tỉ lệ 75% VisDrone + 25% COCO (KHÔNG dùng flight_val: đó là tập chấm điểm).
+  hef: "/home/raspi/NhanHuynh/models/pfdet_v17_640_coco_hailo8l.hef"
+
+  # Lọc hộp rác sau NMS. INT8 làm box kém khít (AP75 rớt 30%, xem
+  # runs/pi_hailo_measured_2026-08-24.md) nên vài hộp dẹt/tí xíu lọt lưới.
+  min_box_px: 200         # bỏ hộp nhỏ hơn 200 px^2 (~14x14) — người ở 3-6m to hơn nhiều
+  max_aspect: 6.0         # bỏ hộp quá dẹt hoặc quá cao, người thật nằm trong khoảng này
+
+  # chỉ dùng khi backend = "torch"
   weights: "../runs/train_v15_light_musgd_v3/best.pt"
-  conf_threshold: 0.4
+  conf_threshold: 0.25    # điểm F1 tốt nhất ĐO TRÊN CHÍNH HEF NÀY: 0.880
+                          # (0.20 -> 0.848, 0.30 -> 0.823, 0.40 -> 0.551).
+                          # ⚠️ Ngưỡng tối ưu KHÁC NHAU theo từng bản HEF — bản _fair cũ
+                          # là 0.30. Đổi HEF thì phải đo lại: bash scripts/deploy_to_pi.sh
   nms_iou: 0.45
   img_size: 640         # Inference size, model trained ở 640
   use_ema: true
@@ -11,6 +38,12 @@ model:
 
 camera:
   source: 0             # 0 = first camera. Camera USB rời thường là 1
+  # GIỮ 640x480. C270 chạy được 1280x720@30 (đã đo), NHƯNG:
+  #  (a) fx/fy/cx/cy bên dưới hiệu chuẩn cho 640x480 — đổi độ phân giải mà không hiệu
+  #      chuẩn lại thì distance.py tính SAI khoảng cách, và khoảng cách là thứ điều
+  #      khiển tiến/lùi. C270 đổi từ 4:3 sang 16:9 là đổi cả góc nhìn, không scale được.
+  #  (b) detector letterbox về 640 nên 720p không cho thêm điểm ảnh nào trên người,
+  #      chỉ tốn CPU giải nén MJPG.
   width: 640
   height: 480
   fps: 30
@@ -21,14 +54,38 @@ camera:
   cy: 240.0
 
 tracking:
-  max_age: 90           # 3s @ 30 FPS — track survive 3s occlusion
+  max_age: 45           # 1.5s @ 30 FPS. Trước là 90 (3 s) — quá dài: bám bằng dự đoán
+                        # Kalman 3 giây thì người đã kịp đổi hướng. Thang mất-mục-tiêu
+                        # bên dưới (coast/hover/loiter) mới là chỗ xử lý mất lâu.
   min_hits: 3           # Cần 3 detection liên tiếp mới confirm track
   iou_threshold: 0.3
   delta_t: 3            # OC-SORT look-back
 
 target_selection:
-  strategy: "largest"   # "largest" hoặc "center" hoặc "manual"
-  lock_on_first: true   # Lock vào target đầu tiên detect được
+  # "largest" = chọn hộp TO NHẤT (~ người gần nhất) ở lần đầu, rồi KHOÁ vào ID đó.
+  # Sau khi khoá, nó bám đúng người đó kể cả khi có người khác gần hơn xuất hiện.
+  strategy: "largest"   # "largest" | "center" (gần tâm khung nhất) | "manual"
+  lock_on_first: true   # khoá ngay vào mục tiêu đầu tiên chọn được
+
+  # Mất mục tiêu bao lâu thì thôi giữ khoá — tức bao giờ ĐƯỢC đổi sang người khác.
+  # ⚠️ ĐỪNG buộc số này vào thang mất-mục-tiêu bên dưới: thang đó quyết định MÁY BAY
+  # LÀM GÌ, còn số này quyết định BÁM AI. OC-SORT đã giữ ID sống thêm max_age (1.5 s),
+  # nên để 7.0 thì tổng thời gian chết là 8.5 s — người quay lại đứng ngay trước ống
+  # kính mà vòng bám vẫn làm ngơ.
+  # 3.0 = đúng bằng pha coast: giữ khoá chừng nào máy bay còn đang đuổi theo dự đoán.
+  lost_grace_s: 3.0
+
+  # Sau khi nhả khoá, dành thêm bấy nhiêu giây CHỈ tìm lại đúng người cũ (so vị trí và
+  # cỡ hộp cuối cùng), chưa chấp nhận người khác. Không có nó thì: hết grace mà trong
+  # khung đang có người lạ là drone khoá luôn vào người lạ, và người cũ quay lại cũng
+  # không giành lại được. Test bắt đúng lỗi này.
+  reacquire_s: 5.0
+
+  # Sau khi nhả khoá thì làm gì:
+  #   true  = tự khoá vào người có hộp to nhất. Tự chủ hơn, NHƯNG nghĩa là mất
+  #           người đang bám đủ lâu thì drone sẽ bám sang người LẠ gần nhất.
+  #   false = đứng yên chờ bấm "ĐỔI MỤC TIÊU" trên bảng giám sát.
+  auto_relock: true
 
 distance:
   person_height_m: 1.7  # Chiều cao giả định
@@ -38,7 +95,13 @@ distance:
 control:
   follow_distance_m: 5.0    # Setpoint khoảng cách
   follow_altitude_m: 5.0    # Setpoint độ cao AGL
-  command_rate_hz: 10       # MAVLink send rate
+  # 30 Hz = KHỚP ĐÚNG nhịp detector (đo được 30 FPS e2e). Mỗi lệnh gửi đi mang một
+  # phát hiện MỚI, không lệnh nào thừa. Ở 10 Hz thì mỗi phát hiện phải chờ trung bình
+  # 50 ms mới được gửi — cộng thẳng vào độ trễ điều khiển mà chẳng đổi lấy gì.
+  # Đường truyền đã đo chịu được: 50 Hz mất 0% gói, khứ hồi p50 4.75 ms / p99 7.73 ms.
+  # Không đi quá 30 Hz vì detector không sinh thêm thông tin.
+  # Xem runs/control_rate_2026-08-27.md
+  command_rate_hz: 30
 
   forward_pid:
     Kp: 0.5
@@ -64,7 +127,8 @@ safety:
   d_min: 3.0                  # Hard stop, không tiến gần hơn
   d_max: 15.0                 # Beyond này, follow chậm + warn
   v_max_horizontal: 5.0       # Cap vận tốc ngang
-  yaw_rate_max: 1.5
+  yaw_rate_max: 1.0           # rad/s = 57 deg/s. Giữ DƯỚI ATC_RATE_WPY_MAX của máy bay
+                              # (đo được 60 deg/s) để lệnh không bị bộ điều khiển bay cắt.
   altitude_min_agl: 2.0
   altitude_max_agl: 25.0      # Phải thấp hơn FENCE_ALT_MAX
 
@@ -73,18 +137,50 @@ safety:
     hover_duration_s: 5.0     # Sau coast, hover (vel=0)
     loiter_duration_s: 7.0    # Sau hover, switch LOITER
 
-  command_timeout_s: 3.0      # ArduPilot GUIDED timeout
+  # Phải KHỚP với GUID_TIMEOUT trên máy bay. Mặc định cả hai là 3 s = 90 lệnh bị mất
+  # ở nhịp 30 Hz trước khi máy bay chịu dừng — quá lâu. Đường xử lý đo được rất ổn định
+  # (p99 36 ms) nên 1.0 s vẫn dư an toàn mà phản ứng nhanh hơn 3 lần khi Pi treo.
+  command_timeout_s: 1.0      # đặt GUID_TIMEOUT = 1.0 trong Mission Planner cho khớp
 
   require_gps_3d_fix: true
   max_hdop: 200               # cm * 100 = 2.0 HDOP
 
+  # NGƯỠNG PIN — pack hiện tại là 4S (đầy 16.8 V, danh định 14.8 V).
+  # Hai số này TRƯỚC ĐÂY bị hard-code 22.5 / 21.5 trong safety.py, tức ngưỡng 6S:
+  # preflight luôn trượt ("Pre-flight check FAILED. Aborting.") và nếu qua được thì
+  # vòng bám nhảy LOITER ngay vòng đầu. Chỉ --no-fly là không lộ ra.
+  battery_warn_v: 14.8        # 3.7 V/cell — dưới mức này thì KHÔNG cho cất cánh
+  battery_critical_v: 14.0    # 3.5 V/cell — đang bay mà tụt tới đây thì chuyển LOITER.
+                              # Khớp đúng BATT_LOW_VOLT = 14.0 đặt trong Mission Planner.
+                              # ⚠️ Đổi sang pack 6S thì đặt 22.2 / 21.0, không dùng lại số 4S.
+
 mavlink:
-  connection: "/dev/serial0"  # Pi 5 GPIO UART. Test SITL: "udpin:127.0.0.1:14550"
-  baud: 921600
+  # ĐO 2026-08-27: Pixhawk6C nối bằng USB -> /dev/ttyACM0 (KHÔNG phải GPIO UART).
+  # Cổng đó chỉ MỘT tiến trình mở được. Muốn chạy cùng lúc với dashboard thì trên Pi
+  # chạy `./run.sh mux` rồi trỏ vào UDP:
+  #     connection: "udpin:127.0.0.1:14550"
+  # Nối thẳng (chỉ mình chương trình này): "/dev/ttyACM0", baud không quan trọng với USB.
+  connection: "udpin:127.0.0.1:14550"
+  baud: 115200
   source_system: 255          # Pi as GCS
   source_component: 1
   takeoff_altitude_m: 5.0
   arm_check_timeout_s: 10.0
+
+# Bảng giám sát nhúng — mở trên laptop/điện thoại cùng WiFi: http://<ip-pi>:8080
+# Dùng lại khung hình + kết quả phát hiện của chính vòng bay, KHÔNG tốn thêm lượt
+# inference nào. Không chạy hailo_gcs.py song song: NPU chỉ một tiến trình dùng được.
+web:
+  enabled: true
+  port: 8080
+
+  # Cho phép bấm "ĐỔI MỤC TIÊU" trên trang giám sát.
+  # Đây là NGOẠI LỆ DUY NHẤT của nguyên tắc "trang chỉ đọc", và nó hẹp: chỉ bỏ khoá
+  # mục tiêu để chọn lại người. KHÔNG arm, KHÔNG đổi chế độ bay, KHÔNG gửi vận tốc.
+  # Cần có vì ngoài bãi bay bạn xem qua web chứ không có màn hình cắm vào Pi, mà
+  # khoá nhầm người thì không còn cách nào sửa ngoài tắt chương trình giữa chuyến.
+  allow_retarget: true
+  quality: 75           # chất lượng JPEG. Hạ xuống 60 nếu WiFi ngoài bãi yếu.
 
 logging:
   log_dir: "./logs"

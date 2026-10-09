@@ -1,3 +1,14 @@
+> # ⚠️ TÀI LIỆU NÀY LÀ NHÁNH CŨ (PX4)
+>
+> Máy bay của đề tài nay chạy **ArduPilot Copter**, không phải PX4. Mọi tham số
+> `COM_*`, `MPC_*`, `MC_*`, `EKF2_*` bên dưới **không tồn tại** trên ArduPilot và
+> chỉnh trong **Mission Planner** chứ không phải QGroundControl.
+>
+> Tham số ArduPilot tương đương: xem `baocao/phuluc/pl_a_cau_hinh.tex`
+> (`SERIAL2_PROTOCOL`, `GUID_TIMEOUT`, `WPNAV_SPEED`, `WPNAV_ACCEL`, `ANGLE_MAX`,
+> `ATC_SLEW_YAW`, `PSC_VELXY_*`, `FS_GCS_ENABLE`, `BATT_FS_LOW_ACT`, `LOG_BITMASK`).
+> Hướng dẫn bay dùng: `follow_drone/README.md`.
+
 # DEPLOY GUIDE — Bay theo người, PX4 + Jetson Nano (làm 1 lần, bay test)
 
 Hệ thống: **Detector (Python/ONNX) → UDP → Control (C++ MAVSDK) → PX4**. Mượt nhờ Kalman + feedforward +

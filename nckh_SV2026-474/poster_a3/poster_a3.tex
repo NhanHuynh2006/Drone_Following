@@ -1,0 +1,155 @@
+% =====================================================================
+%  POSTER TRIỂN LÃM — mẫu BM07A/QT-PKHCN-NCKHSV/00
+%  A3 NGANG (420 x 297 mm), 4 cột. In màu: 1 bản A1 (báo cáo) + 1 bản A3 (đóng vào BCTK).
+%  Biên dịch: pdflatex poster_a3
+% =====================================================================
+\documentclass[10pt]{extarticle}
+\usepackage[T5]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage{mathptmx}
+\usepackage[paperwidth=420mm,paperheight=297mm,top=1.5cm,bottom=1.6cm,left=2.25cm,right=2.0cm]{geometry}
+\usepackage{graphicx,booktabs,array,xcolor,enumitem,amsmath}
+\usepackage[many]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,backgrounds}
+\input{../thongtin.tex}
+\definecolor{xanh}{HTML}{2A78D6}
+\definecolor{cam}{HTML}{EB6834}
+\definecolor{dam}{HTML}{0B3C78}
+\graphicspath{{../hinh/}}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3.5pt}
+\setlist{itemsep=1.5pt,topsep=2pt,parsep=0pt,leftmargin=1.05em}
+\newcommand{\so}[1]{\textbf{\color{dam}#1}}
+\newcommand{\muc}[1]{{\color{dam}\bfseries\large #1}\par\vspace{2pt}}
+% hình có CHIỀU CAO cố định -> bố cục không bao giờ tràn khung
+\newcommand{\hinh}[3]{\par\vspace{2pt}{\centering\includegraphics[height=#2]{#1}\par
+  \vspace{1pt}{\footnotesize\textit{#3}}\par}\vspace{2pt}}
+\newsavebox{\bxhead}\newsavebox{\bxtom}
+\newlength{\colw}\newlength{\colh}
+\setlength{\colw}{89mm}     % (377,5mm - 3*4mm) / 4
+\newtcolorbox{cotbox}[1]{enhanced,colback=white,colframe=dam,boxrule=1pt,arc=3pt,
+  left=5pt,right=5pt,top=4pt,bottom=4pt,width=\colw,height=\colh,valign=top,nobeforeafter,box align=top,
+  before upper={\muc{#1}}}
+
+\begin{document}
+% ---------------- ĐẦU POSTER (tự co theo nội dung) ----------------
+\sbox{\bxhead}{\begin{tcolorbox}[enhanced,colback=white,colframe=dam,boxrule=1.2pt,arc=3pt,
+  left=6pt,right=6pt,top=6pt,bottom=6pt,width=\textwidth,nobeforeafter,box align=top]
+\begin{minipage}[c]{0.105\linewidth}\centering\includegraphics[height=27mm]{logo_truong.png}\end{minipage}%
+\hfill
+\begin{minipage}[c]{0.755\linewidth}\centering
+{\fontsize{25}{29}\selectfont\bfseries\color{dam} TÊN ĐỀ TÀI: \TENDETAI\par}
+\vspace{3pt}
+{\fontsize{14}{17}\selectfont\bfseries Mã số đề tài: \madetai\par}
+\vspace{4pt}
+{\fontsize{12}{14.5}\selectfont
+\textbf{Giảng viên hướng dẫn:} \gvhd\\
+\textbf{Sinh viên thực hiện:} \chunhiem{} (chủ nhiệm đề tài), \thanhvien\\
+\textbf{Email:} \emailchunhiem \qquad \textbf{Khoa:} \khoa\par}
+\end{minipage}%
+\hfill
+\begin{minipage}[c]{0.115\linewidth}\centering\includegraphics[width=\linewidth]{logo_khoa.jpg}\end{minipage}
+\end{tcolorbox}}
+
+% ---------------- TÓM TẮT (tự co theo nội dung) ----------------
+\sbox{\bxtom}{\begin{tcolorbox}[enhanced,colback=dam!5,colframe=dam,boxrule=0.9pt,arc=3pt,
+  left=6pt,right=6pt,top=5pt,bottom=5pt,width=\textwidth,nobeforeafter,box align=top]
+{\color{dam}\bfseries\large Tóm tắt}\par\vspace{2pt}
+Đề tài xây dựng máy bay không người lái tự phát hiện và bám theo người, toàn bộ khối thị giác máy tính chạy ngay trên máy bay. \textbf{Mục tiêu:} mô hình nhận dạng người thời gian thực đạt độ chính xác từ 70\% trở lên, thuật toán theo dõi giữ khoảng cách và hướng bay, tích hợp camera -- xử lý ảnh -- điều khiển bay hoạt động ổn định ngoài thực tế. \textbf{Phương pháp:} đề xuất mạng phát hiện người \textbf{SteadyDet-N} (1,17 triệu tham số; 4,6 GFLOPs) giữ nhánh độ phân giải cao cho người nhỏ, kết hợp \textbf{huấn luyện nhận biết rung} -- đưa mô hình vật lý của nhoè, nhiễu và dao động sáng do cánh quạt vào dữ liệu huấn luyện, không đổi nhãn và không tốn chi phí khi suy luận; triển khai INT8 trên NPU Hailo-8L gắn Raspberry Pi~5, ghép với theo vết OC-SORT, khoá mục tiêu, ước lượng khoảng cách pinhole và ba bộ điều khiển PID gửi lệnh MAVLink 30\,Hz tới ArduPilot. \textbf{Kết quả:} mô hình trên máy bay đạt \so{AP@0,5 = 0,917} trên dữ liệu bay thật (vượt chỉ tiêu 70\%), chuỗi xử lý đạt \so{30 khung hình/giây}; huấn luyện nhận biết rung nâng tỷ lệ giữ độ chính xác khi rung từ \so{16,8\% lên 36,2\%}, giúp mô hình nhỏ nhất trong bảng vượt cả bốn mô hình YOLO bản nano khi rung; vòng bám người chạy trên video bay thử giữ mục tiêu 83,5\% thời gian. \textbf{Bình luận:} kết quả cho thấy với thiết bị bay, thứ quyết định không phải điểm số trên benchmark ảnh sạch mà là độ chính xác còn giữ được khi khung máy bay rung, và độ bền này phải được đo và tối ưu riêng.
+
+\textbf{Keywords:} UAV, person detection, vibration robustness, edge AI, Hailo NPU, OC-SORT, visual servoing, ArduPilot.
+\end{tcolorbox}}
+
+% Chiều cao 4 cột = phần còn lại của trang -> không bao giờ tràn sang trang 2
+\setlength{\parskip}{0pt}
+\setlength{\colh}{\dimexpr\textheight-\ht\bxhead-\dp\bxhead-\ht\bxtom-\dp\bxtom-6mm\relax}
+\noindent\vbox to \textheight{%
+  \hbox{\usebox{\bxhead}}\vskip3mm
+  \hbox{\usebox{\bxtom}}\vskip3mm
+  \hbox to \textwidth{%
+% ---------------- 4 CỘT ----------------
+\vspace{2.5mm}\par\setlength{\parskip}{0pt}\noindent%
+\begin{cotbox}{I. ĐẶT VẤN ĐỀ}
+UAV nhiều cánh quạt ngày càng phổ biến trong giám sát, cứu hộ, quay phim. Người vận hành vừa phải lái vừa phải giữ đối tượng trong khung hình, nên một UAV \textbf{tự nhận dạng và bám theo người} làm tăng tính linh hoạt, an toàn và tiện ích.
+
+Trong 5 năm gần đây nhiều hệ thống bám người đã được công bố~[1--3]; trong nước có các nghiên cứu phát hiện và theo vết UAV trong nền phức tạp~[6] và nâng độ bền khối phát hiện cho hệ hỗ trợ lái xe~[7]. Hầu hết đánh giá mô hình trên ảnh \textbf{sạch, tĩnh}.
+
+Thực tế khung máy bay \textbf{luôn rung} khi động cơ quay: ảnh bị nhoè theo hướng, nhiễu tăng, độ sáng dao động. Mạng học sâu rất nhạy với các suy giảm này~[4], nhưng chưa có giao thức nào mô phỏng riêng rung của UAV để đánh giá các bộ phát hiện nhỏ gọn.
+
+\textbf{Mục tiêu của nghiên cứu:}
+\begin{itemize}
+\item Mô hình nhận dạng người thời gian thực, độ chính xác \textbf{$\ge$ 70\%}, chạy ngay trên máy bay.
+\item Thuật toán theo dõi giữ khoảng cách và hướng bay với người được bám.
+\item Tích hợp camera -- xử lý ảnh -- điều khiển bay thành hệ thống ổn định ngoài thực tế.
+\end{itemize}
+
+\textbf{Đối tượng:} bộ phát hiện người từ UAV, ảnh hưởng của rung, thuật toán bám người trên nền ArduPilot. \textbf{Phạm vi:} một người, không gian thoáng, bay thấp 3--6\,m.
+
+\hinh{rung_minh_hoa.png}{26mm}{Hình 1. Ảnh sạch và ba mức rung của giao thức VisDrone-Shake}
+\end{cotbox}\hfill
+\begin{cotbox}{II. PHƯƠNG PHÁP VÀ NỘI DUNG NGHIÊN CỨU}
+\textbf{1. Mô hình SteadyDet-N.} Mạng một giai đoạn anchor-free, 1,17\,M tham số, 4,6 GFLOPs. Giữ mức dự đoán bước 4 (nơi người ở xa còn tín hiệu) nhưng làm nhánh này mỏng: 1 khối, nửa số kênh neck, head depthwise separable; tính toán dồn về các mức có bản đồ nhỏ. Chi phí giảm 2,8 lần so với bản trước. Hàm mất mát: QFL cho phân loại, NWD kết hợp CIoU theo diện tích cho hồi quy hộp.
+
+\textbf{2. Huấn luyện nhận biết rung.} Mỗi batch ảnh được thay bằng bản đã làm rung với xác suất $p = 0{,}5$:
+\[
+\hat x = \gamma\,(x * k_{L,\theta}) + n, \quad
+\mathcal{L} = \mathcal{L}_{\det}\big(f_\theta(\hat x),\, y\big)
+\]
+Nhoè, nhiễu và độ sáng không dịch chuyển vật nên \textbf{nhãn giữ nguyên}; toán tử chỉ tồn tại khi huấn luyện nên \textbf{không tốn chi phí suy luận}.
+
+\textbf{3. Đo công bằng.} Một chương trình đánh giá duy nhất cho mọi mô hình, cố định seed ngẫu nhiên và lặp 3 lần, báo cáo trung bình $\pm$ độ lệch chuẩn; 5 mô hình đối chứng YOLOv8/v10/11/26-n và RT-DETR-l.
+
+\textbf{4. Triển khai và điều khiển.} Mô hình lượng tử hoá INT8, chạy trên NPU Hailo-8L gắn Raspberry Pi~5; theo vết OC-SORT, khoá và tìm lại mục tiêu, ước lượng khoảng cách pinhole với bộ lọc Kalman, ba bộ PID, lớp an toàn nhiều tầng, gửi lệnh vận tốc MAVLink 30\,Hz tới Pixhawk~6C (GUIDED).
+
+\par\vspace{2pt}{\centering\resizebox{!}{38mm}{\input{../hinh/sodo_hethong.tex}}\par\vspace{1pt}{\footnotesize\textit{Hình 2. Kiến trúc hệ thống trên máy bay}}\par}
+\end{cotbox}\hfill
+\begin{cotbox}{III. KẾT QUẢ NGHIÊN CỨU}
+{\centering\footnotesize\textit{Bảng 1. Kết quả chính đo trên phần cứng thật}\par}
+{\centering\renewcommand{\arraystretch}{1.1}\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.57\linewidth}r@{}}
+\toprule
+\textbf{Chỉ số} & \textbf{Kết quả}\\\midrule
+AP@0,5 bay thật (INT8, trên máy bay) & \so{0,917}\\
+F1 / recall / precision & 0,880 / 0,837 / 0,928\\
+Tốc độ đầu-cuối & \so{30,0 FPS}\\
+Độ trễ p50 / p99 & 32,04 / 36,15\,ms\\
+Suy luận NPU @320 / @640 & 112,55 / 63,66 FPS\\
+So với YOLO26-n trên Hailo-8L & \so{nhanh hơn 1,70 lần}\\
+retain khi rung: gốc $\rightarrow$ đề xuất & 16,8 $\rightarrow$ \so{36,2\%}\\
+Vòng bám: giữ mục tiêu & \so{83,5\%} thời gian\\
+Sai số hướng khi bám (trung vị) & 5,5$^\circ$\\\bottomrule
+\end{tabular}\par}
+
+\hinh{duong_cong_rung.pdf}{36mm}{Hình 3. AP theo mức rung: SteadyDet-N có huấn luyện rung vượt YOLO11-n và RT-DETR-l từ mức 2}
+
+Khi rung, mọi bộ phát hiện nhỏ gọn mất \textbf{74--83\%} độ chính xác. Sau huấn luyện nhận biết rung, mô hình \textbf{nhỏ và rẻ nhất} vượt cả \textbf{bốn mô hình YOLO bản nano} khi bay (mCP 0,0617 so với 0,0557) và vượt RT-DETR-l lớn gấp 28 lần ở mức rung bay tiến; trên dữ liệu bay thật, AP@0,75 tăng khoảng 80\%.
+
+\hinh{vongbam_khung.png}{19mm}{Hình 4. Vòng bám người trên video bay thử}
+\end{cotbox}\hfill
+\begin{cotbox}{IV. KẾT LUẬN}
+\begin{itemize}
+\item Hoàn thành UAV tích hợp nhận dạng và bám theo người, xử lý hoàn toàn trên máy bay: \so{AP@0,5 = 91,7\%} (vượt chỉ tiêu 70\%), \so{30 FPS}, độ trễ p99 36,15\,ms.
+\item Chỉ ra bằng đo đạc có đối chứng rằng rung làm mọi bộ phát hiện nhỏ gọn mất 74--83\% độ chính xác --- điều các benchmark thông thường không đo.
+\item Huấn luyện nhận biết rung tăng gấp đôi độ bền (16,8 $\rightarrow$ 36,2\%) mà không tốn chi phí suy luận, rẻ hơn nhiều so với thêm mạng khử nhoè hay gimbal chống rung.
+\item Trên NPU, số \textit{context} chứ không phải số phép tính quyết định tốc độ: SteadyDet-N nhanh hơn YOLO26-n 1,70 lần.
+\item \textbf{Hạn chế:} tập bay thật còn nhỏ (92 khung, một người, một độ cao); mô hình rung là mô phỏng.
+\item \textbf{Hướng phát triển:} hiệu chuẩn mô hình rung bằng nhật ký IMU, mở rộng dữ liệu bay thật nhiều độ cao, đưa mô hình nhận biết rung lên NPU, bám nhiều kịch bản và nhận dạng lại theo ngoại hình.
+\end{itemize}
+
+\vspace{2pt}
+{\color{dam}\bfseries\large TÀI LIỆU THAM KHẢO}\par\vspace{2pt}
+{\scriptsize
+[1] S.-Y. Yang, H.-Y. Cheng, C.-C. Yu, ``Real-time object detection and tracking for unmanned aerial vehicles based on convolutional neural networks,'' \textit{Electronics}, vol.~12, no.~24, p.~4928, 2023.\par
+[2] L.-Y. Lo \textit{et al.}, ``Dynamic object tracking on autonomous UAV system for surveillance applications,'' \textit{Sensors}, vol.~21, no.~23, p.~7888, 2021.\par
+[3] K. Kang, W. Kim, ``A human-following drone providing gesture recognition to control IoT devices based on 3D body-landmark detection,'' \textit{Int. J. Control, Automation and Systems}, vol.~23, no.~9, pp.~2718--2727, 2025.\par
+[4] D. Hendrycks, T. Dietterich, ``Benchmarking neural network robustness to common corruptions and perturbations,'' in \textit{Proc. ICLR}, 2019.\par
+[5] P. Zhu \textit{et al.}, ``Detection and tracking meet drones challenge,'' \textit{IEEE TPAMI}, vol.~44, no.~11, pp.~7380--7399, 2022.\par
+[6] K.-P. Phung \textit{et al.}, ``Multi-model deep learning drone detection and tracking in complex background conditions,'' in \textit{Proc. ATC}, 2021, pp.~189--194.\par
+[7] L.-A. Tran \textit{et al.}, ``Enhancement of robustness in object detection module for advanced driver assistance systems,'' in \textit{Proc. ICSSE}, 2021, pp.~158--163.\par
+[8] J. Cao \textit{et al.}, ``Observation-centric SORT,'' in \textit{Proc. CVPR}, 2023, pp.~9686--9696.\par}
+\end{cotbox}}%
+  \vfill}
+\end{document}

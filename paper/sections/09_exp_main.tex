@@ -1,0 +1,131 @@
+% ==================================================================
+% 4.2 Ket qua chinh + 2 doi chung + generality.
+% So lieu: runs/paper_queue/UNIFIED.json (sinh dong bang bang paper/make_tables.py)
+% file: sections/09_exp_main.tex
+% ==================================================================
+\subsection{Main Results}
+\label{sec:mainresults}
+
+\begin{table}[t]
+\centering
+\caption{VisDrone person subset, $640\times640$, \texttt{pycocotools}. Clean
+accuracy is deterministic; corrupted columns are mean $\pm$ std over three seeds.
+Within each block the rows differ in exactly one variable and share the schedule,
+learning rate and augmentation pipeline. Reading the SteadyDet-N block downwards
+identifies where the robustness comes from: not from the extra epochs, and not
+from the consistency term. The YOLO11-n block, added as a test of generality,
+shows the regime having no effect at all outside our detector family.}
+\label{tab:main}
+\setlength{\tabcolsep}{3.4pt}
+\begin{tabular}{lccc|cccc}
+\toprule
+ & \multicolumn{3}{c|}{clean} & \multicolumn{4}{c}{under vibration (AP$_{50:95}$)} \\
+Model & AP$_{50:95}$ & AP$_{50}$ & AP$_{75}$ & sev1 & sev2 & sev3 & retain\% \\
+\midrule
+\multicolumn{8}{l}{\emph{SteadyDet-N (1.17\,M, 4.6 GFLOPs)}} \\
+\quad baseline             & 0.1892 & 0.5127 & 0.0811
+    & \ms{0.0792}{.0026} & \ms{0.0123}{.0013} & \ms{0.0040}{.0005} & \ms{16.8}{.7} \\
+\quad + 120 ep, no vibration & 0.1823 & 0.4984 & 0.0762
+    & \ms{0.0761}{.0028} & \ms{0.0125}{.0005} & \ms{0.0040}{.0005} & \ms{16.9}{.7} \\
+\quad + consistency variant & 0.1746 & 0.4837 & 0.0728
+    & \ms{0.1098}{.0010} & \ms{0.0392}{.0021} & \ms{0.0081}{.0011} & \ms{30.0}{.6} \\
+\quad \textbf{+ vibration-aware} & 0.1708 & 0.4731 & 0.0715
+    & \best{\ms{0.1223}{.0014}} & \best{\ms{0.0518}{.0019}} & \best{\ms{0.0111}{.0002}} & \best{\ms{36.2}{.7}} \\
+\midrule
+\multicolumn{8}{l}{\emph{SteadyDet-W (1.00\,M, 12.9 GFLOPs)}} \\
+\quad baseline           & 0.2349 & 0.5800 & 0.1305
+                 & \ms{0.1260}{.0023} & \ms{0.0258}{.0022} & \ms{0.0046}{.0026} & \ms{22.2}{.9} \\
+\quad + consistency variant & 0.2207 & 0.5561 & 0.1202
+                 & \ms{0.1309}{.0026} & \ms{0.0580}{.0007} & \ms{0.0132}{.0016} & \ms{30.5}{.6} \\
+\quad \textbf{+ vibration-aware} & 0.2219 & 0.5511 & 0.1279
+                 & \best{\ms{0.1583}{.0013}} & \best{\ms{0.0839}{.0001}} & \best{\ms{0.0200}{.0012}} & \best{\ms{39.4}{.3}} \\
+\midrule
+\multicolumn{8}{l}{\emph{YOLO11-n, trained from scratch on the same data (2.59\,M, 6.4 GFLOPs)}} \\
+\quad baseline           & 0.2588 & 0.5842 & 0.1839
+                 & \ms{0.1398}{.0057} & \ms{0.0248}{.0022} & \ms{0.0052}{.0021} & \ms{21.9}{1.1} \\
+\quad + 120 ep, no vibration & 0.2641 & 0.5897 & 0.1857
+                 & \ms{0.1410}{.0036} & \ms{0.0226}{.0026} & \ms{0.0062}{.0030} & \ms{21.4}{.9} \\
+\quad + vibration-aware  & 0.2579 & 0.5835 & 0.1806
+                 & \ms{0.1384}{.0037} & \ms{0.0227}{.0017} & \ms{0.0055}{.0026} & \ms{21.5}{.8} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:main} reports the primary results. On SteadyDet-N the baseline
+retains $16.8 \pm 0.7\%$ of its clean accuracy under vibration; training with the
+corruption raises this to $36.2 \pm 0.7\%$, a factor of $2.15$. At sev2, the
+moderate vibration of an airframe in forward flight, the baseline retains $6.5\%$
+of its clean accuracy and is effectively blind, while the vibration-aware model
+retains $30.3\%$ and is $4.2\times$ better in absolute AP, while clean AP falls by
+$9.7\%$. For an airborne system that exchange is favourable: a detector a tenth
+less accurate on the ground and four times more accurate with the rotors running is
+the more useful one. The two middle rows are what make the result interpretable,
+and each was run because a reader would otherwise be entitled to doubt the first.
+
+\subsubsection{The gain is not an artefact of the extra epochs.}
+The regime is applied as a finetuning stage, so the vibration-aware model has seen
+$120$ epochs that the baseline has not. Finetuning the baseline for the same $120$
+epochs with the corruption switched off leaves retention at $16.9 \pm 0.7\%$
+against the baseline's $16.8 \pm 0.7\%$, a difference well inside one standard
+deviation. Continued training contributes nothing. Clean accuracy does drift down
+over those epochs ($0.1892$ to $0.1823$), so roughly a third of the clean-AP cost
+of the vibration-aware model is the finetuning rather than the corruption.
+
+\subsubsection{The consistency term does not help; it hurts.}
+We expected the opposite. The variant of Eq.~\ref{eq:vibcon} reaches
+$30.0 \pm 0.6\%$, $6.2$ points below the simple substitution and roughly nine times
+the seed-to-seed spread of either measurement, so the ordering is not noise. It is
+worse in absolute terms at every severity, not only after normalisation, and costs
+$1.8\times$ the training time. Our reading is that the consistency term, computing
+the detection loss on the clean branch only, never asks the network to \emph{detect}
+under blur; it asks only that its corrupted predictions resemble its clean ones, a
+weaker requirement that can be satisfied by making both less committed. The simple
+substitution puts the corrupted image directly against the labels. We offer this as
+an explanation rather than a demonstration.
+
+\subsubsection{Generality, and where it stops.}
+\label{sec:generality}
+A regime that works on exactly one architecture is hard to distinguish from a
+fortunate interaction with it. This one carries across both of our detectors and
+then stops, and the stop is worth as much detail as the success. The middle block
+of Table~\ref{tab:main} repeats the experiment on SteadyDet-W, an earlier detector
+of ours with a full-width stride-4 branch and non-separable five-convolution heads,
+so that despite slightly \emph{fewer} parameters ($1.00$ against $1.17$\,M) it
+costs $2.8\times$ the compute and is the stronger on clean data. Nothing was
+retuned. Retention rises from $22.2 \pm 0.9\%$ to
+$39.4 \pm 0.3\%$, a gain of $17.2$ points against $19.3$, and the consistency
+variant again falls short at $30.5 \pm 0.6\%$. Direction, magnitude and the
+ordering of the two variants all reproduce on a network of different width, depth
+and head design.
+
+The lower block applies the identical regime to YOLO11-n, and nothing happens:
+$21.9 \pm 1.1\%$ becomes $21.5 \pm 0.8\%$, with the no-vibration control at
+$21.4 \pm 0.9\%$. The consistency variant on the COCO-pretrained checkpoint
+likewise moved $20.1 \pm 1.2\%$ to $19.2 \pm 1.3\%$. Logging the corrupted-batch
+substitution during training confirms the treatment was applied and not silently
+skipped. We tested three explanations and none survived.
+
+\emph{Pretraining.} If the baseline already holds blur-tolerant features there is
+nothing left to teach. Retraining YOLO11-n from random initialisation leaves the
+regime at $-0.3$ points, exactly as from pretrained weights, and the pretrained
+checkpoint is the \emph{less} robust of the two ($20.1$ against $21.9\%$).
+
+\emph{Object scale.} Our detectors carry a stride-4 level and YOLO11-n starts at
+stride~8, so perhaps only the finest level has anything to gain. Broken out on
+small objects the gain is $+18.7$ points against $+19.3$ overall, tracking the
+aggregate rather than concentrating in it, and nearly every instance in this subset
+is small for both families (AP$_s$ $0.2741$ of AP $0.2768$ for YOLO11-n). There is
+no scale split available to carry the argument.
+
+\emph{Headroom.} SteadyDet-W starts at $22.2 \pm 0.9\%$ and YOLO11-n from scratch at
+$21.9 \pm 1.1\%$, the same point within noise. One gains $17.2$ points and the
+other none.
+
+What remains is the architecture or the loss, which our detectors share and
+YOLO11-n does not: a stride-4 branch, a normalised-Wasserstein and CIoU box
+objective, quality focal classification, and direct rather than distributional box
+regression. One non-responding model cannot separate these, so we state the claim
+at the scope the evidence supports. Vibration-aware training is a large,
+reproducible gain for the detector family of Section~\ref{sec:platform} and does
+nothing on the one outside architecture we tried; locating the boundary is the most
+useful experiment this work leaves open.

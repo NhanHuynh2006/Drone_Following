@@ -1,0 +1,41 @@
+<mxfile host="app.diagrams.net" agent="pfdet-drone-follow" type="device">
+  <diagram id="Vòng_bám_30_Hz_(tóm_tắt)" name="Vòng bám 30 Hz (tóm tắt)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="620"
+        math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="Model nằm ở đâu trong hệ thống bay — bản tóm tắt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=22;fontFamily=Helvetica;fontColor=#102A43;fontStyle=1" vertex="1" parent="1"><mxGeometry x="60" y="25" width="1200" height="34" as="geometry"/></mxCell>
+        <mxCell id="t2" value="Phần điều khiển chi tiết xem FOLLOW_CONTROL.md · ở đây chỉ để thấy detector là mắt xích nào" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#627D98;fontStyle=0" vertex="1" parent="1"><mxGeometry x="60" y="55" width="1200" height="40" as="geometry"/></mxCell>
+        <mxCell id="n3" value="Camera USB
+640×480 @ 30 Hz" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="70" y="150" width="255" height="85" as="geometry"/></mxCell>
+        <mxCell id="n4" value="SteadyDet-N
+trên Hailo-8L
+17.6 ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="405" y="150" width="255" height="85" as="geometry"/></mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n3" target="n4"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n6" value="OC-SORT
+cấp ID cho người" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;fontColor=#37474F;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="740" y="150" width="255" height="85" as="geometry"/></mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n4" target="n6"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n8" value="Chọn &amp; khoá mục tiêu
+hộp to nhất ≈ gần nhất" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;fontColor=#37474F;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="1075" y="150" width="255" height="85" as="geometry"/></mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n6" target="n8"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n10" value="PID → vx, vy, vz, yaw" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;fontColor=#37474F;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="70" y="320" width="255" height="85" as="geometry"/></mxCell>
+        <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n8" target="n10"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n12" value="SafetyManager
+kẹp tốc độ / độ cao / cự ly" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#C62828;fontColor=#B71C1C;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="405" y="320" width="255" height="85" as="geometry"/></mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n10" target="n12"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n14" value="Pixhawk · ArduPilot
+chế độ GUIDED, 30 Hz" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="740" y="320" width="255" height="85" as="geometry"/></mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n12" target="n14"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n16" value="Nhật ký bay CSV
+kèm rung thật (vibe_x/y/z)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#616161;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="1080" y="320" width="255" height="85" as="geometry"/></mxCell>
+        <mxCell id="t17" value="Vì sao 30 Hz: detector sinh thông tin mới 30 lần/giây, nên mỗi lệnh gửi xuống mang đúng một phát hiện mới.
+10 Hz thì thêm 33 ms trễ vô ích; 50 Hz thì 40 % lệnh không mang tin gì mới. Khứ hồi lệnh đo được p50 4.75 ms / p99 7.73 ms.
+
+Ngân sách một vòng = 33.3 ms. Detector chiếm 17.6 ms → còn dư hơn một nửa cho tracking, PID và MAVLink.
+Đây là toàn bộ lý do phải ép model xuống 4.6 GFLOPs." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#455A64;fontStyle=0" vertex="1" parent="1"><mxGeometry x="70" y="460" width="1300" height="150" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

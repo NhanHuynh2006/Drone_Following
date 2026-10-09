@@ -1,0 +1,117 @@
+% =====================================================================
+%  PHỤ LỤC B. CHƯƠNG TRÌNH MÁY TÍNH
+% =====================================================================
+\chapter{Chương trình máy tính}
+\label{pl:b}
+
+\section{Cấu trúc mã nguồn}
+
+\begin{lstlisting}
+pfdet_drone_follow/
+|-- models/pfdet_nano_v17.py     # kien truc SteadyDet-N (v15: SteadyDet-W)
+|-- utils/losses_v15.py          # ham mat mat QFL + NWD/CIoU + gan nhan
+|-- utils/musgd.py               # bo toi uu MuSGD
+|-- vib_consistency.py           # toan tu rung + bien the rang buoc nhat quan
+|-- train_v3.py                  # chuong trinh huan luyen (doc file cau hinh)
+|-- configs/                     # cau hinh huan luyen tung thi nghiem
+|-- paper_eval_unified.py        # MOT chuong trinh do cho moi mo hinh, 3 hat giong
+|-- flight_eval_unified.py       # danh gia 92 khung bay that + bootstrap
+|-- train_yolo_baselines.py      # huan luyen 5 mo hinh doi chung
+|-- export_onnx_hailo.py         # xuat ONNX cho Hailo (opset 11, dynamo=False)
+|-- compile_hef.py               # ONNX -> HEF (Hailo DFC)
+|-- hailo_eval_val.py            # do do chinh xac INT8 tren Pi
+|-- hailo_bench_latency.py       # do do tre tung chang p50/p95/p99
+|-- cam_ctl.py                   # SoftAE: tu phoi sang bang phan mem
+|-- mavmux.py                    # chia 1 cong MAVLink cho nhieu chuong trinh
+|-- nckh_SV2026-474/video/replay_follow.py  # chay vong bam nguoi tren video bay thu
+`-- follow_drone/                # CHUONG TRINH BAM NGUOI
+    |-- main.py                  # vong lap 30 Hz + bang giam sat
+    |-- config.yaml              # toan bo tham so
+    |-- RUNBOOK.md               # quy trinh ra bai bay
+    |-- follow/
+    |   |-- camera.py            # luong doc camera
+    |   |-- detector_hailo.py    # suy luan NPU + giai ma + NMS
+    |   |-- ocsort.py            # theo vet OC-SORT
+    |   |-- target_selector.py   # chon, khoa, tim lai muc tieu
+    |   |-- distance.py          # pinhole + Kalman 1 chieu
+    |   |-- visual_servo.py      # servo thi giac lai
+    |   |-- pid.py               # 3 bo PID
+    |   |-- safety.py            # lop an toan
+    |   |-- mavlink_client.py    # giao tiep ArduPilot
+    |   `-- dashboard.py         # web giam sat
+    |-- scripts/                 # calibrate_camera, test_mavlink, arm_test...
+    `-- tests/                   # 2 bo kiem thu tu dong (25 phep kiem tra)
+\end{lstlisting}
+
+\section{Các lệnh tái lập kết quả}
+
+\textbf{Huấn luyện và đánh giá (máy tính có GPU):}
+\begin{lstlisting}
+# Huan luyen goc, roi tinh chinh nhan biet rung
+python train_v3.py --config configs/train_config_v17_light.yaml
+python train_v3.py --config configs/train_config_v17_vib_augonly.yaml
+# Do moi mo hinh bang MOT chuong trinh, 3 hat giong -> UNIFIED.json
+python paper_eval_unified.py --seeds 0 1 2 --out runs/paper_queue/UNIFIED.json
+\end{lstlisting}
+
+\textbf{Triển khai lên NPU:}
+\begin{lstlisting}
+python export_onnx_hailo.py --weights runs/train_v17_hailo_coco/best.pt --img-size 640
+python compile_hef.py --onnx <tep>.onnx --hw-arch hailo8l --img-size 640 \
+       --calib-dir <anh hieu chuan tu tap huan luyen> --calib-n 64
+bash scripts/deploy_to_pi.sh      # day HEF sang Pi, quet nguong tren 92 khung
+\end{lstlisting}
+
+\textbf{Trên Raspberry Pi~5:}
+\begin{lstlisting}
+./run.sh check                      # kiem tra truoc khi ra bai
+./run.sh bench --minutes 2 --source cam   # do do tre tung chang
+./run.sh mux                        # cua so 1: chia cong MAVLink
+cd follow_drone
+../venv/bin/python3 -u main.py --no-fly       # thu tren ban, khong gui lenh
+../venv/bin/python3 -u main.py --no-takeoff   # bay: cat canh tay roi gat GUIDED
+\end{lstlisting}
+
+\textbf{Kiểm thử tự động:}
+\begin{lstlisting}
+cd follow_drone
+python3 tests/test_target_selector.py         # 14 phep kiem tra
+python3 tests/test_safety_no_mode_change.py   # 11 phep kiem tra
+\end{lstlisting}
+
+\section{Trích đoạn mã nguồn tiêu biểu}
+
+\textbf{Toán tử rung} (\texttt{vib\_consistency.py}):
+\begin{lstlisting}[language=Python]
+_PRESETS = {1: (5, 0.02, 0.10), 2: (9, 0.04, 0.20), 3: (15, 0.06, 0.30)}
+
+def corrupt_batch(imgs, severity=None, angle=None):
+    if severity is None:
+        severity = random.choice([1, 2, 3])
+    L, ns, br = _PRESETS.get(int(severity), _PRESETS[2])
+    ang = random.uniform(0, 180) if angle is None else angle
+    k = motion_blur_kernel(L, ang, imgs.device, imgs.dtype)   # (L, L)
+    w = k.view(1, 1, *k.shape).repeat(imgs.shape[1], 1, 1, 1)
+    out = F.conv2d(imgs, w, padding=k.shape[0] // 2, groups=imgs.shape[1])
+    out = out + torch.randn_like(out) * ns                     # nhieu cam bien
+    out = out * (1.0 + random.uniform(-br, br))                # dao dong sang
+    return out
+\end{lstlisting}
+
+\textbf{Thang mất mục tiêu không đổi chế độ bay} (\texttt{follow\_drone/follow/safety.py}):
+\begin{lstlisting}[language=Python]
+def update_target_status(self, target_present):
+    now = time.time()
+    if target_present:
+        self.target_lost_since = None
+        self.current_state = SafetyState.FOLLOW
+        return SafetyState.FOLLOW
+    if self.target_lost_since is None:
+        self.target_lost_since = now
+        return SafetyState.COAST
+    elapsed = now - self.target_lost_since
+    # Nguoi lai so huu che do bay: KHONG goi set_mode o bat cu dau.
+    new_state = SafetyState.COAST if elapsed < self.t_coast_end else SafetyState.HOVER
+    self.current_state = new_state
+    return new_state
+\end{lstlisting}

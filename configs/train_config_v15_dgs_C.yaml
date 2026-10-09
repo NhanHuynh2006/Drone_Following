@@ -1,4 +1,4 @@
-# PFDet-Nano v15 — Ablation C: DGS ĐẦY ĐỦ (density head + crowd-loc α=1.0)
+# SteadyDet-W — Ablation C: DGS ĐẦY ĐỦ (density head + crowd-loc α=1.0)
 # Đóng góp chính của paper. So sánh với A (baseline 0.235) và B (chỉ density).
 # Run QUAN TRỌNG NHẤT (xem BEST_PLAN_DATA_DRIVEN.md mục 6).
 

@@ -1,9 +1,9 @@
-# PFDet-Nano v17 + VIBRATION-CONSISTENCY (ĐÓNG GÓP PAPER) — finetune từ baseline v17_light.
+# SteadyDet-N + VIBRATION-CONSISTENCY (ĐÓNG GÓP CHO BÀI BÁO) — finetune từ baseline v17_light.
 # Train baseline (v17_light) TRƯỚC -> best.pt, rồi chạy config này để finetune vibration.
 # Đo robustness bằng eval_robustness.py. no-COCO (số chuẩn paper).
 
 meta:
-  role: paper_vibration_v17
+  role: chuan_vibration_v17
   notes: "v17 light: P2 mỏng + LiteHead, MuSGD, no COCO. Target Jetson Nano TensorRT FP16."
 
 model:
@@ -33,7 +33,7 @@ data:
   train_labels: "train/labels"
   val_images: "val/images"
   val_labels: "val/labels"
-  # PAPER: KHÔNG khai báo extra_* -> chỉ train VisDrone (số benchmark chuẩn).
+  # NHÁNH CHUẨN: KHÔNG khai báo extra_* -> chỉ train VisDrone (số benchmark chuẩn).
 
 
   mosaic_prob: 0.50

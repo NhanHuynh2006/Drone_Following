@@ -1,0 +1,31 @@
+% ==================================================================
+% 4.1 Setup thi nghiem   (file: sections/08_exp_setup.tex)
+% ==================================================================
+\subsection{Setup}
+\label{sec:setup}
+
+We evaluate on the person categories of VisDrone-DET~\cite{zhu2021visdrone}, merging
+\texttt{pedestrian} and \texttt{people} into one class, which matches a following system
+that must track any human regardless of pose: $6471$ training and $548$ validation
+images.
+
+\subsubsection{One evaluation code path for every model.}
+Each detector family ships its own harness with its own confidence threshold,
+detection cap and area convention, and differences of several AP points can be
+produced by the harness alone. We therefore evaluate \emph{every} model in
+\emph{every} table below with one script: images are letterboxed to $640\times640$ by the same loader, predictions are
+thresholded at confidence $0.01$, reduced by NMS at IoU $0.5$, capped at $300$
+detections per image, and scored by \texttt{pycocotools} on identically constructed
+ground truth. Baselines receive the same pre-processed tensors as ours, so no model
+sees a different image. Every corrupted evaluation is repeated with three seeds
+($0,1,2$), reseeding the corruption sampler before each severity pass, and reported as
+mean $\pm$ sample standard deviation; clean evaluation is deterministic.
+
+\subsubsection{Training.}
+Training uses only VisDrone, with no COCO person data, so comparison against prior
+work is not confounded by extra training data. Baselines start from COCO-pretrained
+weights and ours from scratch, which favours them, and each family uses its own
+recommended optimiser and schedule rather than a shared one, since a shared one
+destroys some of them: under default CNN optimiser selection RT-DETR diverges by
+epoch four. All models train on a single RTX~4060 Laptop GPU (8\,GB), one run per
+configuration.

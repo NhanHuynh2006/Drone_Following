@@ -1,6 +1,6 @@
 """Test detection + tracking pipeline (no MAVLink, no flight).
 
-Loads camera + PFDet + OC-SORT, displays annotated frames.
+Loads camera + SteadyDet + OC-SORT, displays annotated frames.
 Useful to verify model + tracker work before flying.
 
 Usage:

@@ -1,4 +1,4 @@
-"""PFDet-Nano v15 detector wrapper.
+"""SteadyDet-W detector wrapper.
 
 Reuses the trained model and the existing infer.py preprocessing/postprocessing.
 """

@@ -1,3 +1,20 @@
+// ============================================================================
+// ⚠️  NHÁNH CŨ — VIẾT CHO PX4, KHÔNG CHẠY ĐƯỢC VỚI ArduPilot.
+//
+// Máy bay của đề tài (2026-08-27) chạy **ArduPilot Copter**. File này dùng
+// plugin MAVSDK `Offboard`, mà OFFBOARD là chế độ **riêng của PX4** — ArduPilot
+// KHÔNG có chế độ mang tên đó. Việc điều khiển từ máy tính đồng hành trên
+// ArduPilot diễn ra trong chế độ **GUIDED**, gửi SET_POSITION_TARGET_LOCAL_NED
+// và phải lặp lại liên tục (nếu quá `GUID_TIMEOUT` giây không có lệnh mới thì
+// máy bay tự dừng).
+//
+// 👉 DÙNG THAY THẾ:  follow_drone/   (Python + pymavlink, ArduPilot GUIDED,
+//                    có safety ladder, OC-SORT, PID — xem follow_drone/README.md)
+//
+// Giữ file này lại để đối chiếu thuật toán (Kalman + feedforward 50 Hz), KHÔNG
+// build và KHÔNG bay bằng nó.
+// ============================================================================
+
 // follow_px4.cpp — Bộ điều khiển bay-theo-người MƯỢT cho PX4 (chạy trên Jetson, C++ MAVSDK).
 // =============================================================================================
 // Kiến trúc (grounded theo SOTA — xem DEPLOY_GUIDE.md):

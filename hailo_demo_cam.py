@@ -96,8 +96,12 @@ def main():
         in_vp = InputVStreamParams.make(ng, format_type=FormatType.UINT8)
         out_vp = OutputVStreamParams.make(ng, format_type=FormatType.FLOAT32)  # dequantize -> logits float
 
-        cap = cv2.VideoCapture(args.cam)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap = cv2.VideoCapture(args.cam, cv2.CAP_V4L2)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))   # YUYV 720p nghen USB -> 5 fps
+        # BUFFERSIZE=1 lam ROT DUNG MOT NUA khung (30->15 fps): mot buffer thi driver
+        # khong co cho ghi khung ke trong luc app dang giu buffer. Do tren C270/Pi5
+        # 2026-08-27. Dung 2 — van tuoi vi vong doc luon lay khung moi nhat.
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
         if not cap.isOpened():
             print("KHÔNG mở được camera", args.cam); return
         print(f"[hailo] {args.hef} @ {sz}px | q=thoat, +/- conf")

@@ -1,4 +1,4 @@
-# PFDet Drone Follow
+# SteadyDet Drone Follow
 
 Phát hiện người tí hon (tiny person detection) từ camera drone, kèm hệ thống điều khiển
 drone tự động bay theo người. Target: deploy lên Raspberry Pi 5 + Pixhawk 6C.
@@ -7,7 +7,7 @@ drone tự động bay theo người. Target: deploy lên Raspberry Pi 5 + Pixha
 
 | | Giá trị |
 |---|---|
-| **Model** | PFDet-Nano v15 light + MuSGD |
+| **Model** | SteadyDet-W light + MuSGD |
 | **AP@0.5** (VisDrone person) | **0.5931** |
 | **Params** | ~1.0M |
 | **Tốc độ** | ~30 FPS trên Pi 5 @ 320px |
@@ -108,7 +108,7 @@ python benchmark.py \
 
 Hệ thống điều khiển drone bay theo người, dùng detection của model trên.
 
-Pipeline: `PFDet-Nano v15 → OC-SORT tracking → pinhole distance → hybrid 2.5D visual servoing → cascade PID → pymavlink → Pixhawk 6C (ArduPilot GUIDED)`.
+Pipeline: `SteadyDet-W → OC-SORT tracking → pinhole distance → hybrid 2.5D visual servoing → cascade PID → pymavlink → Pixhawk 6C (ArduPilot GUIDED)`.
 
 ```bash
 cd follow_drone

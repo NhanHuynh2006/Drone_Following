@@ -12,6 +12,11 @@ mkdir -p "$Q"
 exec 6>/tmp/fix_queue.lock
 flock -n 6 || { echo "[fix_queue] instance khác đang chạy, thoát"; exit 0; }
 
+# GUARD (thêm 2026-07-25): đã xong hết thì THOÁT NGAY.
+# Không có dòng này, cron @reboot sẽ chạy lại phần EVAL (ăn GPU) và tranh với
+# ablation_queue.sh đang train. Marker đã có nghĩa là không còn gì phải làm.
+[ -f "$Q/FIX_ALL_DONE" ] && { echo "[fix_queue] ĐÃ XONG HẾT TỪ TRƯỚC (FIX_ALL_DONE) -> thoát"; exit 0; }
+
 log() { echo "[$(date '+%F %T')] $*" | tee -a "$Q/fix_queue.log"; }
 
 log "========== FIX QUEUE: CHỜ deploy_queue xong (DEPLOY_ALL_DONE) =========="

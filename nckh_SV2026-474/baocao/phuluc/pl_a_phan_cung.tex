@@ -1,0 +1,118 @@
+% =====================================================================
+%  PHỤ LỤC A. CẤU HÌNH PHẦN CỨNG VÀ THAM SỐ
+% =====================================================================
+\chapter{Cấu hình phần cứng và tham số hệ thống}
+\label{pl:a}
+
+\section{Tham số an toàn trên bộ điều khiển bay (ArduPilot Copter 4.7.0)}
+
+Giá trị ``đọc từ máy bay'' được tải trực tiếp từ Pixhawk~6C ngày 27/08/2026 (1.038 tham số). Giá trị khuyến nghị được đặt bằng Mission Planner trước mọi chuyến bay tự động.
+
+\begin{table}[H]
+\centering
+\caption{Tham số ArduPilot cần chỉnh trước khi bay tự động}
+\label{tab:plthamso}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{@{}lcc>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Tham số} & \textbf{Đọc từ máy bay} & \textbf{Khuyến nghị} & \textbf{Lý do}\\
+\midrule
+\texttt{ARMING\_SKIPCHK} & $-1$ & 0 & $-1$ bỏ qua toàn bộ kiểm tra trước khi arm\\
+\texttt{BATT\_LOW\_VOLT} & 10 & 14,0\,V & Pin 4S không bao giờ tụt tới 10\,V\\
+\texttt{BATT\_CRT\_VOLT} & 14 & 13,5\,V & Phải thấp hơn ngưỡng pin yếu (đang bị ngược)\\
+\texttt{BATT\_FS\_LOW\_ACT} & 0 & 2 (RTL) & 0 là không có hành động nào\\
+\texttt{BATT\_FS\_CRT\_ACT} & 0 & 1 (Land) & 0 là không có hành động nào\\
+\texttt{FS\_GCS\_ENABLE} & 0 & 1 & Có phản ứng khi mất liên lạc máy tính đồng hành\\
+\texttt{FENCE\_ENABLE} & 0 & 1 & Hàng rào bán kính 300\,m, trần 100\,m đã cấu hình nhưng đang tắt\\
+\texttt{GUID\_TIMEOUT} & 3 & 1,0\,s & Khớp thời gian chờ lệnh của phần mềm; dừng sau 1\,s nếu Pi treo\\
+\texttt{WP\_SPD} & 10\,m/s & 4,0\,m/s & Phòng thủ nhiều lớp (phần mềm đã giới hạn 3--5\,m/s)\\
+\texttt{INS\_LOG\_BAT\_MASK} & 1 & 7 & Ghi phổ rung của cả ba IMU để phân tích rung\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Các tham số đã hợp lý và giữ nguyên: \texttt{WP\_ACC} = 2,5\,m/s², \texttt{PSC\_JERK\_NE} = 5, \texttt{PSC\_NE\_VEL\_P} = 1,80, \texttt{FS\_THR\_ENABLE} = 3, \texttt{FS\_EKF\_ACTION} = 1, \texttt{FS\_CRASH\_CHECK} = 1, \texttt{INS\_HNTCH\_ENABLE} = 1 (bộ lọc chặn hài theo tốc độ động cơ, có lợi cho giảm rung), \texttt{ATC\_RATE\_WPY\_MAX} = 60\,°/s.
+
+\begin{table}[H]
+\centering
+\caption{Một số tham số ArduPilot đã đổi tên và đơn vị ở phiên bản 4.7}
+\label{tab:pldoiten}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Tên trong tài liệu cũ} & \textbf{Tên ở 4.7} & \textbf{Đơn vị ở 4.7}\\
+\midrule
+\texttt{WPNAV\_SPEED} & \texttt{WP\_SPD} & m/s (cũ: cm/s)\\
+\texttt{WPNAV\_ACCEL} & \texttt{WP\_ACC} & m/s² (cũ: cm/s²)\\
+\texttt{ANGLE\_MAX} & \texttt{ATC\_ANGLE\_MAX} & độ (cũ: phần trăm độ)\\
+\texttt{PSC\_VELXY\_P} & \texttt{PSC\_NE\_VEL\_P} & --\\
+\texttt{RTL\_ALT} & \texttt{RTL\_ALT\_M} & m (cũ: cm)\\
+\texttt{ARMING\_CHECK} & \texttt{ARMING\_SKIPCHK} & mặt nạ bit, ý nghĩa ngược lại\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Tham số chính của chương trình bám người (\texttt{config.yaml})}
+
+\begin{table}[H]
+\centering
+\caption{Tham số cấu hình chính của chương trình}
+\label{tab:plconfig}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{5.4cm}>{\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Khoá} & \textbf{Giá trị} & \textbf{Ghi chú}\\
+\midrule
+\texttt{model.backend} & \texttt{hailo} & Suy luận trên NPU\\
+\texttt{model.hef} & \texttt{pfdet\_v17\_640\_coco\_}\-\texttt{hailo8l.hef} & Mô hình triển khai\\
+\texttt{model.conf\_threshold} & 0,25 & F1 cao nhất trên dữ liệu bay thật\\
+\texttt{model.nms\_iou} & 0,45 & \\
+\texttt{model.min\_box\_px}, \texttt{max\_aspect} & 200\,px², 6,0 & Lọc hộp bất thường\\
+\texttt{camera.width/height/fps} & $640\times480$, 30 & $f_x=f_y=700$, $c_x=320$, $c_y=240$\\
+\texttt{tracking.max\_age/min\_hits} & 45 / 3 & 1,5\,s ở 30\,Hz\\
+\texttt{target\_selection} & largest, lock, 3,0\,s, 5,0\,s & Chiến lược, khoá, giữ khoá, cửa sổ tìm lại\\
+\texttt{distance.person\_height\_m} & 1,7 & Chiều cao người giả định\\
+\texttt{control.follow\_distance\_m} & 5,0 & Khoảng cách đặt\\
+\texttt{control.follow\_altitude\_m} & 5,0 & Độ cao đặt\\
+\texttt{control.command\_rate\_hz} & 30 & Khớp nhịp bộ phát hiện\\
+\texttt{safety.d\_min / d\_max} & 3,0 / 15,0\,m & \\
+\texttt{safety.v\_max\_horizontal} & 5,0\,m/s & \\
+\texttt{safety.yaw\_rate\_max} & 1,0\,rad/s & Dưới 60\,°/s của máy bay\\
+\texttt{safety.altitude\_min/}\-\texttt{max\_agl} & 2,0 / 25,0\,m & \\
+\texttt{safety.command\_timeout\_s} & 1,0\,s & Khớp \texttt{GUID\_TIMEOUT}\\
+\texttt{safety.battery\_warn/}\-\texttt{critical\_v} & 14,8 / 14,0\,V & Pin 4S\\
+\texttt{mavlink.connection} & \texttt{udpin:127.0.0.1:14550} & Qua \texttt{mavmux.py}\\
+\texttt{web.port}, \texttt{allow\_retarget} & 8080, bật & Bảng giám sát\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Siêu tham số huấn luyện}
+
+\begin{table}[H]
+\centering
+\caption{Siêu tham số huấn luyện SteadyDet-N}
+\label{tab:plhuanluyen}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.4cm}>{\centering\arraybackslash}X>{\centering\arraybackslash}X>{\centering\arraybackslash}X@{}}
+\toprule
+\textbf{Siêu tham số} & \textbf{Huấn luyện gốc} & \textbf{Tinh chỉnh rung} & \textbf{Tinh chỉnh cho NPU}\\
+\midrule
+Dữ liệu & VisDrone & VisDrone & VisDrone + 25\% COCO\\
+Khởi tạo & ngẫu nhiên & checkpoint gốc & checkpoint nhánh triển khai\\
+Số epoch & 300 & 120 & 20\\
+Kích thước lô $\times$ tích luỹ & $16\times6$ & $8\times12$ & 12\\
+Tốc độ học (cosin) & $10^{-2} \rightarrow 10^{-4}$ & $2\cdot10^{-3} \rightarrow 10^{-4}$ & $10^{-3}$\\
+Khởi động & 10 epoch & 3 epoch & 3 epoch\\
+Bộ tối ưu & MuSGD & MuSGD & MuSGD\\
+Suy giảm trọng số / quán tính & $5\cdot10^{-4}$ / 0,9 & $5\cdot10^{-4}$ / 0,9 & $5\cdot10^{-4}$ / 0,9\\
+EMA & 0,9998 & 0,9998 & 0,9998\\
+Toán tử rung & tắt & $p=0{,}5$, mức 1--3 & tắt\\
+Self-attention $P_5$ & có & có & bỏ\\
+\bottomrule
+\end{tabularx}
+\end{table}

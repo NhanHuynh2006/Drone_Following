@@ -1,0 +1,205 @@
+% =====================================================================
+%  CHƯƠNG 1. CƠ SỞ LÝ THUYẾT
+% =====================================================================
+\renewcommand{\thetable}{\thechapter.\arabic{table}}\renewcommand{\thefigure}{\thechapter.\arabic{figure}}
+\chapter{Cơ sở lý thuyết}
+\label{chap:lythuyet}
+
+Chương này trình bày các kiến thức nền tảng mà hệ thống dựa vào, đi theo đúng thứ tự dữ liệu chảy qua hệ thống: từ ảnh đầu vào, qua mô hình phát hiện, bộ theo vết, khối ước lượng khoảng cách, bộ điều khiển, tới bộ điều khiển bay. Mỗi mục chỉ giữ lại những gì cần để hiểu các lựa chọn thiết kế ở các chương sau.
+
+\section{Bài toán phát hiện đối tượng}
+
+\subsection{Định nghĩa}
+
+Cho một ảnh $I \in \mathbb{R}^{H \times W \times 3}$, bài toán phát hiện đối tượng yêu cầu xuất ra một tập bounding box $\{(b_i, c_i, s_i)\}$, trong đó $b_i = (x_1, y_1, x_2, y_2)$ là toạ độ hộp, $c_i$ là lớp và $s_i \in [0,1]$ là điểm tin cậy. Đề tài chỉ quan tâm một lớp là \textit{người}, nên bài toán thu về việc định vị chính xác từng người trong ảnh.
+
+Mức độ trùng khớp giữa hộp dự đoán $B_p$ và hộp thật $B_g$ được đo bằng tỷ lệ giao trên hợp:
+\begin{equation}
+\mathrm{IoU}(B_p, B_g) = \frac{|B_p \cap B_g|}{|B_p \cup B_g|}.
+\label{eq:iou}
+\end{equation}
+Một dự đoán được xem là đúng khi IoU với một hộp thật chưa được ghép vượt ngưỡng $\tau$, thường là 0,5.
+
+\subsection{Loại bỏ hộp không cực đại}
+
+Các bộ phát hiện dày đặc sinh ra nhiều hộp chồng lên nhau cho cùng một đối tượng. Thuật toán loại bỏ hộp không cực đại (NMS) sắp xếp các hộp theo điểm tin cậy, giữ hộp cao nhất và xoá các hộp có IoU với nó vượt ngưỡng, rồi lặp lại. Biến thể DIoU-NMS~\cite{zheng2020diou} bổ sung khoảng cách tâm vào tiêu chí xoá, giúp giữ lại hai người đứng sát nhau. Chi phí NMS phụ thuộc số hộp, nên trong cảnh đông người, NMS là chặng có độ trễ biến động nhất của chuỗi xử lý.
+
+\section{Mạng nơ-ron tích chập cho phát hiện đối tượng}
+
+\subsection{Bộ phát hiện hai giai đoạn và một giai đoạn}
+
+Học sâu thay thế các đặc trưng thiết kế thủ công bằng đặc trưng học từ dữ liệu~\cite{lecun2015deep,goodfellow2016dl}. Mạng tích chập (CNN) với kết nối tắt~\cite{he2016resnet} là backbone của phần lớn bộ phát hiện hiện nay. Họ bộ phát hiện hai giai đoạn, tiêu biểu là Faster R-CNN~\cite{ren2017faster}, trước tiên đề xuất các vùng có khả năng chứa đối tượng rồi mới phân loại và tinh chỉnh từng vùng; cách này chính xác nhưng chậm. Họ một giai đoạn như SSD~\cite{liu2016ssd} và YOLO~\cite{redmon2016yolo} dự đoán trực tiếp lớp và hộp trên một lưới đặc trưng trong một lần truyền, phù hợp với ứng dụng thời gian thực. RetinaNet~\cite{lin2017focal} chỉ ra rằng sự mất cân bằng giữa rất nhiều ô nền và rất ít ô chứa đối tượng là nguyên nhân chính khiến bộ phát hiện một giai đoạn kém chính xác, và đề xuất hàm mất mát tiêu điểm để khắc phục.
+
+\subsection{Kim tự tháp đặc trưng}
+
+Đối tượng xuất hiện ở nhiều kích thước. Mạng kim tự tháp đặc trưng (FPN)~\cite{lin2017fpn} kết hợp feature map sâu (giàu ngữ nghĩa, độ phân giải thấp) với bản đồ nông (chi tiết, độ phân giải cao) qua một đường từ trên xuống, rồi dự đoán ở nhiều mức. Ký hiệu $P_k$ chỉ feature map có bước (stride) $2^k$ so với ảnh vào; với ảnh $640\times640$, $P_3$ có kích thước $80\times80$, còn $P_2$ có kích thước $160\times160$. EfficientDet~\cite{tan2020efficientdet} mở rộng FPN thành cấu trúc hai chiều có trọng số.
+
+\subsection{Head anchor-free}
+
+Các bộ phát hiện đời đầu dựa vào tập anchor box định sẵn. FCOS~\cite{tian2019fcos} và các thế hệ YOLO gần đây dự đoán trực tiếp khoảng cách từ mỗi grid cell tới bốn cạnh hộp, bỏ hẳn anchor box và giảm số siêu tham số phải chỉnh. Việc ghép grid cell với hộp thật trong huấn luyện được thực hiện bằng các chiến lược gán nhãn động như TOOD~\cite{feng2021tood}, trong đó mức độ phù hợp của một ô được đo bằng tích giữa điểm phân loại và IoU của hộp nó dự đoán.
+
+\subsection{Họ YOLO và bộ phát hiện dựa trên Transformer}
+
+Họ YOLO liên tục được cải tiến qua các phiên bản YOLOv7~\cite{wang2023yolov7}, YOLOv8, YOLO11 và YOLO26 của Ultralytics~\cite{ultralytics}. YOLOv10~\cite{wang2024yolov10} huấn luyện song song hai head, một head ``one-to-many'' cho tín hiệu học phong phú và một head ``one-to-one'' cho phép bỏ NMS khi suy luận. DETR~\cite{carion2020detr} coi phát hiện là bài toán dự đoán tập hợp bằng Transformer; RT-DETR~\cite{zhao2024rtdetr} là phiên bản thời gian thực đầu tiên của hướng này. Đề tài dùng bốn mô hình YOLO bản nano và RT-DETR-l làm đối chứng, phủ ba trường phái: CNN có NMS, CNN không NMS và Transformer.
+
+\section{Các khối xây dựng mạng hiệu quả}
+
+\subsection{Tích chập depthwise separable}
+
+Một lớp tích chập chuẩn kích thước $k\times k$ từ $C_{in}$ sang $C_{out}$ kênh trên bản đồ $H\times W$ tốn khoảng $k^2 C_{in} C_{out} H W$ phép nhân. Tích chập depthwise separable tách lớp này thành một tích chập $k\times k$ riêng cho từng kênh và một tích chập $1\times1$ trộn kênh, tổng chi phí khoảng $(k^2 C_{in} + C_{in} C_{out}) H W$, tức giảm gần $k^2$ lần khi $C_{out}$ lớn. MobileNetV2~\cite{sandler2018mobilenetv2} xây dựng khối nút cổ chai đảo ngược (mở rộng kênh, tích chập depthwise, thu hẹp kênh). MobileNetV4~\cite{qin2024mnv4} tổng quát hoá thành khối UIB, cho phép thêm hoặc bỏ tích chập depthwise ở đầu và giữa khối.
+
+Công thức chi phí trên cho thấy một điểm quan trọng: \textit{chi phí tỷ lệ thuận với diện tích feature map}. Một lớp đặt ở $P_2$ ($160\times160$) tốn gấp 16 lần cùng lớp đó đặt ở $P_3$ ($80\times80$) và gấp 64 lần ở $P_4$. Đây là cơ sở của thiết kế ``nhánh $P_2$ mỏng'' ở Chương~\ref{chap:mohinh}.
+
+\subsection{Kết nối từng phần liên tầng và tái tham số hoá}
+
+CSPNet~\cite{wang2020cspnet} chia feature map thành hai phần, chỉ cho một phần đi qua chuỗi khối tính toán rồi ghép lại, nhờ đó giảm chi phí mà vẫn giữ luồng gradient phong phú. RepVGG~\cite{ding2021repvgg} dùng nhiều nhánh khi huấn luyện và gộp chúng thành một tích chập duy nhất khi suy luận; phép gộp lớp tích chập với lớp batch norm cũng được dùng khi xuất mô hình để triển khai.
+
+\subsection{Self-attention theo cửa sổ}
+
+Cơ chế self-attention cho phép mỗi vị trí tổng hợp thông tin từ mọi vị trí khác, nhưng chi phí tăng theo bình phương số vị trí. Swin Transformer~\cite{liu2021swin} giới hạn phép chú ý trong các cửa sổ cục bộ để chi phí tăng tuyến tính. Đặt khối này ở mức phân giải thấp nhất ($P_5$, $20\times20$ với ảnh $640$) giúp mô hình có ngữ cảnh rộng với chi phí rất nhỏ. LSKNet~\cite{li2023lsknet} là một hướng khác, dùng nhân tích chập lớn có chọn lọc cho ảnh viễn thám.
+
+\section{Phát hiện người có kích thước nhỏ từ UAV}
+
+Trong ảnh chụp từ độ cao vài chục mét, một người thường chiếm ít hơn $32\times32$ điểm ảnh, thuộc nhóm ``vật thể nhỏ'' theo quy ước của COCO~\cite{lin2014coco}. Các khảo sát~\cite{cheng2023sod,yu2020tinyperson} chỉ ra ba khó khăn chính: đặc trưng của vật nhỏ bị mất sau các lớp giảm mẫu, IoU rất nhạy với sai lệch vài điểm ảnh, và mất cân bằng mẫu dương trong gán nhãn.
+
+\subsection{Giữ mức phân giải cao}
+
+Với bước 8, một người rộng 8 điểm ảnh chỉ còn đúng một ô trên bản đồ $P_3$, và thông tin bị trộn với nền xung quanh. Thêm mức dự đoán $P_2$ (bước 4) giúp giữ lại tín hiệu này nhưng làm tăng mạnh chi phí tính toán như đã phân tích ở mục trên. Phần lớn các mô hình YOLO bản nano bắt head từ $P_3$.
+
+\subsection{Khoảng cách Wasserstein chuẩn hoá}
+
+Với hộp nhỏ, lệch một hai điểm ảnh làm IoU giảm rất mạnh, khiến gradient không ổn định. Wang và cộng sự~\cite{wang2021nwd} mô hình hoá mỗi hộp $(c_x, c_y, w, h)$ như một phân phối Gauss hai chiều và đo khoảng cách Wasserstein bậc hai giữa chúng:
+\[
+W_2^2 = (c_x^p - c_x^g)^2 + (c_y^p - c_y^g)^2 + \left(\tfrac{w^p - w^g}{2}\right)^2 + \left(\tfrac{h^p - h^g}{2}\right)^2,
+\]
+\begin{equation}
+\mathrm{NWD} = \exp\!\left(-\frac{\sqrt{W_2^2}}{C}\right),
+\label{eq:nwd}
+\end{equation}
+trong đó $C$ là hằng số chuẩn hoá. NWD thay đổi trơn theo sai lệch vị trí kể cả khi hai hộp không giao nhau, nên phù hợp với vật nhỏ.
+
+\subsection{Hàm mất mát hồi quy CIoU và phân loại theo chất lượng}
+
+CIoU~\cite{zheng2020diou} bổ sung vào IoU hai thành phần phạt khoảng cách tâm và sai khác tỷ lệ khung hình:
+\begin{equation}
+\mathcal{L}_{\mathrm{CIoU}} = 1 - \mathrm{IoU} + \frac{\rho^2(\mathbf{c}_p, \mathbf{c}_g)}{d^2} + \alpha v,
+\label{eq:ciou}
+\end{equation}
+với $\rho$ là khoảng cách Euclid giữa hai tâm, $d$ là đường chéo hộp nhỏ nhất bao cả hai hộp, $v$ đo sai khác tỷ lệ khung hình và $\alpha$ là hệ số cân bằng. Ở nhánh phân loại, hàm mất mát tiêu điểm theo chất lượng (QFL)~\cite{li2020gfl} dùng IoU của hộp dự đoán làm nhãn mềm thay cho nhãn cứng 0/1:
+\begin{equation}
+\mathcal{L}_{\mathrm{QFL}}(p, q) = -\,|q - p|^{\beta}\,\big[(1-q)\log(1-p) + q \log p\big],
+\label{eq:qfl}
+\end{equation}
+trong đó $p$ là xác suất dự đoán, $q$ là IoU mục tiêu và $\beta$ điều chỉnh mức tập trung vào mẫu khó. Nhờ vậy điểm tin cậy phản ánh cả khả năng có người lẫn độ khít của hộp.
+
+\section{Suy giảm ảnh do rung động của UAV}
+\label{sec:lythuyet_rung}
+
+\subsection{Nguồn gốc vật lý}
+
+Động cơ và cánh quạt mất cân bằng, cùng các tần số cộng hưởng của khung, truyền dao động tần số cao tới camera. Cảm biến ảnh tích luỹ ánh sáng trong suốt thời gian phơi sáng $t_e$; nếu camera dịch chuyển trong khoảng thời gian này, mỗi điểm của cảnh bị trải dài theo quỹ đạo chuyển động. Với chuyển động gần như thẳng trong thời gian phơi sáng ngắn, ảnh thu được có thể mô hình hoá bằng phép tích chập:
+\begin{equation}
+I_{\text{rung}} = \gamma \cdot \big(I_{\text{sạch}} * k_{L,\theta}\big) + n, \qquad n \sim \mathcal{N}(0, \sigma^2),
+\label{eq:rung}
+\end{equation}
+trong đó $k_{L,\theta}$ là nhân nhoè dạng đoạn thẳng dài $L$ điểm ảnh theo hướng $\theta$, được chuẩn hoá để tổng bằng 1; $n$ là nhiễu cảm biến; $\gamma$ là hệ số độ sáng. Ba hiệu ứng xuất hiện cùng lúc: \textit{nhoè có hướng} do dịch chuyển trong lúc phơi sáng; \textit{nhiễu tăng} vì khi ảnh tối và nhoè, bộ tự phơi sáng tăng độ khuếch đại; \textit{dao động độ sáng giữa các khung} do tần số cánh quạt giao thoa với màn trập cuộn. Độ dài nhoè $L$ tỷ lệ với biên độ vận tốc góc và thời gian phơi sáng, nên rút ngắn $t_e$ làm giảm nhoè nhưng làm tăng nhiễu.
+
+\subsection{Độ bền của mạng nơ-ron trước ảnh suy giảm}
+
+Dodge và Karam~\cite{dodge2016quality} cho thấy các mạng phân loại giảm mạnh độ chính xác khi ảnh bị nhoè và nhiễu dù con người vẫn nhận ra nội dung. Hendrycks và Dietterich~\cite{hendrycks2019imagenetc} đề xuất bộ ImageNet-C gồm 15 loại suy giảm ở 5 mức và chỉ số lỗi trung bình trên các mức; Michaelis và cộng sự~\cite{michaelis2019winter} mở rộng cho bài toán phát hiện đối tượng. Các benchmark này bao quát nhiều loại suy giảm chung, còn trên UAV phân phối suy giảm tập trung hơn, do động học cánh quạt và thời gian phơi sáng quyết định. Có hai hướng xử lý chính: khôi phục ảnh bằng mạng khử nhoè~\cite{nah2017deblur,kupyn2018deblurgan}, vốn thêm một mạng nữa vào đường xử lý và làm tăng độ trễ; hoặc làm cho chính bộ phát hiện bền hơn qua dữ liệu huấn luyện~\cite{shorten2019augmentation}. Đề tài chọn hướng thứ hai vì nó không tốn chi phí khi suy luận.
+
+\section{Lượng tử hoá mô hình và bộ tăng tốc nơ-ron}
+
+\subsection{Lượng tử hoá INT8}
+
+Lượng tử hoá biểu diễn trọng số và giá trị kích hoạt bằng số nguyên 8 bit thay cho số thực 32 bit, giảm 4 lần bộ nhớ và cho phép dùng phép tính nguyên trên phần cứng chuyên dụng. Phép lượng tử hoá affine~\cite{jacob2018quantization} ánh xạ số thực $r$ sang số nguyên $q$:
+\begin{equation}
+q = \mathrm{clamp}\!\left(\mathrm{round}\!\left(\frac{r}{S}\right) + Z,\; 0,\; 255\right), \qquad r \approx S\,(q - Z),
+\label{eq:quant}
+\end{equation}
+với $S$ là hệ số tỷ lệ và $Z$ là điểm không. Lượng tử hoá sau huấn luyện (PTQ)~\cite{krishnamoorthi2018whitepaper} ước lượng $S$ và $Z$ từ một tập ảnh hiệu chuẩn nhỏ; các kỹ thuật như làm tròn thích nghi~\cite{nagel2020adaround} giảm sai số làm tròn. Sai số lượng tử $S/2$ trên toạ độ hộp ảnh hưởng lớn tới vật nhỏ, vì với vật chỉ vài điểm ảnh, sai lệch này chiếm tỷ lệ đáng kể so với kích thước vật.
+
+\subsection{Bộ tăng tốc Hailo-8L}
+
+Hailo-8L là bộ xử lý nơ-ron dạng M.2, công suất tính toán danh định 13 TOPS, được Raspberry Pi phân phối kèm bộ AI Kit cho Raspberry Pi~5~\cite{rpi_aikit}. Mô hình ở định dạng ONNX được trình biên dịch luồng dữ liệu (DFC) của Hailo phân tích, lượng tử hoá với tập hiệu chuẩn rồi biên dịch thành tệp HEF. Khi mô hình không vừa bộ nhớ trên chip, trình biên dịch chia nó thành nhiều \textit{context}; mỗi lần chuyển context, trọng số phải được nạp lại qua đường PCIe. Vì vậy, trên loại chip này, số context là một yếu tố quyết định tốc độ bên cạnh số phép tính.
+
+\section{Theo vết đa đối tượng}
+
+\subsection{Bộ lọc Kalman}
+
+Bộ lọc Kalman~\cite{kalman1960} ước lượng trạng thái $\mathbf{x}$ của một hệ tuyến tính có nhiễu qua hai bước. Bước dự đoán:
+\begin{equation}
+\hat{\mathbf{x}}_{k|k-1} = F\,\hat{\mathbf{x}}_{k-1}, \qquad P_{k|k-1} = F P_{k-1} F^\top + Q.
+\end{equation}
+Bước cập nhật khi có quan sát $\mathbf{z}_k$:
+\begin{equation}
+\begin{aligned}
+K_k &= P_{k|k-1} H^\top \big(H P_{k|k-1} H^\top + R\big)^{-1},\\
+\hat{\mathbf{x}}_k &= \hat{\mathbf{x}}_{k|k-1} + K_k\big(\mathbf{z}_k - H\hat{\mathbf{x}}_{k|k-1}\big), \qquad
+P_k = (I - K_k H) P_{k|k-1}.
+\end{aligned}
+\end{equation}
+Trong đó $F$ là ma trận chuyển trạng thái, $H$ là ma trận quan sát, $Q$ và $R$ là hiệp phương sai nhiễu quá trình và nhiễu đo. Khi không có quan sát, chỉ bước dự đoán được thực hiện, cho phép ``đi tiếp'' theo quỹ đạo trong thời gian ngắn.
+
+\subsection{Từ SORT tới OC-SORT}
+
+SORT~\cite{bewley2016sort} theo vết mỗi đối tượng bằng một bộ lọc Kalman với trạng thái gồm tâm, diện tích, tỷ lệ khung hình và vận tốc, rồi ghép dự đoán với phát hiện mới bằng thuật toán Hungary trên ma trận chi phí $1-\mathrm{IoU}$. DeepSORT~\cite{wojke2017deepsort} thêm đặc trưng ngoại hình; ByteTrack~\cite{zhang2022bytetrack} tận dụng cả các phát hiện có điểm thấp. OC-SORT~\cite{cao2023ocsort} chỉ ra rằng khi đối tượng bị mất quan sát vài khung, lỗi của bộ lọc Kalman tích luỹ theo thời gian; nó khắc phục bằng cách dùng lại các quan sát thật để hiệu chỉnh trạng thái khi đối tượng xuất hiện trở lại, và thêm tiêu chí nhất quán hướng chuyển động khi ghép. OC-SORT không cần mạng trích đặc trưng ngoại hình, nên chạy nhẹ trên CPU, phù hợp với máy tính nhúng.
+
+\section{Mô hình camera và ước lượng khoảng cách}
+
+Mô hình camera lỗ kim ánh xạ điểm $(X, Y, Z)$ trong hệ toạ độ camera thành điểm ảnh $(u, v)$:
+\begin{equation}
+u = f_x \frac{X}{Z} + c_x, \qquad v = f_y \frac{Y}{Z} + c_y,
+\label{eq:pinhole}
+\end{equation}
+với $f_x, f_y$ là tiêu cự tính theo điểm ảnh và $(c_x, c_y)$ là tâm ảnh, xác định bằng hiệu chuẩn bàn cờ~\cite{zhang2000calibration}. Nếu một người có chiều cao thực $H_r$ và chiều cao bounding box trên ảnh là $h$ điểm ảnh, khoảng cách tới người đó xấp xỉ:
+\begin{equation}
+Z \approx \frac{f_y H_r}{h}.
+\label{eq:distance}
+\end{equation}
+Đạo hàm theo $h$ cho $|\partial Z/\partial h| = Z^2/(f_y H_r)$: sai số tăng theo bình phương khoảng cách, vì ở xa mỗi điểm ảnh sai lệch tương ứng nhiều mét hơn. Tương tự, độ lệch góc phương vị của người so với trục quang học được tính từ độ lệch ngang của tâm hộp: $\psi \approx (u - c_x)/f_x$.
+
+\section{Điều khiển servo thị giác và bộ điều khiển PID}
+
+\subsection{Servo thị giác}
+
+Điều khiển servo thị giác dùng thông tin từ ảnh để tạo lệnh chuyển động~\cite{chaumette2006visual}. Có hai trường phái: servo dựa trên ảnh (IBVS) điều khiển trực tiếp sai số trong mặt phẳng ảnh; servo dựa trên vị trí (PBVS) ước lượng vị trí ba chiều của mục tiêu rồi điều khiển trong không gian. Các hệ thống lai kết hợp cả hai, ví dụ dùng sai số ngang trong ảnh để quay hướng và khoảng cách ước lượng để tiến lùi.
+
+\subsection{Bộ điều khiển PID}
+
+Bộ điều khiển PID~\cite{astrom2008feedback} tính tín hiệu điều khiển từ sai số $e(t)$ giữa giá trị đặt và giá trị đo:
+\begin{equation}
+u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\, d\tau + K_d \frac{de(t)}{dt}.
+\label{eq:pid}
+\end{equation}
+Thành phần tỷ lệ phản ứng với sai số hiện tại, tích phân triệt tiêu sai số xác lập, vi phân giảm vọt lố. Khi tín hiệu ra bị giới hạn, cần chặn thành phần tích phân (chống bão hoà tích phân) để tránh vọt lố lớn khi sai số đổi dấu. Trong hệ rời rạc, tích phân và vi phân được xấp xỉ bằng tổng và sai phân theo bước thời gian thực đo được giữa hai lần gọi.
+
+\section{Bộ điều khiển bay ArduPilot và giao thức MAVLink}
+
+ArduPilot là phần mềm điều khiển bay mã nguồn mở, hỗ trợ nhiều loại phương tiện, trong đó ArduCopter dành cho máy bay nhiều cánh quạt~\cite{ardupilot}. ArduCopter có nhiều chế độ bay: \texttt{STABILIZE} (người lái điều khiển tư thế), \texttt{LOITER} (giữ vị trí bằng GPS), \texttt{RTL} (tự bay về điểm cất cánh, trước tiên leo lên độ cao an toàn) và \texttt{GUIDED}, chế độ nhận lệnh vị trí hoặc vận tốc từ máy tính bên ngoài. Bộ điều khiển bay tự đảm nhận vòng ổn định tư thế và vận tốc bên trong với tần số cao, còn máy tính đồng hành chỉ cần gửi vận tốc mong muốn.
+
+MAVLink là giao thức thông điệp gọn nhẹ dùng phổ biến giữa UAV, trạm mặt đất và máy tính đồng hành~\cite{koubaa2019mavlink}. Mỗi gói có tiêu đề, định danh hệ thống/thành phần, mã thông điệp, dữ liệu và mã kiểm tra. Các thông điệp dùng trong đề tài gồm \texttt{HEARTBEAT} (trạng thái sống và chế độ), \texttt{ATTITUDE}, \texttt{GLOBAL\_POSITION\_INT}, \texttt{SYS\_STATUS}, \texttt{VIBRATION} (mức rung ba trục và số lần bão hoà cảm biến gia tốc) và \texttt{SET\_POSITION\_TARGET\_LOCAL\_NED} để gửi vận tốc đặt. ArduPilot có tham số \texttt{GUID\_TIMEOUT}: nếu không nhận lệnh mới trong khoảng thời gian này, máy bay tự dừng lại, là một lớp bảo vệ khi máy tính đồng hành bị treo.
+
+\section{Các chỉ số đánh giá}
+\label{sec:chiso}
+
+\textbf{Độ chuẩn xác, recall và F1.} Với TP, FP, FN là số dự đoán đúng, sai và số người bị bỏ sót:
+\begin{equation}
+\mathrm{Precision} = \frac{TP}{TP+FP}, \qquad \mathrm{Recall} = \frac{TP}{TP+FN}, \qquad F_1 = \frac{2\,\mathrm{Precision}\cdot\mathrm{Recall}}{\mathrm{Precision}+\mathrm{Recall}}.
+\end{equation}
+
+\textbf{Độ chính xác trung bình (AP).} Khi thay đổi ngưỡng điểm tin cậy, ta được đường cong precision theo recall; AP là diện tích dưới đường cong này (nội suy 101 điểm theo chuẩn COCO)~\cite{lin2014coco,padilla2021metrics}. AP@0,5 dùng ngưỡng IoU 0,5; AP@0,75 dùng ngưỡng 0,75 và phản ánh độ khít của hộp; AP@[.50:.95] là trung bình trên 10 ngưỡng IoU từ 0,50 tới 0,95. AR@100 là recall trung bình khi giữ tối đa 100 dự đoán mỗi ảnh. AP$_s$ là AP trên vật có diện tích dưới $32^2$ điểm ảnh.
+
+\textbf{Độ chính xác khi bị suy giảm.} Theo cách tiếp cận của~\cite{hendrycks2019imagenetc}, đề tài định nghĩa mCP là AP@[.50:.95] trung bình trên $M$ mức suy giảm và tỷ lệ giữ độ chính xác:
+\begin{equation}
+\mathrm{mCP} = \frac{1}{M}\sum_{m=1}^{M} \mathrm{AP}_m, \qquad
+\mathrm{retain} = 100 \times \frac{\mathrm{mCP}}{\mathrm{AP}_{\text{sạch}}}\ (\%).
+\label{eq:mcp}
+\end{equation}
+mCP cho biết mô hình chính xác bao nhiêu \textit{khi đang bay}, còn retain cho biết mô hình giữ lại được bao nhiêu phần độ chính xác so với khi đứng yên. Hai mô hình có cùng AP sạch có thể khác nhau rất xa về retain.
+
+\textbf{Khoảng tin cậy bootstrap.} Khi tập đánh giá nhỏ, chênh lệch giữa hai mô hình có thể chỉ do ngẫu nhiên. Phương pháp bootstrap~\cite{efron1979bootstrap} lấy mẫu lại có hoàn lại các khung hình nhiều lần, tính chỉ số trên mỗi mẫu và lấy phân vị 2,5\% và 97,5\% làm khoảng tin cậy 95\%. Khi lấy mẫu ghép cặp (cùng một tập khung cho cả hai mô hình), khoảng tin cậy của \textit{hiệu} hai chỉ số không chứa 0 nghĩa là chênh lệch có ý nghĩa trên tập dữ liệu đó.
+
+\section{Kết luận chương}
+
+Chương này đã trình bày nền tảng về bộ phát hiện một giai đoạn, các khối mạng hiệu quả và các khó khăn khi phát hiện người nhỏ; mô hình vật lý của suy giảm ảnh do rung; lượng tử hoá INT8 và đặc điểm context của NPU Hailo; bộ lọc Kalman và OC-SORT; mô hình camera lỗ kim; bộ điều khiển PID; ArduPilot và MAVLink; cùng các chỉ số đánh giá. Hai nhận xét định hướng cho các chương sau: chi phí tính toán tỷ lệ với diện tích feature map, và các benchmark phát hiện thông thường không đo độ chính xác trong điều kiện rung mà UAV luôn gặp phải.

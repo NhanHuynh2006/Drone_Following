@@ -1,4 +1,4 @@
-# PFDet-Nano v17 + VIBRATION-CONSISTENCY — nhánh DEPLOY (finetune từ v17_DEPLOY, có COCO).
+# SteadyDet-N + VIBRATION-CONSISTENCY — nhánh DEPLOY (finetune từ v17_DEPLOY, có COCO).
 # Phase-2 (deployment/pivot): vibration khớp domain deploy 3-6m. KHÁC vib no-COCO ở: pretrained=deploy + COCO.
 # Chạy SAU khi paper_queue no-COCO xong (deploy_queue.sh tự lo). KHÔNG ngắt job đang chạy.
 

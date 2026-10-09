@@ -1,4 +1,4 @@
-# PFDet-Nano v15 — Phân tích kiến trúc chi tiết
+# SteadyDet-W — Phân tích kiến trúc chi tiết
 
 > **Bài toán:** Phát hiện người (person detection) từ camera drone, chạy realtime trên Raspberry Pi 5.
 > **Kết quả thực tế:** AP@0.5 = **0.5931** trên VisDrone, ~**1.0M params**, ~**30 FPS** trên Pi 5 ở 320px.

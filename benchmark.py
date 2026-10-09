@@ -1,5 +1,5 @@
 """
-Benchmark PFDet-Nano v14 on desktop and edge-oriented profiles.
+Benchmark SteadyDet v14 on desktop and edge-oriented profiles.
 
 Reports:
   - params
@@ -325,7 +325,7 @@ def append_scoreboard_row(csv_path, row):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Benchmark PFDet-Nano v14")
+    parser = argparse.ArgumentParser(description="Benchmark SteadyDet v14")
     parser.add_argument("--weights", required=True, help="Path to checkpoint (.pt)")
     parser.add_argument("--profile", default="desktop_4060", choices=sorted(BENCHMARK_PROFILES))
     parser.add_argument("--img-size", type=int, default=None, help="Override input size")
@@ -361,7 +361,7 @@ def main():
 
     print(f"Profile: {args.profile}")
     print(f"Device: {device}")
-    print(f"Model: PFDetNano {model_version}")
+    print(f"Model: SteadyDet {model_version}")
     print(f"Model kwargs: {model_kwargs}")
     print(f"Input size: {img_size}")
     print(

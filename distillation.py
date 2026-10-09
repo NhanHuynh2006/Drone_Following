@@ -1,8 +1,8 @@
 """
-distillation.py — Knowledge Distillation cho PFDet-Nano
+distillation.py — Knowledge Distillation cho SteadyDet-N
 ========================================================
 
-Teacher = PFDet-Nano BALANCED (2.0M, bạn tự train)  ->  Student = LIGHT (1.0M).
+Teacher = SteadyDet-N BALANCED (2.0M, bạn tự train)  ->  Student = LIGHT (1.0M).
 
 Vì teacher & student CÙNG kiến trúc nên:
   - Output KD: head outputs cả hai đều (B, 5, H, W) mỗi scale -> so trực tiếp, KHÔNG cần adapter.

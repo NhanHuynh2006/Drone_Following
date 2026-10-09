@@ -1,0 +1,79 @@
+% =====================================================================
+% Vibration-Consistency Training — SoICT 2026 submission (v3)
+% Template: Springer CCIS / LNCS (llncs.cls)
+%
+% SoICT 2026: single-blind, 12 pages EXCLUDING references, Springer CCIS,
+% PDF without page numbers, submitted via EasyChair.
+%   abstract 09 Sep 2026 | full paper 16 Sep 2026
+%   notification 12 Oct 2026 | camera-ready 23 Oct 2026
+%
+% EVERY NUMBER IN THIS PAPER COMES FROM A FILE IN THE REPOSITORY:
+%   runs/paper_queue/UNIFIED.json   <- Tables 1, 2, 3, 4 (one eval code path,
+%                                      3 seeds, mean +/- std)
+%   runs/paper_queue/SUMMARY_DEPLOY.txt, RESULTS_FLIGHT_VAL.md <- Table 5
+%   runs/paper_queue/BASELINES_TABLE.md <- params / GFLOPs
+% See PAPER_INPUTS.md for the table -> file map.
+% Anything marked \TODO{} is NOT measured yet. Do not submit with a \TODO.
+% =====================================================================
+
+\documentclass[runningheads]{llncs}
+
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\TODO}[1]{\textcolor{red}{\textbf{[#1]}}}
+\newcommand{\best}[1]{\textbf{#1}}
+% mean +/- std gon trong bang: \ms{16.8}{0.7}
+\newcommand{\ms}[2]{#1\,{\scriptsize$\pm$#2}}
+
+\begin{document}
+
+\input{sections/01_titlepage}
+\input{sections/02_abstract}
+
+\input{sections/03_introduction}
+\input{sections/04_related_work}
+
+\section{Method}
+\label{sec:method}
+\input{sections/05_platform}
+\input{sections/06_shake_protocol}
+\input{sections/07_vibcon}
+
+\section{Experiments}
+\label{sec:exp}
+\input{sections/08_exp_setup}
+\input{sections/09_exp_main}
+% 4.3 Generality DA GOP vao 09_exp_main.tex (chung Table 1, truoc do lap y).
+% File 10_exp_generality.tex con trong repo neu muon tach lai.
+% \input{sections/10_exp_generality}
+\input{sections/11_exp_baselines}
+% 4.5 Val bay that: CAT 2026-07-27 de vua 12 trang (quyet dinh cua tac gia).
+% Ly do: 92 frame / 1 nguoi / 1 canh / quay man hinh GCS -> bang chung yeu nhat bai.
+% Chuyen bay dau thang 8 (xem FLIGHT_DATA_SPEC.md) se cho >=1000 frame + log IMU;
+% LUC DO dua lai muc nay, no se manh hon nhieu. So da do van con o
+% runs/paper_queue/FLIGHT.json va file section van con trong repo.
+% \input{sections/12_exp_flight}
+% ---------------------------------------------------------------------
+% 4.6 Edge Deployment: TAM BO RA de vua 12 trang. Muc nay chua co so do
+% (AP sau INT8, latency p99, nhiet) nen dang la phan yeu nhat cua bai --
+% reviewer se hoi ngay. Bo ONNX ra thi paper GON hon va KHONG mat claim nao
+% (abstract/intro/conclusion khong phu thuoc vao no).
+% Muon dua lai: bo dau % o dong duoi, DIEN het \TODO trong file do, va do
+% lai so trang. Xem README_OVERLEAF.txt.
+% \input{sections/13_exp_deploy}
+% ---------------------------------------------------------------------
+
+\input{sections/14_limitations}
+\input{sections/15_conclusion}
+
+\subsubsection{Acknowledgements.} \TODO{Funding, laboratory, advisor.}
+
+\input{sections/16_bibliography}
+
+\end{document}

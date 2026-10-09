@@ -1,0 +1,67 @@
+<mxfile host="app.diagrams.net" agent="pfdet-drone-follow" type="device">
+  <diagram id="Chia_luồng_và_tiến_trình_khi_bay" name="Chia luồng và tiến trình khi bay">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1560" pageHeight="1000"
+        math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="Chia luồng — 2 tiến trình, 5 luồng, và ai chạy ở tần số nào" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=22;fontFamily=Helvetica;fontColor=#102A43;fontStyle=1" vertex="1" parent="1"><mxGeometry x="60" y="25" width="1300" height="34" as="geometry"/></mxCell>
+        <mxCell id="t2" value="Trên Raspberry Pi 5. Ràng buộc gốc: /dev/ttyACM0 CHỈ một tiến trình mở được, và NPU Hailo CHỈ một tiến trình dùng được." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#627D98;fontStyle=0" vertex="1" parent="1"><mxGeometry x="60" y="55" width="1300" height="40" as="geometry"/></mxCell>
+        <mxCell id="g3" value="TIẾN TRÌNH 1 — mavmux.py   ( ./run.sh mux )" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F0FB;strokeColor=#4527A0;fontColor=#311B92;dashed=1;dashPattern=8 6;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;arcSize=6;fontStyle=1" vertex="1" parent="1"><mxGeometry x="70" y="120" width="380" height="300" as="geometry"/></mxCell>
+        <mxCell id="n4" value="Giữ cổng /dev/ttyACM0
+MAVLink v2 · 94–100 gói/s · 0 lỗi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="95" y="165" width="330" height="60" as="geometry"/></mxCell>
+        <mxCell id="n5" value="Phát lại ra UDP cho nhiều client
+(đã test 2 client × 100 gói/s)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="95" y="245" width="330" height="60" as="geometry"/></mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4527A0;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#4527A0;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n4" target="n5"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="t7" value="Tồn tại CHỈ vì cổng USB độc quyền: không có mux thì
+vòng bám và bảng giám sát không thể cùng nói chuyện
+với mạch bay." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fontFamily=Helvetica;fontColor=#4527A0;fontStyle=0" vertex="1" parent="1"><mxGeometry x="95" y="320" width="330" height="80" as="geometry"/></mxCell>
+        <mxCell id="g8" value="TIẾN TRÌNH 2 — follow_drone/main.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F4FBF5;strokeColor=#2E7D32;fontColor=#1B5E20;dashed=1;dashPattern=8 6;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;arcSize=6;fontStyle=1" vertex="1" parent="1"><mxGeometry x="500" y="120" width="1000" height="620" as="geometry"/></mxCell>
+        <mxCell id="n9" value="LUỒNG 1 · CameraThread
+follow/camera.py:54 (daemon)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="525" y="165" width="300" height="96" as="geometry"/></mxCell>
+        <mxCell id="n10" value="30 Hz" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="845" y="189" width="90" height="48" as="geometry"/></mxCell>
+        <mxCell id="n11" value="Đọc camera liên tục, giữ ĐÚNG 1 khung mới nhất.
+CAP_PROP_BUFFERSIZE = 1 và tắt auto-exposure —
+hai lỗi này từng ghìm e2e ở 15.4 FPS." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#616161;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="955" y="165" width="520" height="96" as="geometry"/></mxCell>
+        <mxCell id="n12" value="LUỒNG 2 · MAVLink _recv_loop
+follow/mavlink_client.py:104 (daemon)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;fontColor=#37474F;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="525" y="277" width="300" height="96" as="geometry"/></mxCell>
+        <mxCell id="n13" value="theo gói đến" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="845" y="301" width="90" height="48" as="geometry"/></mxCell>
+        <mxCell id="n14" value="Nhận telemetry, cập nhật state dùng chung.
+Tốc độ đặt cho FCU: ATTITUDE / LOCAL_POSITION_NED /
+VFR_HUD 10 Hz · GPS · SYS_STATUS 5 Hz ·
+VIBRATION / EKF / BATTERY 2 Hz · HOME 0.2 Hz." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#616161;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="955" y="277" width="520" height="96" as="geometry"/></mxCell>
+        <mxCell id="n15" value="LUỒNG 3 · heartbeat
+follow/mavlink_client.py:106 (daemon)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;fontColor=#37474F;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="525" y="389" width="300" height="96" as="geometry"/></mxCell>
+        <mxCell id="n16" value="1 Hz" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="845" y="413" width="90" height="48" as="geometry"/></mxCell>
+        <mxCell id="n17" value="Nhịp tim bắt buộc của MAVLink. Ngừng gửi là FCU
+coi như mất liên lạc." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#616161;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="955" y="389" width="520" height="96" as="geometry"/></mxCell>
+        <mxCell id="n18" value="LUỒNG 4 · Dashboard HTTP
+follow/dashboard.py:157 (ThreadingHTTPServer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#616161;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="525" y="501" width="300" height="96" as="geometry"/></mxCell>
+        <mxCell id="n19" value="theo yêu cầu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="845" y="525" width="90" height="48" as="geometry"/></mxCell>
+        <mxCell id="n20" value="Bảng giám sát cổng 8080, DÙNG LẠI khung hình và
+phát hiện có sẵn — không tốn thêm lượt suy luận.
+Nhúng thẳng vào main.py vì NPU chỉ 1 tiến trình dùng được." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#616161;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="955" y="501" width="520" height="96" as="geometry"/></mxCell>
+        <mxCell id="n21" value="LUỒNG CHÍNH · vòng bám
+follow_drone/main.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="525" y="613" width="300" height="96" as="geometry"/></mxCell>
+        <mxCell id="n22" value="30 Hz" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="845" y="637" width="90" height="48" as="geometry"/></mxCell>
+        <mxCell id="n23" value="Detect → track → chọn mục tiêu → 3 PID → kẹp an toàn
+→ gửi SET_POSITION_TARGET → ghi log → ngủ bù.
+Ngân sách 33.3 ms, detector chiếm 17.6 ms." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#616161;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="955" y="613" width="520" height="96" as="geometry"/></mxCell>
+        <mxCell id="n24" value="Pixhawk 6C
+ArduPilot Copter 4.7.0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="180" y="620" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="e25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4527A0;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#4527A0;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n5" target="n24"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e26" value="telemetry" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#4527A0;strokeWidth=2;dashed=1;fontSize=11;fontFamily=Helvetica;fontColor=#4527A0;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n24" target="n4"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="130" y="655"/><mxPoint x="130" y="195"/></Array></mxGeometry></mxCell>
+        <mxCell id="t27" value="USB /dev/ttyACM0 · MAVLink v2" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=12;fontFamily=Helvetica;fontColor=#4527A0;fontStyle=0" vertex="1" parent="1"><mxGeometry x="70" y="720" width="380" height="60" as="geometry"/></mxCell>
+        <mxCell id="n28" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#616161;strokeWidth=1.5;fontSize=1;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="525" y="760" width="300" height="1" as="geometry"/></mxCell>
+        <mxCell id="e29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#FFFFFF;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#FFFFFF;endArrow=none;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n5" target="n28"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="t30" value="BA RÀNG BUỘC PHẦN CỨNG ĐÃ ĐỊNH HÌNH CÁCH CHIA NÀY
+1. NPU Hailo chỉ MỘT tiến trình dùng được → hailo_gcs.py và follow_drone KHÔNG chạy song song. Vì vậy bảng giám sát
+   phải là một LUỒNG bên trong main.py chứ không phải một tiến trình riêng, và nó dùng lại kết quả suy luận sẵn có.
+2. /dev/ttyACM0 chỉ MỘT tiến trình mở được → sinh ra mavmux.py.
+3. GIL của Python không cản ở đây vì mọi luồng đều chờ I/O (camera, socket) hoặc chờ NPU — phần tính toán nặng
+   nằm ngoài Python. Ngoài bãi chỉ cần đúng 2 lệnh:  ./run.sh mux   và   python main.py" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#455A64;fontStyle=0" vertex="1" parent="1"><mxGeometry x="500" y="770" width="1000" height="200" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

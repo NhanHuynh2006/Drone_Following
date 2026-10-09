@@ -1,5 +1,5 @@
 """
-PFDet-Nano v16 Loss Function
+SteadyDet v16 Loss Function
 ============================
 
 Standalone loss file for v16.

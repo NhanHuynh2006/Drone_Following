@@ -1,0 +1,34 @@
+% ==================================================================
+% 6. Conclusion   (file: sections/15_conclusion.tex)
+% ==================================================================
+\section{Conclusion}
+
+SteadyDet-N, at $1.17$\,M parameters and $4.6$ GFLOPs, is the least accurate
+detector in our comparison on clean VisDrone and, within its compute budget, the
+most accurate one under vibration. Getting there required both halves of this paper. The failure it
+starts from is general: under a single evaluation protocol every detector we
+tested, from $1.17$ to $32.8$\,M parameters, loses most of its accuracy to the
+vibration intrinsic to rotor-driven flight, so the problem belongs to the regime
+rather than to any one architecture. The fix is cheaper than the problem. Putting a
+physically motivated vibration model into the training distribution raises
+retention from $16.8 \pm 0.7\%$ to $36.2 \pm 0.7\%$ while leaving the deployed
+network untouched, and a matched control confirms the extra epochs contribute
+nothing. Neither the network nor the regime does this alone: untreated, the network
+is the worst row in our table, and the same regime on YOLO11-n moves nothing.
+
+We also report two results we did not want: the consistency formulation we expected
+to extract more from the corrupted view reaches only $30.0 \pm 0.6\%$ at
+$1.8\times$ the training cost, and neither formulation moves YOLO11-n. We think this
+is the more useful half of the paper. The default when a robustness
+intervention works is to credit the mechanism that was designed; here the control
+says the gain came from the data and the designed mechanism was in the way, and the
+generality test says we do not yet know what the gain depends on. Both are
+conclusions a reader can act on, and neither would have appeared without running
+the controls.
+
+One lesson extends beyond our detector: a stochastic corruption benchmark must be
+seeded and reported with error bars, since run-to-run spread on a single checkpoint
+was large enough here to manufacture a modest improvement. The extensions we
+consider most valuable are calibrating the corruption against measured airframe
+spectra, and identifying which property of a detector decides whether the regime
+helps it at all.

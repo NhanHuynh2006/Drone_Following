@@ -1,5 +1,5 @@
 """
-Box operations for PFDet-Nano.
+Box operations for SteadyDet-N.
 
 Provides:
   - xywh2xyxy: convert normalized [cx, cy, w, h] → [x1, y1, x2, y2]

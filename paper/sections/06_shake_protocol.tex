@@ -1,0 +1,36 @@
+% ==================================================================
+% 3.2 Giao thuc VisDrone-Shake   (file: sections/06_shake_protocol.tex)
+% ==================================================================
+\subsection{The VisDrone-Shake Protocol}
+\label{sec:shake}
+
+Measuring vibration robustness needs a corruption model reflecting rotorcraft
+physics rather than a generic suite. Three effects dominate. \textbf{Directional
+motion blur}: camera displacement during exposure integrates the scene along the
+motion direction, modelled as convolution with a linear kernel. \textbf{Sensor
+noise}: blur reduces effective signal and automatic exposure compensates by raising
+gain, amplifying read noise. \textbf{Exposure oscillation}: rotor frequency beating
+against the rolling shutter gives frame-to-frame brightness fluctuation, applied
+multiplicatively.
+
+The three are composed at three severity levels above clean, parameterised by (blur
+kernel length in pixels, noise $\sigma$, brightness range) as
+sev1 $=(5,\,0.02,\,{\pm}10\%)$, sev2 $=(9,\,0.04,\,{\pm}20\%)$ and
+sev3 $=(15,\,0.06,\,{\pm}30\%)$, with blur orientation drawn uniformly per batch.
+Levels sev1 and sev2 correspond to a well-balanced airframe in steady flight; sev3 to
+severe excitation such as an unbalanced rotor. None of the three translates objects, so
+ground-truth boxes stay valid and the same operator serves as both a training
+perturbation and a fixed evaluation protocol.
+
+Following~\cite{hendrycks2019benchmarking} we report the mean corrupted precision
+$\mathrm{mCP}$ over the three corrupted levels and the retention ratio
+$\mathrm{retain}\% = 100 \cdot \mathrm{mCP}/\mathrm{AP}_{\mathrm{clean}}$, which
+measures how much of a detector's accuracy survives flight rather than how accurate
+it is on the ground. Two detectors with equal clean AP can differ widely in it.
+
+\subsubsection{The protocol is stochastic, so it must be seeded.}
+Blur orientation, noise and brightness are drawn at random, so a single pass is one
+draw rather than a measurement: unseeded, retention for one checkpoint varied by
+more than a point between passes, enough to manufacture a modest improvement. We
+reseed before every severity pass and report mean and standard deviation over three
+seeds. Gains smaller than a benchmark's own run-to-run spread are not gains.

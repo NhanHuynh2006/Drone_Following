@@ -1,6 +1,6 @@
 # Follow Drone — Hệ thống điều khiển drone follow person
 
-Code hoàn chỉnh để drone tự động bay theo người dùng PFDet-Nano v15 detection,
+Code hoàn chỉnh để drone tự động bay theo người dùng SteadyDet-W detection,
 chạy trên Raspberry Pi 5 + Pixhawk 6C + ArduPilot Copter.
 
 **ĐỌC KỸ TRƯỚC KHI BAY THẬT.** Test theo thứ tự được liệt kê dưới.
@@ -15,7 +15,7 @@ follow_drone/
 ├── main.py                    # Main entry point (chạy follow loop)
 ├── follow/
 │   ├── camera.py              # Camera capture thread
-│   ├── detector.py            # PFDet-Nano v15 wrapper
+│   ├── detector.py            # SteadyDet-W wrapper
 │   ├── ocsort.py              # OC-SORT tracker
 │   ├── target_selector.py     # Lock target ID
 │   ├── distance.py            # Pinhole distance + Kalman smoother
@@ -251,7 +251,7 @@ Vượt geofence → ArduPilot fence breach → RTL.
 
 ## Tham khảo
 
-- `ARCHITECTURE.md` — chi tiết PFDet-Nano v15 model
+- `ARCHITECTURE.md` — chi tiết SteadyDet-W model
 - `FOLLOW_CONTROL.md` — chi tiết thiết kế thuật toán điều khiển
 - ArduPilot Copter docs: https://ardupilot.org/copter/
 - pymavlink: https://github.com/ArduPilot/pymavlink

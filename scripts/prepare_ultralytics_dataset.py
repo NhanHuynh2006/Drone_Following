@@ -1,7 +1,7 @@
 """
-Prepare a YOLO/RT-DETR-friendly dataset view from PFDet labels.
+Prepare a YOLO/RT-DETR-friendly dataset view from SteadyDet labels.
 
-PFDet labels may store:
+SteadyDet labels may store:
   class cx cy w h fx fy
 
 Ultralytics detection training expects:
@@ -74,7 +74,7 @@ def convert_split(src_root: Path, dst_root: Path, split: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Prepare an Ultralytics-compatible dataset view")
-    parser.add_argument("--src", default="./data/visdrone", help="Source dataset root with PFDet labels")
+    parser.add_argument("--src", default="./data/visdrone", help="Source dataset root with SteadyDet labels")
     parser.add_argument("--dst", default="./data/visdrone_ultralytics", help="Destination dataset root")
     parser.add_argument(
         "--splits",

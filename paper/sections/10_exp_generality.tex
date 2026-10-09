@@ -1,0 +1,37 @@
+% ==================================================================
+% 4.3 Tinh tong quat tren kien truc khac (v15)
+% KHONG co bang rieng — dung LAI khoi v15 trong Table~\ref{tab:main}.
+% file: sections/10_exp_generality.tex
+% ==================================================================
+\subsection{Generality Across Architectures}
+\label{sec:generality}
+
+A regulariser that works on exactly one architecture is hard to distinguish from a
+fortunate interaction with it. The lower block of Table~\ref{tab:main} therefore
+repeats the experiment on SteadyDet-W, an earlier detector of ours with a full-width
+stride-4 branch and non-separable five-convolution heads, so that although it has
+slightly \emph{fewer} parameters ($1.00$ against $1.17$\,M) it costs $2.8\times$ the
+compute and is the stronger of the two on clean data. Nothing was retuned.
+
+The outcome reproduces: retention rises from $22.2 \pm 0.9\%$ to $30.5 \pm 0.6\%$,
+accuracy at sev2 improves $2.25\times$, and clean AP falls by $6.0\%$. The two arrows
+in Fig.~\ref{fig:tradeoff} are the same shape, which is the point: the mechanism acts
+on the training objective rather than on a particular inductive bias. The magnitude is
+smaller than on SteadyDet-N ($+8.3$ against $+13.2$ points), consistent with
+SteadyDet-W starting from a higher baseline retention.
+
+\subsubsection{A note on checkpoint selection.}
+The final checkpoint of this run reaches a higher retention than the one we
+report, $33.4 \pm 0.3\%$ against $30.5 \pm 0.6\%$. We report the lower figure
+because it comes from the checkpoint selected by clean validation AP, which is the
+rule applied to the baseline; taking the final checkpoint for our model while
+taking the best-validation checkpoint for the baseline would be two rules, and the
+difference between them here is $2.9$ points, a third of the effect we are
+claiming. We state the rule and accept the number it produces.
+
+\subsubsection{Scope of this evidence.}
+Both architectures are ours and share the loss function, assignment strategy and
+optimiser, so this shows insensitivity to backbone design rather than independence
+from our whole training recipe. We prefer to state that limit than to describe two
+detectors of our own as an architecture-agnostic result; the experiment that would
+settle it is in Section~\ref{sec:limitations}.

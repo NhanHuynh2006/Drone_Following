@@ -1,5 +1,5 @@
 """
-Export PFDet-Nano v14 to ONNX and TensorRT-compatible artifacts.
+Export SteadyDet v14 to ONNX and TensorRT-compatible artifacts.
 
 The export contract mirrors the 4-scale v14 runtime path:
   input -> output_p2, output_p3, output_p4, output_p5
@@ -182,7 +182,7 @@ print(f"Engine saved to {{ENGINE_PATH}}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Export PFDet-Nano")
+    parser = argparse.ArgumentParser(description="Export SteadyDet-N")
     parser.add_argument("--weights", required=True, help="PyTorch weights (.pt)")
     parser.add_argument("--format", default="onnx", choices=["onnx", "trt", "all"])
     parser.add_argument("--fp16", action="store_true", help="FP16 for TensorRT")
@@ -205,13 +205,13 @@ def main():
     output_names = list(export_cfg.get('output_names') or DEFAULT_EXPORT_OUTPUT_NAMES)
     if len(output_names) != len(model.strides):
         raise ValueError(
-            f"Expected {len(model.strides)} export outputs for PFDet v14, got {len(output_names)}"
+            f"Expected {len(model.strides)} export outputs for SteadyDet v14, got {len(output_names)}"
         )
     export_model, fused = prepare_export_model(model, fuse=not args.no_fuse)
     total, _ = count_params(model)
     deploy_total, _ = count_params(export_model)
     print(
-        f"Model: PFDetNano {model_version} "
+        f"Model: SteadyDet {model_version} "
         f"(base_c={cfg['model'].get('base_c', 'n/a')}, "
         f"train_params={total/1e6:.2f}M, deploy_params={deploy_total/1e6:.2f}M)"
     )

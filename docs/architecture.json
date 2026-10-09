@@ -1,0 +1,474 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "SteadyDet Drone Follow — kiến trúc hệ thống bám người",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/NhanHuynh2006/Drone_Following",
+      "revision": "1dc939c1008a58a674eb275d240e23700b7371e2"
+    },
+    "views": [
+      {
+        "id": "vong-bam",
+        "label": "Vòng bám 30 Hz",
+        "focus": [
+          "camera",
+          "detector",
+          "tracker",
+          "selector",
+          "servo",
+          "safety",
+          "mavlink",
+          "fcu"
+        ],
+        "note": "Đường đi của một khung hình: từ camera tới lệnh vận tốc gửi xuống bộ điều khiển bay."
+      },
+      {
+        "id": "duong-mo-hinh",
+        "label": "Đưa mô hình lên NPU",
+        "focus": [
+          "train",
+          "compile",
+          "detector"
+        ],
+        "note": "Checkpoint huấn luyện trên máy trạm được biên dịch INT8 thành HEF rồi nạp vào Hailo-8L."
+      },
+      {
+        "id": "an-toan",
+        "label": "An toàn và giám sát",
+        "focus": [
+          "safety",
+          "mavlink",
+          "fcu",
+          "logger",
+          "dashboard"
+        ],
+        "note": "Lớp kẹp lệnh, nhật ký bay và bảng giám sát của người vận hành."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "train",
+      "type": "backend",
+      "label": "Huấn luyện SteadyDet-N",
+      "sublabel": "VisDrone + COCO person",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "models/pfdet_nano_v17.py",
+          "label": "kiến trúc mô hình"
+        }
+      ]
+    },
+    {
+      "id": "compile",
+      "type": "backend",
+      "label": "Xuất ONNX → biên dịch HEF",
+      "sublabel": "Hailo DFC · INT8",
+      "pos": [
+        360,
+        60
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "export_onnx_hailo.py",
+          "label": "xuất ONNX"
+        },
+        {
+          "path": "compile_hef.py",
+          "label": "biên dịch HEF"
+        }
+      ]
+    },
+    {
+      "id": "dashboard",
+      "type": "frontend",
+      "label": "Bảng giám sát web",
+      "sublabel": "trình duyệt · cổng 8080",
+      "pos": [
+        1000,
+        60
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "camera",
+      "type": "external",
+      "label": "Camera USB",
+      "sublabel": "640×480 @ 30 fps",
+      "pos": [
+        40,
+        214
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "follow_drone/follow/camera.py",
+          "line": 11,
+          "label": "CameraThread"
+        }
+      ]
+    },
+    {
+      "id": "detector",
+      "type": "backend",
+      "label": "PersonDetectorHailo",
+      "sublabel": "Hailo-8L · 17,7 ms/khung",
+      "pos": [
+        360,
+        214
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "tracker",
+      "type": "backend",
+      "label": "OC-SORT",
+      "sublabel": "max_age 45 · min_hits 3",
+      "pos": [
+        680,
+        214
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "follow_drone/follow/ocsort.py",
+          "line": 191,
+          "label": "OCSORT"
+        }
+      ]
+    },
+    {
+      "id": "selector",
+      "type": "backend",
+      "label": "TargetSelector",
+      "sublabel": "khoá ID · grace 3 s",
+      "pos": [
+        1000,
+        214
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "follow_drone/follow/target_selector.py",
+          "line": 14,
+          "label": "TargetSelector"
+        }
+      ]
+    },
+    {
+      "id": "servo",
+      "type": "backend",
+      "label": "Cự ly + Visual servo",
+      "sublabel": "PID → vx, vy, vz, yaw",
+      "pos": [
+        40,
+        348
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "follow_drone/follow/visual_servo.py",
+          "line": 14,
+          "label": "VisualServo"
+        }
+      ]
+    },
+    {
+      "id": "safety",
+      "type": "security",
+      "label": "SafetyManager",
+      "sublabel": "kẹp v, độ cao, cự ly",
+      "pos": [
+        360,
+        348
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "follow_drone/follow/safety.py",
+          "line": 24,
+          "label": "SafetyManager"
+        }
+      ]
+    },
+    {
+      "id": "mavlink",
+      "type": "messagebus",
+      "label": "MAVLinkClient",
+      "sublabel": "pymavlink · GUIDED",
+      "pos": [
+        680,
+        348
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "follow_drone/follow/mavlink_client.py",
+          "line": 23,
+          "label": "MAVLinkClient"
+        }
+      ]
+    },
+    {
+      "id": "logger",
+      "type": "database",
+      "label": "Nhật ký bay CSV",
+      "sublabel": "cự ly, lệnh, rung",
+      "pos": [
+        1000,
+        348
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "follow_drone/main.py",
+          "line": 59,
+          "label": "FlightLogger"
+        }
+      ]
+    },
+    {
+      "id": "fcu",
+      "type": "external",
+      "label": "Pixhawk / ArduPilot",
+      "sublabel": "GUIDED · LOITER · RTL",
+      "pos": [
+        680,
+        482
+      ],
+      "size": [
+        180,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Máy trạm huấn luyện (ngoại tuyến)",
+      "wraps": [
+        "train",
+        "compile"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Raspberry Pi 5 + Hailo-8L — trên máy bay",
+      "wraps": [
+        "camera",
+        "detector",
+        "tracker",
+        "selector",
+        "servo",
+        "safety",
+        "mavlink",
+        "logger"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Chốt an toàn",
+      "wraps": [
+        "safety",
+        "mavlink"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ckpt",
+      "from": "train",
+      "to": "compile",
+      "label": "best.pt"
+    },
+    {
+      "id": "hef",
+      "from": "compile",
+      "to": "detector",
+      "label": "nạp .hef",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        450,
+        169
+      ]
+    },
+    {
+      "id": "frames",
+      "from": "camera",
+      "to": "detector",
+      "label": "khung 30 Hz",
+      "variant": "emphasis"
+    },
+    {
+      "id": "boxes",
+      "from": "detector",
+      "to": "tracker",
+      "label": "hộp người",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tracks",
+      "from": "tracker",
+      "to": "selector",
+      "label": "track kèm ID",
+      "variant": "emphasis"
+    },
+    {
+      "id": "target",
+      "from": "selector",
+      "to": "servo",
+      "label": "mục tiêu đã khoá",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          1090,
+          313
+        ],
+        [
+          130,
+          313
+        ]
+      ]
+    },
+    {
+      "id": "cmd",
+      "from": "servo",
+      "to": "safety",
+      "label": "vận tốc thân",
+      "variant": "emphasis"
+    },
+    {
+      "id": "clamped",
+      "from": "safety",
+      "to": "mavlink",
+      "label": "lệnh đã kẹp",
+      "variant": "security"
+    },
+    {
+      "id": "log",
+      "from": "mavlink",
+      "to": "logger",
+      "label": "ghi mỗi vòng",
+      "variant": "dashed"
+    },
+    {
+      "id": "setpoint",
+      "from": "mavlink",
+      "to": "fcu",
+      "label": "SET_POSITION_TARGET 30 Hz",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        640,
+        459
+      ]
+    },
+    {
+      "id": "telem",
+      "from": "fcu",
+      "to": "mavlink",
+      "label": "telemetry, rung",
+      "labelAt": [
+        850,
+        459
+      ]
+    },
+    {
+      "id": "stream",
+      "from": "selector",
+      "to": "dashboard",
+      "label": "ảnh + trạng thái",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [
+        990,
+        169
+      ]
+    },
+    {
+      "id": "retarget",
+      "from": "dashboard",
+      "to": "selector",
+      "label": "đổi mục tiêu",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        1150,
+        169
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Nhận thức",
+      "items": [
+        "SteadyDet-N huấn luyện trên VisDrone trộn COCO person, biên dịch INT8 thành HEF.",
+        "Hailo-8L suy luận 17,7 ms/khung — dư trong ngân sách 33,3 ms của vòng 30 Hz."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Điều khiển",
+      "items": [
+        "Cự ly ước lượng từ chiều cao hộp, làm mượt Kalman rồi mới vào PID.",
+        "Lệnh vx/vy/vz/yaw gửi xuống Pixhawk ở chế độ GUIDED, đúng 30 Hz."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "An toàn",
+      "items": [
+        "Mọi lệnh đều bị SafetyManager kẹp vận tốc, độ cao và cự ly tiến.",
+        "Mất mục tiêu leo thang FOLLOW → COAST → HOVER → LOITER."
+      ]
+    }
+  ]
+}

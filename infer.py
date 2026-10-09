@@ -1,8 +1,8 @@
 """
-Inference script for PFDet-Nano v14.
+Inference script for SteadyDet v14.
 
 Supports single-image, directory, video, and webcam inference with the
-4-scale PFDet decoder contract used by training/export/runtime paths.
+4-scale SteadyDet decoder contract used by training/export/runtime paths.
 """
 
 import os
@@ -206,7 +206,7 @@ def run_image(model, img_path, img_size, device, conf_thr=0.3, nms_iou=0.45,
         print(f"  Saved to {save_path}")
 
     if show:
-        cv2.imshow("PFDet-Nano", vis)
+        cv2.imshow("SteadyDet-N", vis)
         cv2.waitKey(0)
 
     return dets
@@ -295,7 +295,7 @@ def run_video(model, source, img_size, device, conf_thr=0.3, nms_iou=0.45,
             writer.write(vis)
 
         if show:
-            cv2.imshow("PFDet-Nano", vis)
+            cv2.imshow("SteadyDet-N", vis)
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
                 break
@@ -316,7 +316,7 @@ def run_video(model, source, img_size, device, conf_thr=0.3, nms_iou=0.45,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PFDet-Nano Inference")
+    parser = argparse.ArgumentParser(description="SteadyDet-N Inference")
     parser.add_argument("--weights", required=True, help="Path to .pt weights")
     parser.add_argument("--source", required=True, help="Image/video/webcam")
     parser.add_argument("--conf", type=float, default=0.4, help="Confidence threshold")

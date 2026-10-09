@@ -16,6 +16,9 @@ class SafetyState:
     FOLLOW = 'follow'
     COAST = 'coast'
     HOVER = 'hover'
+    # LOITER và RTL GIỮ LẠI CHỈ ĐỂ ĐỌC ĐƯỢC LOG CŨ. Thang mất-mục-tiêu không
+    # còn sinh ra hai trạng thái này nữa, và phần mềm không đổi chế độ bay.
+    # Xem ghi chú trong update_target_status().
     LOITER = 'loiter'
     RTL = 'rtl'
     EMERGENCY = 'emergency'
@@ -36,7 +39,19 @@ class SafetyManager:
         # cumulative thresholds
         self.t_coast_end = self.coast_duration
         self.t_hover_end = self.coast_duration + self.hover_duration
+        # Không còn dùng (thang dừng ở HOVER) — giữ để config cũ không vỡ.
         self.t_loiter_end = self.t_hover_end + self.loiter_duration
+
+        # NGƯỠNG PIN — PHẢI KHỚP SỐ CELL CỦA PACK.
+        # Trước đây hai số này hard-code 22.5 / 21.5 (pack 6S). Máy bay này chạy
+        # 4S: đầy 16.8 V, nên preflight LUÔN trượt và vòng bám LUÔN nhảy LOITER
+        # ngay vòng đầu. Chỉ `--no-fly` là không lộ, vì nó bỏ qua preflight và
+        # chỉ in cảnh báo khi health fail — nên mọi lần test trên bàn đều "qua".
+        # Mặc định dưới đây là 4S (3.7 / 3.5 V mỗi cell); critical khớp đúng
+        # BATT_LOW_VOLT = 14.0 đã đặt trong Mission Planner.
+        # Đổi pack thì sửa config.yaml, ĐỪNG sửa lại ở đây.
+        self.battery_warn_v = float(config.get('battery_warn_v', 14.8))
+        self.battery_critical_v = float(config.get('battery_critical_v', 14.0))
 
     # ───── Pre-flight checks ─────────────────────────────────────
 
@@ -58,8 +73,10 @@ class SafetyManager:
                 warnings.append(f"GPS sats < 6 (current: {state['gps_sats']})")
 
         # Battery
-        if state['battery_voltage'] is not None and state['battery_voltage'] < 22.5:
-            warnings.append(f"Battery low: {state['battery_voltage']:.1f}V")
+        if state['battery_voltage'] is not None and \
+                state['battery_voltage'] < self.battery_warn_v:
+            warnings.append(f"Battery low: {state['battery_voltage']:.1f}V "
+                            f"(< {self.battery_warn_v:.1f}V)")
             ok = False
 
         # Heartbeat
@@ -94,23 +111,31 @@ class SafetyManager:
             self.target_lost_since = now
             return SafetyState.COAST
 
+        # ⚠️ ĐỌC KỸ TRƯỚC KHI SỬA — sự cố bay 2026-09-04.
+        #
+        # Bản cũ leo thang tới LOITER rồi RTL và GỌI THẲNG self.mav.set_mode().
+        # main.py gọi hàm này VÔ ĐIỀU KIỆN (bước 7), không nằm trong `if not
+        # args.no_fly` — nên kể cả chạy --no-fly, mất mục tiêu quá 15 s là phần mềm
+        # CƯỚP chế độ bay khỏi tay người lái. Và RTL của ArduPilot leo lên RTL_ALT
+        # (mặc định 15 m) trước khi bay về: đó là cú "tự nhiên bay thẳng lên trời"
+        # trong chuyến 2026-09-04, khi camera không thấy người lần nào suốt 249 s.
+        #
+        # LUẬT BÂY GIỜ: người lái sở hữu chế độ bay. Phần mềm KHÔNG BAO GIỜ gọi
+        # set_mode — không LOITER, không RTL, không gì cả. Mất mục tiêu thì thang
+        # dừng ở HOVER (gửi vận tốc 0 = đứng yên tại chỗ) và ở đó mãi cho tới khi
+        # người lái tự gạt công tắc. Đừng thêm set_mode vào lại đây.
         elapsed = now - self.target_lost_since
         if elapsed < self.t_coast_end:
             new_state = SafetyState.COAST
-        elif elapsed < self.t_hover_end:
-            new_state = SafetyState.HOVER
-        elif elapsed < self.t_loiter_end:
-            new_state = SafetyState.LOITER
         else:
-            new_state = SafetyState.RTL
+            new_state = SafetyState.HOVER
 
         if new_state != self.current_state:
             print(f"[Safety] State change: {self.current_state} → {new_state} "
                   f"(target lost {elapsed:.1f}s)")
-            if new_state == SafetyState.LOITER:
-                self.mav.set_mode('LOITER')
-            elif new_state == SafetyState.RTL:
-                self.mav.set_mode('RTL')
+            if new_state == SafetyState.HOVER:
+                print("[Safety] Đứng yên chờ. KHÔNG đổi chế độ bay — "
+                      "gạt công tắc nếu muốn lấy lại quyền.")
             self.current_state = new_state
 
         return new_state
@@ -170,8 +195,9 @@ class SafetyManager:
 
         # Battery
         if state['battery_voltage'] is not None:
-            if state['battery_voltage'] < 21.5:
-                return False, f"Battery critical: {state['battery_voltage']:.1f}V"
+            if state['battery_voltage'] < self.battery_critical_v:
+                return False, (f"Battery critical: {state['battery_voltage']:.1f}V "
+                               f"(< {self.battery_critical_v:.1f}V)")
 
         # Altitude sanity
         alt = state.get('altitude_agl', 0)

@@ -1,0 +1,77 @@
+<mxfile host="app.diagrams.net" agent="pfdet-drone-follow" type="device">
+  <diagram id="Gán_nhãn_và_hàm_mất_mát_của_SteadyDet-N" name="Gán nhãn và hàm mất mát của SteadyDet-N">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1520" pageHeight="980"
+        math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="Gán nhãn &amp; hàm mất mát — vì sao SteadyDet-N nhìn được người tí xíu" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=22;fontFamily=Helvetica;fontColor=#102A43;fontStyle=1" vertex="1" parent="1"><mxGeometry x="60" y="25" width="1250" height="34" as="geometry"/></mxCell>
+        <mxCell id="t2" value="utils/losses_v15.py (SteadyDet-N dùng chung contract head nên dùng chung loss) · TAL + STAL + QFL + NWD/CIoU + ASL + ProgLoss" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#627D98;fontStyle=0" vertex="1" parent="1"><mxGeometry x="60" y="55" width="1250" height="40" as="geometry"/></mxCell>
+        <mxCell id="n3" value="Dự đoán 4 mức
+(B,5,H,W) × 4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="70" y="130" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="n4" value="Nhãn thật
+hộp người (xywh)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="70" y="230" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="g5" value="BƯỚC 1 — chọn ô nào chịu trách nhiệm cho mỗi người (TAL + STAL)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFEF5;strokeColor=#F9A825;fontColor=#F57F17;dashed=1;dashPattern=8 6;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;arcSize=6;fontStyle=1" vertex="1" parent="1"><mxGeometry x="320" y="105" width="620" height="320" as="geometry"/></mxCell>
+        <mxCell id="n6" value="Chọn mức theo cỡ hộp
+scale_ranges (0-48 / 24-112 / 80-200 / 160+)
+có CHỒNG LẤN → một người có thể ở 2 mức" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="345" y="145" width="265" height="60" as="geometry"/></mxCell>
+        <mxCell id="n7" value="Ô ứng viên quanh tâm hộp
+bán kính 3 ô nếu hộp tí xíu, 2 ô nếu thường" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="345" y="225" width="265" height="60" as="geometry"/></mxCell>
+        <mxCell id="n8" value="Điểm khớp = cls^1.0 · IoU^8.0 · thưởng STAL
+thưởng = 1 + 2·exp(−diện tích / 576)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="640" y="145" width="275" height="60" as="geometry"/></mxCell>
+        <mxCell id="n9" value="Lấy top-k:  k = 6 nếu hộp &lt; 576 px²,  k = 3 nếu thường
+k giảm dần về 3/2 theo epoch (ProgLoss)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="640" y="225" width="275" height="60" as="geometry"/></mxCell>
+        <mxCell id="n10" value="BẢO HIỂM cho hộp SIÊU nhỏ (&lt; 64 px²): nếu chưa đủ 4 ô thì NỚI bán kính thêm 1 rồi chọn lại
+→ không người nào bị bỏ trắng, đây là thứ giữ được recall ở VisDrone" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="345" y="315" width="570" height="60" as="geometry"/></mxCell>
+        <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#F9A825;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n3" target="n6"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#F9A825;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n4" target="n6"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#F9A825;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n6" target="n7"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#F9A825;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n7" target="n9"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#F9A825;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n6" target="n8"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#F9A825;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n8" target="n9"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="g17" value="BƯỚC 2 — hai nhánh mất mát" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCFCFD;strokeColor=#BDBDBD;fontColor=#616161;dashed=0;dashPattern=8 6;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;arcSize=6;fontStyle=1" vertex="1" parent="1"><mxGeometry x="320" y="460" width="620" height="300" as="geometry"/></mxCell>
+        <mxCell id="n18" value="PHÂN LOẠI — Quality Focal Loss (β=2)
+
+Đích KHÔNG phải 0/1 mà là IoU của hộp dự đoán
+→ ô nào khớp khít hơn thì bị ép tin cậy cao hơn.
+Chia cho số ô dương, không chia H·W (nếu chia
+H·W thì gradient loãng ~550 lần)." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="345" y="500" width="270" height="110" as="geometry"/></mxCell>
+        <mxCell id="n19" value="HỘP — trộn NWD với CIoU theo DIỆN TÍCH
+
+w = exp(−diện tích / 1024)
+loss = w · NWD + (1−w) · CIoU
+Cùng lệch 3 px: người 6×6 còn IoU 0.33,
+người 60×60 vẫn 0.90. NWD phạt đều theo pixel." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="645" y="500" width="270" height="110" as="geometry"/></mxCell>
+        <mxCell id="n20" value="Nhân thêm trọng số theo diện tích (ASL):  √(0.004 · 640² / diện tích), kẹp trong [1, 4]
+→ người 10×10 px &quot;tính điểm&quot; gấp 4 lần, 20×20 gấp 2, từ 40×40 trở lên bằng 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="345" y="630" width="570" height="60" as="geometry"/></mxCell>
+        <mxCell id="n21" value="ProgLoss: đầu train obj×2 / box÷2 (học &quot;có người ở đâu&quot; trước), cuối train về đúng 8.0 / 4.0 (học hộp cho khít)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#F57F17;strokeWidth=1.5;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="345" y="705" width="570" height="44" as="geometry"/></mxCell>
+        <mxCell id="e22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#6A1B9A;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n10" target="n18"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#6A1B9A;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n10" target="n19"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#6A1B9A;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n18" target="n20"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#6A1B9A;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n19" target="n20"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#6A1B9A;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n20" target="n21"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n27" value="loss = 8.0 · L_cls  +  4.0 · L_box
+(trọng số chạy theo lịch ProgLoss)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#455A64;fontColor=#263238;strokeWidth=1.5;fontSize=14;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="1000" y="600" width="420" height="80" as="geometry"/></mxCell>
+        <mxCell id="e28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#455A64;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#455A64;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n21" target="n27"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="t29" value="VÌ SAO PHẢI LÀM VẬY
+
+VisDrone bay cao → phần lớn người chỉ vài chục pixel.
+Với hộp cỡ đó, gán nhãn kiểu chuẩn (top-1 anchor, loss
+IoU) hỏng theo hai cách:
+
+• Quá ít ô dương → tín hiệu học gần như không có,
+  model học luôn &quot;không có ai&quot; cho chắc.
+  → sửa bằng k_tiny = 6 và bảo hiểm 4 ô.
+
+• IoU phạt hộp nhỏ nặng hơn hẳn: cùng lệch 3 pixel, người
+  6×6 còn IoU 0.33 trong khi người 60×60 vẫn 0.90.
+  → sửa bằng NWD (khoảng cách Wasserstein giữa hai
+    Gauss), mượt theo pixel chứ không theo tỉ lệ.
+
+Ba cơ chế này KHÔNG tốn gì lúc chạy thật — chúng chỉ
+tồn tại trong lúc train." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#455A64;fontStyle=0" vertex="1" parent="1"><mxGeometry x="1000" y="130" width="430" height="420" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

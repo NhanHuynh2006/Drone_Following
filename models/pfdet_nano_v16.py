@@ -1,5 +1,5 @@
 """
-PFDet-Nano v16 — Stability-First Hybrid for Drone Person Detection
+SteadyDet v16 — Stability-First Hybrid for Drone Person Detection
 ==================================================================
 
 Design goal:
@@ -59,7 +59,7 @@ def resolve_model_profile(profile="balanced"):
     profile = str(profile).lower().strip()
     if profile not in MODEL_PROFILES:
         raise ValueError(
-            f"Unknown PFDet profile: {profile!r}. Available: {sorted(MODEL_PROFILES)}"
+            f"Unknown SteadyDet profile: {profile!r}. Available: {sorted(MODEL_PROFILES)}"
         )
     return dict(MODEL_PROFILES[profile])
 

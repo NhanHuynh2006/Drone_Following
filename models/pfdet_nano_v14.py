@@ -1,5 +1,5 @@
 """
-PFDet-Nano v14 — Drone Person Detector
+SteadyDet v14 — Drone Person Detector
 ======================================
 
 Novel contributions for conference paper:
@@ -70,7 +70,7 @@ def resolve_model_profile(profile='balanced'):
     profile = str(profile).lower().strip()
     if profile not in MODEL_PROFILES:
         raise ValueError(
-            f"Unknown PFDet profile: {profile!r}. "
+            f"Unknown SteadyDet profile: {profile!r}. "
             f"Available profiles: {sorted(MODEL_PROFILES)}"
         )
     return dict(MODEL_PROFILES[profile])
@@ -593,7 +593,7 @@ class DecoupledHead(nn.Module):
 
 class PFDetNanoV14(nn.Module):
     """
-    PFDet-Nano v14 — Person Detection from Drone Camera.
+    SteadyDet v14 — Person Detection from Drone Camera.
 
     Architecture overview:
       EdgeContextStem

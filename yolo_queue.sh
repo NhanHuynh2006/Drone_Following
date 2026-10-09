@@ -9,6 +9,11 @@ mkdir -p "$Q"
 exec 8>/tmp/yolo_queue.lock
 flock -n 8 || { echo "[yolo] instance khác đang chạy, thoát"; exit 0; }
 
+# GUARD (thêm 2026-07-25): đã xong hết thì THOÁT NGAY.
+# Không có dòng này, cron @reboot sẽ chạy lại phần EVAL (ăn GPU) và tranh với
+# ablation_queue.sh đang train. Marker đã có nghĩa là không còn gì phải làm.
+[ -f "$Q/FINAL_ALL_DONE" ] && { echo "[yolo_queue] ĐÃ XONG HẾT TỪ TRƯỚC (FINAL_ALL_DONE) -> thoát"; exit 0; }
+
 log() { echo "[$(date '+%F %T')] $*" | tee -a "$Q/queue.log"; }
 
 # 1) chờ v17 queue xong (để không giành GPU)
@@ -26,9 +31,9 @@ done
 touch "$Q/BASELINES_DONE"   # đảm bảo có marker dù retry cạn (model lỗi không chặn hoàn tất)
 
 # 3) TỰ ĐỘNG so no-COCO vs COCO(deploy) -> ghi DECISION.md (khuyến nghị model-only vs system)
-log "========== TỰ QUYẾT ĐỊNH HƯỚNG PAPER =========="
+log "========== TỰ QUYẾT ĐỊNH HƯỚNG NHÁNH CHUẨN =========="
 $PY paper_decision.py >> "$Q/decision.log" 2>&1
 
 # 4) marker hoàn tất TOÀN BỘ
-log "========== TOÀN BỘ PIPELINE PAPER HOÀN TẤT (v17 + vibration + nms_free + YOLO + decision) =========="
+log "========== TOÀN BỘ PIPELINE NHÁNH CHUẨN HOÀN TẤT (v17 + vibration + nms_free + YOLO + decision) =========="
 touch "$Q/FINAL_ALL_DONE"

@@ -1,0 +1,125 @@
+% =====================================================================
+%  STANDEE — nội dung theo mẫu BM07B/QT-PKHCN-NCKHSV/00
+%  Khổ standee 0,6 x 1,6 m (in bạt). Cỡ chữ đã tính để đọc ở khoảng cách 1-2 m.
+%  Biên dịch: pdflatex standee
+% =====================================================================
+\documentclass[12pt]{extarticle}
+\usepackage[T5]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage{mathptmx}
+\usepackage[paperwidth=600mm,paperheight=1600mm,top=40mm,bottom=45mm,left=40mm,right=40mm]{geometry}
+\usepackage{graphicx,booktabs,array,xcolor,enumitem,amsmath}
+\usepackage[many]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,backgrounds}
+\input{../thongtin.tex}
+\definecolor{xanh}{HTML}{2A78D6}
+\definecolor{cam}{HTML}{EB6834}
+\definecolor{dam}{HTML}{0B3C78}
+\graphicspath{{../hinh/}}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{14pt}
+\setlist{itemsep=5pt,topsep=5pt,parsep=0pt,leftmargin=1.3em}
+\newcommand{\so}[1]{\textbf{\color{dam}#1}}
+\newcommand{\hinh}[3]{\par\vspace{6pt}{\centering\includegraphics[height=#2]{#1}\par
+  \vspace{3pt}{\fontsize{19}{23}\selectfont\textit{#3}}\par}\vspace{6pt}}
+\newtcolorbox{muc}[1]{enhanced,colback=white,colframe=dam,boxrule=2pt,arc=8pt,
+  left=14pt,right=14pt,top=10pt,bottom=12pt,width=\textwidth,
+  fonttitle=\fontsize{40}{48}\selectfont\bfseries,coltitle=white,colbacktitle=dam,
+  title={#1},halign=justify,before skip=10pt,after skip=10pt}
+
+\begin{document}
+\fontsize{26}{34}\selectfont
+
+% ---------------- ĐẦU STANDEE ----------------
+\begin{tcolorbox}[enhanced,colback=dam,colframe=dam,arc=8pt,left=16pt,right=16pt,top=14pt,bottom=14pt,width=\textwidth]
+\color{white}\centering
+\begin{minipage}[c]{0.2\linewidth}\centering\colorbox{white}{\includegraphics[height=64mm]{logo_truong.png}}\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}\centering
+{\fontsize{28}{34}\selectfont TRƯỜNG ĐẠI HỌC CÔNG NGHỆ KỸ THUẬT TP.HCM\par}
+\vspace{4pt}{\fontsize{26}{32}\selectfont NGHIÊN CỨU KHOA HỌC SINH VIÊN NĂM 2026\par}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.2\linewidth}\centering\colorbox{white}{\includegraphics[width=0.94\linewidth]{logo_khoa.jpg}}\end{minipage}
+
+\vspace{16pt}
+{\fontsize{60}{70}\selectfont\bfseries \TENDETAI\par}
+\vspace{10pt}
+{\fontsize{34}{40}\selectfont\bfseries Mã đề tài: \madetai\par}
+\end{tcolorbox}
+
+\begin{tcolorbox}[enhanced,colback=dam!6,colframe=dam,boxrule=1.4pt,arc=6pt,left=14pt,right=14pt,top=10pt,bottom=10pt,width=\textwidth]
+{\fontsize{26}{33}\selectfont
+\textbf{Sinh viên thực hiện:} \chunhiem{} (chủ nhiệm đề tài), \thanhvien\\
+\textbf{Email chủ nhiệm đề tài:} \emailchunhiem \hfill \textbf{Điện thoại:} \dienthoai\\
+\textbf{Giáo viên hướng dẫn:} \gvhd \hfill \textbf{Khoa:} \khoa\par}
+\end{tcolorbox}
+
+% ---------------- I ----------------
+\begin{muc}{I. ĐẶT VẤN ĐỀ}
+Máy bay không người lái ngày càng phổ biến trong giám sát, cứu hộ, quay phim, nhưng người vận hành vừa phải lái vừa phải giữ đối tượng trong khung hình. Một UAV \textbf{tự nhận dạng và bám theo người} làm tăng tính linh hoạt, an toàn và tiện ích.
+
+Nhiều hệ thống bám người đã được công bố trong 5 năm gần đây, nhưng hầu hết chỉ đánh giá mô hình trên \textbf{ảnh sạch, tĩnh}. Thực tế khung máy bay \textbf{luôn rung} khi động cơ quay: ảnh bị nhoè theo hướng, nhiễu tăng và độ sáng dao động, làm bộ phát hiện mất phần lớn độ chính xác.
+
+\textbf{Mục tiêu:} (i) mô hình nhận dạng người thời gian thực đạt độ chính xác \textbf{$\ge$ 70\%}, chạy ngay trên máy bay; (ii) thuật toán theo dõi giữ khoảng cách và hướng bay; (iii) tích hợp camera -- xử lý ảnh -- điều khiển bay hoạt động ổn định ngoài thực tế.
+\end{muc}
+
+% ---------------- II ----------------
+\begin{muc}{II. PHƯƠNG PHÁP VÀ NỘI DUNG NGHIÊN CỨU}
+\textbf{Mô hình SteadyDet-N:} mạng phát hiện người \textbf{1,17 triệu tham số, 4,6 GFLOPs}, giữ nhánh độ phân giải cao cho người ở xa nhưng làm nhánh này mỏng để chạy được trên thiết bị biên.
+
+\textbf{Huấn luyện nhận biết rung:} thay một nửa số batch ảnh huấn luyện bằng bản đã làm rung theo mô hình vật lý của nhoè, nhiễu và dao động sáng. Nhãn giữ nguyên, mô hình khi chạy không đổi nên \textbf{không tốn chi phí suy luận}.
+
+\textbf{Đo công bằng:} một chương trình đánh giá duy nhất cho mọi mô hình, cố định seed ngẫu nhiên, lặp 3 lần; đối chứng với YOLOv8/v10/11/26-n và RT-DETR-l.
+
+\textbf{Hệ thống trên máy bay:} camera $\rightarrow$ SteadyDet-N INT8 trên NPU Hailo-8L (Raspberry Pi~5) $\rightarrow$ theo vết OC-SORT $\rightarrow$ khoá mục tiêu $\rightarrow$ ước lượng khoảng cách $\rightarrow$ ba bộ PID $\rightarrow$ lớp an toàn $\rightarrow$ lệnh MAVLink 30\,Hz tới ArduPilot (chế độ GUIDED).
+
+\hinh{rung_minh_hoa.png}{118mm}{Hình 1. Ảnh sạch và ba mức rung của giao thức VisDrone-Shake}
+\end{muc}
+
+% ---------------- III ----------------
+\begin{muc}{III. KẾT QUẢ NGHIÊN CỨU}
+{\centering\fontsize{22}{27}\selectfont\textit{Bảng 1. Kết quả chính đo trên phần cứng thật}\par}
+\vspace{4pt}
+{\centering\fontsize{25}{32}\selectfont\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.62\linewidth}r@{}}
+\toprule
+\textbf{Chỉ số} & \textbf{Kết quả}\\\midrule
+AP@0,5 trên dữ liệu bay thật (INT8, trên máy bay) & \so{0,917}\\
+F1 / recall / precision & 0,880 / 0,837 / 0,928\\
+Tốc độ đầu-cuối trên máy bay & \so{30,0 FPS}\\
+Suy luận NPU @320 / @640 & 112,55 / 63,66 FPS\\
+So với YOLO26-n trên cùng chip Hailo-8L & \so{nhanh hơn 1,70 lần}\\
+Giữ độ chính xác khi rung: gốc $\rightarrow$ đề xuất & 16,8 $\rightarrow$ \so{36,2\%}\\
+Vòng bám trên video bay thử: giữ mục tiêu & \so{83,5\%} thời gian\\\bottomrule
+\end{tabular}\par}
+
+\hinh{duong_cong_rung.pdf}{150mm}{Hình 2. Độ chính xác theo mức rung: sau huấn luyện nhận biết rung, SteadyDet-N vượt YOLO11-n và RT-DETR-l từ mức 2}
+
+Khi rung, mọi bộ phát hiện nhỏ gọn mất \textbf{74--83\%} độ chính xác. Sau huấn luyện nhận biết rung, mô hình \textbf{nhỏ và rẻ nhất} vượt cả \textbf{bốn mô hình YOLO bản nano} và vượt RT-DETR-l (lớn gấp 28 lần) ở mức rung của bay tiến thông thường.
+
+\hinh{vongbam_khung.png}{95mm}{Hình 3. Vòng bám người trên video bay thử ở độ cao khoảng 6\,m}
+\end{muc}
+
+% ---------------- IV ----------------
+\begin{muc}{IV. KẾT LUẬN}
+\begin{itemize}
+\item Hoàn thành UAV tích hợp nhận dạng và bám theo người, xử lý hoàn toàn trên máy bay: \so{AP@0,5 = 91,7\%} (vượt chỉ tiêu 70\%), \so{30 khung hình/giây}.
+\item Huấn luyện nhận biết rung tăng gấp đôi độ bền khi rung mà không tốn chi phí suy luận.
+\item Trên NPU, số \textit{context} quyết định tốc độ: SteadyDet-N nhanh hơn YOLO26-n 1,70 lần.
+\item \textbf{Hướng phát triển:} hiệu chuẩn mô hình rung bằng nhật ký IMU, mở rộng dữ liệu bay thật, bám nhiều kịch bản.
+\end{itemize}
+\end{muc}
+
+% ---------------- V ----------------
+\begin{muc}{V. TÀI LIỆU THAM KHẢO}
+{\fontsize{20}{25}\selectfont
+[1] S.-Y. Yang, H.-Y. Cheng, C.-C. Yu, ``Real-time object detection and tracking for unmanned aerial vehicles based on convolutional neural networks,'' \textit{Electronics}, vol.~12, no.~24, p.~4928, 2023.\par
+[2] L.-Y. Lo \textit{et al.}, ``Dynamic object tracking on autonomous UAV system for surveillance applications,'' \textit{Sensors}, vol.~21, no.~23, p.~7888, 2021.\par
+[3] K. Kang, W. Kim, ``A human-following drone providing gesture recognition to control IoT devices based on 3D body-landmark detection,'' \textit{Int. J. Control, Automation and Systems}, vol.~23, no.~9, pp.~2718--2727, 2025.\par
+[4] D. Hendrycks, T. Dietterich, ``Benchmarking neural network robustness to common corruptions and perturbations,'' in \textit{Proc. ICLR}, 2019.\par
+[5] P. Zhu \textit{et al.}, ``Detection and tracking meet drones challenge,'' \textit{IEEE TPAMI}, vol.~44, no.~11, pp.~7380--7399, 2022.\par
+[6] J. Cao \textit{et al.}, ``Observation-centric SORT: rethinking SORT for robust multi-object tracking,'' in \textit{Proc. CVPR}, 2023, pp.~9686--9696.\par}
+\end{muc}
+\end{document}

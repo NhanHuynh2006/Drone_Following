@@ -1,0 +1,90 @@
+% =====================================================================
+%  MỞ ĐẦU
+% =====================================================================
+\chuongkhongso{Mở đầu}
+\renewcommand{\thetable}{\arabic{table}}\renewcommand{\thefigure}{\arabic{figure}}\setcounter{table}{0}\setcounter{figure}{0}
+
+\section*{1. Tổng quan tình hình nghiên cứu thuộc lĩnh vực đề tài}
+\addcontentsline{toc}{section}{1. Tổng quan tình hình nghiên cứu thuộc lĩnh vực đề tài}
+
+\subsection*{1.1. Tình hình nghiên cứu ngoài nước}
+
+Máy bay không người lái (UAV) loại nhiều cánh quạt đã trở thành một nền tảng cảm biến phổ biến nhờ giá thành giảm nhanh và khả năng bay treo tại chỗ. Khi gắn thêm camera và một bộ xử lý đủ mạnh, UAV có thể tự nhận biết đối tượng trong ảnh và phản ứng mà không cần người điều khiển. Bài tổng quan của Wu và cộng sự~\cite{wu2022uavsurvey} cho thấy phát hiện và theo vết đối tượng bằng học sâu là hướng được quan tâm nhiều nhất trong thị giác máy tính cho UAV, đồng thời chỉ ra hai khó khăn đặc thù: đối tượng thường rất nhỏ trong khung hình và tài nguyên tính toán trên máy bay rất hạn chế. Các bộ dữ liệu chuẩn như VisDrone~\cite{zhu2022visdrone} và UAVDT~\cite{du2018uavdt} ra đời để đo lường đúng những khó khăn này.
+
+Về bài toán bám theo người, nhiều hệ thống đã được công bố với các lựa chọn khác nhau. Yang và cộng sự~\cite{yang2023uavtrack} kết hợp một mạng YOLOv4 đã được tỉa bớt để phát hiện nhanh với mô hình SiamMask để theo vết liên tục, rồi dùng bộ điều khiển PID để điều chỉnh tư thế bay trên nền tảng ROS, thử nghiệm cả trong nhà và ngoài trời. Lo và cộng sự~\cite{lo2021tracking} xây dựng hệ thống giám sát tự động dùng YOLOv4-Tiny, ước lượng tư thế ba chiều của đối tượng và bộ lọc Kalman để UAV bám theo mục tiêu chuyển động. Liu và Szirányi~\cite{liu2021rescue} dùng YOLOv3-tiny chạy ngay trên máy bay để phát hiện người và nhận dạng cử chỉ phục vụ cứu nạn. Gần đây hơn, Kang và Kim~\cite{kang2025following} đề xuất một UAV bám theo người dựa trên phát hiện điểm mốc cơ thể ba chiều, dùng bộ điều khiển PI để giữ vị trí tương đối và nhận dạng cử chỉ để điều khiển thiết bị IoT. Ở mảng thương mại, các hãng như DJI đã tích hợp tính năng tự động bám theo đối tượng (ActiveTrack) vào sản phẩm tiêu dùng~\cite{dji_activetrack}, cho thấy nhu cầu thực tế của chức năng này.
+
+Song song với các hệ thống ứng dụng, nhiều nhóm nghiên cứu tại châu Âu tập trung vào việc đưa mạng nơ-ron lên máy bay có tài nguyên cực nhỏ. Nhóm của Đại học Zurich và ETH Zurich đã trình diễn mạng DroNet học lái UAV từ dữ liệu xe đạp và ô tô~\cite{loquercio2018dronet}, rồi thu gọn nó để chạy với công suất 64\,mW trên máy bay cỡ nano~\cite{palossi2019nano}; cũng nhóm này đã huấn luyện được UAV đua thắng các tay đua vô địch bằng học tăng cường~\cite{kaufmann2023racing}. Về mô hình phát hiện, các họ YOLO~\cite{redmon2016yolo,wang2023yolov7,wang2024yolov10,ultralytics} và RT-DETR~\cite{zhao2024rtdetr} liên tục cải thiện độ chính xác trên mỗi đơn vị tính toán, còn RemDet~\cite{li2025remdet} thiết kế riêng cho ảnh UAV với nhiều vật thể nhỏ.
+
+Tuy nhiên, gần như toàn bộ các công trình trên đánh giá mô hình trên ảnh tĩnh, sạch, thu từ nền tảng ổn định. Trong khi đó, khung máy bay nhiều cánh quạt rung liên tục khi động cơ quay; rung truyền tới camera tạo ra motion blur, tăng nhiễu và làm độ sáng dao động. Các nghiên cứu về độ bền của mạng nơ-ron trước ảnh bị suy giảm~\cite{hendrycks2019imagenetc,michaelis2019winter,dodge2016quality} đã chứng minh mạng học sâu rất nhạy với nhoè và nhiễu, nhưng chưa có giao thức nào mô phỏng riêng loại suy giảm do rung của UAV để đánh giá các bộ phát hiện nhỏ gọn. Đây là khoảng trống mà đề tài hướng tới.
+
+\subsection*{1.2. Tình hình nghiên cứu trong nước}
+
+Tại Việt Nam, các trường đại học và viện nghiên cứu đã có nhiều đề tài về UAV và xử lý ảnh bằng trí tuệ nhân tạo. Nhóm nghiên cứu tại Học viện Kỹ thuật Quân sự đã công bố hệ thống phát hiện và theo vết UAV trong nền phức tạp bằng kết hợp nhiều mô hình học sâu~\cite{phung2021drone}. Tại Trường Đại học Công nghệ Kỹ thuật TP.HCM, nhóm của PGS.TS. Lê Mỹ Hà nghiên cứu nâng cao độ bền của khối phát hiện đối tượng cho hệ thống hỗ trợ lái xe~\cite{tran2021adas}, một bài toán có cùng bản chất với đề tài này là giữ độ chính xác của bộ phát hiện khi điều kiện ảnh xấu đi. Ở mảng ứng dụng cứu nạn, Ngô và cộng sự~\cite{ngo2026drowning} xây dựng khung UAV phát hiện, theo vết và phân loại tư thế người gặp nạn trên biển, có thử nghiệm tại tỉnh Quảng Ninh.
+
+Nhìn chung, phần lớn nghiên cứu trong nước mới dừng ở phát hiện đối tượng trên video thu sẵn, định vị bằng GPS hoặc ổn định tư thế bay. Hướng nghiên cứu UAV tự động bám theo người, với toàn bộ khâu nhận dạng chạy ngay trên máy bay trong thời gian thực và khép kín vòng điều khiển, vẫn còn ở giai đoạn thử nghiệm. Việc triển khai mô hình học sâu lên thiết bị biên còn hạn chế vì yêu cầu cao về năng lực tính toán, độ trễ và độ ổn định của hệ thống.
+
+\section*{2. Lý do chọn đề tài}
+\addcontentsline{toc}{section}{2. Lý do chọn đề tài}
+
+UAV ngày càng được dùng rộng rãi trong giám sát, cứu hộ, quay phim và giao hàng. Trong nhiều ứng dụng này, người điều khiển vừa phải lái máy bay vừa phải giữ đối tượng trong khung hình, một yêu cầu khó đáp ứng khi đối tượng di chuyển liên tục. Một UAV tự nhận dạng và bám theo người sẽ giải phóng người vận hành khỏi thao tác lái, tăng tính linh hoạt, an toàn và tiện ích của hệ thống.
+
+Đề tài được lựa chọn vì ba lý do cụ thể. \textit{Thứ nhất}, bài toán đòi hỏi kết hợp nhiều lĩnh vực: học sâu, tối ưu mô hình cho phần cứng nhúng, theo vết đa đối tượng và điều khiển bay; đây là cơ hội để sinh viên ngành Công nghệ kỹ thuật máy tính vận dụng kiến thức liên ngành. \textit{Thứ hai}, qua khảo sát ban đầu, nhóm nhận thấy các bộ phát hiện nhẹ đạt điểm cao trên bộ dữ liệu chuẩn nhưng mất phần lớn độ chính xác khi ảnh bị nhoè do rung, một vấn đề thực tế nhưng ít được đo lường. \textit{Thứ ba}, các bộ tăng tốc nơ-ron giá rẻ như Hailo-8L gắn trên Raspberry Pi~5 đã xuất hiện, mở ra khả năng xây dựng hệ thống xử lý hoàn toàn trên máy bay với chi phí thấp, phù hợp điều kiện nghiên cứu của sinh viên.
+
+\section*{3. Mục tiêu đề tài}
+\addcontentsline{toc}{section}{3. Mục tiêu đề tài}
+
+Theo thuyết minh đã được phê duyệt, đề tài có ba mục tiêu:
+\begin{enumerate}
+\item Xây dựng mô hình máy bay không người lái có khả năng phát hiện và nhận dạng con người theo thời gian thực bằng trí tuệ nhân tạo, với độ chính xác nhận dạng từ 70\% trở lên.
+\item Thiết kế thuật toán theo dõi chuyển động để máy bay duy trì khoảng cách và hướng bay phù hợp với người được theo.
+\item Tích hợp hệ thống máy ảnh -- xử lý ảnh -- điều khiển bay tự động thành một hệ thống hoạt động ổn định trong môi trường thực tế.
+\end{enumerate}
+
+\section*{4. Phương pháp nghiên cứu}
+\addcontentsline{toc}{section}{4. Phương pháp nghiên cứu}
+
+\textbf{Cách tiếp cận.} Ứng dụng học sâu và thị giác máy tính để nhận dạng người, kết hợp điều khiển tự động để di chuyển máy bay theo mục tiêu. Mọi quyết định thiết kế được đưa ra dựa trên số đo trên phần cứng thật thay vì ước đoán.
+
+\textbf{Các phương pháp cụ thể.}
+\begin{itemize}
+\item \textit{Nghiên cứu tài liệu:} tổng hợp các công trình về phát hiện đối tượng nhỏ, độ bền của mạng nơ-ron trước ảnh suy giảm, lượng tử hoá mô hình, theo vết đa đối tượng và điều khiển UAV bằng thị giác.
+\item \textit{Thực nghiệm có đối chứng:} mỗi thay đổi trong mô hình được so với một cấu hình đối chứng chỉ khác đúng một biến. Mọi mô hình, gồm cả 5 mô hình đối chứng công khai, được chấm bằng cùng một chương trình đánh giá, với 3 hạt giống ngẫu nhiên và báo cáo trung bình $\pm$ độ lệch chuẩn.
+\item \textit{Đo đạc trên phần cứng đích:} tốc độ, độ trễ từng chặng, nhiệt độ và độ chính xác sau lượng tử hoá được đo trực tiếp trên Raspberry Pi~5 gắn NPU Hailo-8L, không suy ra từ máy tính huấn luyện.
+\item \textit{Kiểm thử phân tầng:} kiểm thử đơn vị cho các khối logic, kiểm thử trên bàn không cất cánh (chế độ \texttt{--no-fly}), kiểm tra liên lạc với bộ điều khiển bay thật, rồi mới bay thử ngoài bãi.
+\end{itemize}
+
+\section*{5. Đối tượng và phạm vi nghiên cứu}
+\addcontentsline{toc}{section}{5. Đối tượng và phạm vi nghiên cứu}
+
+\textbf{Đối tượng nghiên cứu:} (i) các mô hình học sâu phát hiện người từ ảnh chụp trên cao; (ii) ảnh hưởng của rung động khung máy bay tới độ chính xác phát hiện; (iii) thuật toán theo vết và điều khiển bám theo người cho UAV nhiều cánh quạt chạy firmware ArduPilot.
+
+\textbf{Phạm vi nghiên cứu:} theo thuyết minh, đề tài giới hạn trong không gian thoáng, tầm nhìn rõ, mục tiêu chính là một người di chuyển với tốc độ trung bình, độ cao bay thấp (khoảng 3--6\,m). Đề tài không xét trường hợp nhiều người cần bám đồng thời hoặc điều kiện môi trường phức tạp như ánh sáng mạnh, gió lớn hay che khuất kéo dài. Khi có nhiều người trong khung hình, hệ thống chỉ khoá và bám một người.
+
+\section*{6. Nội dung nghiên cứu và mức độ hoàn thành}
+\addcontentsline{toc}{section}{6. Nội dung nghiên cứu và mức độ hoàn thành}
+
+Bảng~\ref{tab:tiendo} đối chiếu năm nội dung trong thuyết minh với sản phẩm thực tế và vị trí trình bày trong báo cáo.
+
+\begin{table}[H]
+\centering
+\caption{Đối chiếu nội dung thuyết minh với kết quả thực hiện}
+\label{tab:tiendo}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{@{}c>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.1cm}@{}}
+\toprule
+\textbf{STT} & \textbf{Nội dung theo thuyết minh} & \textbf{Sản phẩm đạt được} & \textbf{Trình bày tại}\\
+\midrule
+1 & Nghiên cứu tổng quan và thu thập dữ liệu huấn luyện & Tổng quan tài liệu; bộ dữ liệu chuẩn hoá một lớp \textit{person}: 6.471 ảnh huấn luyện và 548 ảnh kiểm định VisDrone, 2.654 ảnh COCO-person, 92 khung bay thật gán nhãn tay & Mở đầu, Chương 1, 2\\
+2 & Huấn luyện và đánh giá mô hình nhận dạng người & Mô hình \sd{}; AP@0,5 = 0,917 trên dữ liệu bay thật (chỉ tiêu $\ge$ 70\%); 30 khung hình/giây đầu-cuối trên máy bay & Chương 3, 4, 5\\
+3 & Thiết kế hệ thống điều khiển máy bay tự động đi theo người & Chương trình điều khiển: OC-SORT, khoá mục tiêu, ước lượng khoảng cách, PID ba kênh, thang an toàn, MAVLink 30\,Hz & Chương 6\\
+4 & Tích hợp và kiểm thử toàn hệ thống & Máy bay tích hợp Raspberry Pi~5 + Hailo-8L + camera + Pixhawk~6C; kiểm thử phân tầng, bay thử, chạy vòng bám người trên video bay thử & Chương 7\\
+5 & Viết báo cáo tổng kết & Báo cáo tổng kết, bài tóm tắt, poster, video bay thử & Toàn bộ hồ sơ\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section*{7. Bố cục báo cáo}
+\addcontentsline{toc}{section}{7. Bố cục báo cáo}
+
+Ngoài phần Mở đầu và Kết luận, báo cáo gồm bảy chương. Chương~1 trình bày cơ sở lý thuyết về phát hiện đối tượng, suy giảm ảnh do rung, lượng tử hoá, theo vết và điều khiển UAV. Chương~2 mô tả dữ liệu và giao thức đánh giá. Chương~3 trình bày kiến trúc \sd{} và phương pháp huấn luyện nhận biết rung. Chương~4 báo cáo kết quả thực nghiệm của mô hình. Chương~5 trình bày quá trình triển khai lên thiết bị biên. Chương~6 trình bày hệ thống điều khiển bám người. Chương~7 trình bày tích hợp và kiểm thử toàn hệ thống.

@@ -4,7 +4,7 @@ Drone Follow-Me Controller for Jetson Nano + Pixhawk 6C
 
 This is the main flight controller that:
   1. Captures frames from camera
-  2. Runs PFDet-Nano person detection
+  2. Runs SteadyDet-N person detection
   3. Selects target person (largest/closest or specific ID)
   4. Computes PID-based velocity commands
   5. Sends MAVLink commands to Pixhawk 6C via serial/UDP
@@ -640,7 +640,7 @@ class DroneFollowController:
 
 def main():
     parser = argparse.ArgumentParser(description="Drone Follow-Me Controller")
-    parser.add_argument("--weights", required=True, help="PFDet-Nano weights (.pt)")
+    parser.add_argument("--weights", required=True, help="SteadyDet-N weights (.pt)")
     parser.add_argument("--camera", default="0", help="Camera source (index or path)")
     parser.add_argument("--pixhawk", default=None,
                         help="Pixhawk connection string (e.g. /dev/ttyTHS1, udp:127.0.0.1:14550)")
@@ -663,7 +663,7 @@ def main():
     cfg = ckpt['cfg']
 
     img_size = cfg['model']['img_size']
-    print(f"[MODEL] PFDet-Nano {model_version} loaded (base_c={cfg['model'].get('base_c', 'n/a')}, img={img_size})")
+    print(f"[MODEL] SteadyDet-N {model_version} loaded (base_c={cfg['model'].get('base_c', 'n/a')}, img={img_size})")
     if model_kwargs:
         print(f"[MODEL] kwargs: {model_kwargs}")
 

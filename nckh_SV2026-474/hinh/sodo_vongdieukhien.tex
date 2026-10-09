@@ -1,0 +1,34 @@
+% Lưu đồ một vòng lặp điều khiển 30 Hz
+\begin{tikzpicture}[
+  font=\footnotesize, >={Stealth[length=2mm]},
+  st/.style={draw=black!60, rounded corners=2pt, align=center, minimum height=8mm, text width=5.2cm, inner sep=2pt, fill=white},
+  sm/.style={st, text width=3.6cm},
+  io/.style={st, fill=xanh!12},
+  dc/.style={diamond, draw=black!60, aspect=2.8, align=center, inner sep=0pt, fill=cam!10, font=\scriptsize, text width=2.4cm},
+  tm/.style={st, rounded corners=9pt, fill=black!8}
+]
+\node[tm] (s) at (0,0) {Bắt đầu vòng lặp (chu kỳ 33,3\,ms)};
+\node[io] (a) at (0,-1.1) {1. Lấy khung mới nhất từ camera};
+\node[st] (b) at (0,-2.2) {2. Phát hiện người trên NPU (ngưỡng 0,25; NMS)};
+\node[st] (c) at (0,-3.3) {3. Cập nhật bộ theo vết OC-SORT};
+\node[st] (d) at (0,-4.4) {4. Chọn/khoá mục tiêu (xử lý nút đổi mục tiêu)};
+\node[io] (e) at (0,-5.5) {5. Đọc trạng thái máy bay qua MAVLink};
+\node[dc] (f) at (0,-6.9) {Có mục tiêu?};
+\node[sm] (g) at (-3.4,-8.4) {6. Khoảng cách pinhole + Kalman $\rightarrow$ 3 PID $\rightarrow$ giới hạn an toàn};
+\node[sm] (h) at (3.4,-8.4) {Đặt lại các bộ PID};
+\node[st] (i) at (0,-9.9) {7. Cập nhật thang mất mục tiêu\\8. Kiểm tra sức khoẻ hệ thống};
+\node[dc] (j) at (0,-11.5) {Đang ở GUIDED?};
+\node[sm, fill=xanh!12] (k) at (-3.4,-13.0) {9. Gửi vận tốc: FOLLOW / COAST ($\times0{,}5$) / HOVER (0)};
+\node[sm] (l) at (3.4,-13.0) {Không gửi lệnh (người lái đang giữ quyền)};
+\node[st] (m) at (0,-14.5) {10. Ghi log CSV, cập nhật bảng giám sát};
+\foreach \x/\y in {s/a,a/b,b/c,c/d,d/e,e/f,i/j} \draw[->] (\x) -- (\y);
+\draw[->] (f.west) -| node[pos=0.25,above,font=\scriptsize]{có} (g.north);
+\draw[->] (f.east) -| node[pos=0.25,above,font=\scriptsize]{không} (h.north);
+\draw[->] (g.south) |- (i.west);
+\draw[->] (h.south) |- (i.east);
+\draw[->] (j.west) -| node[pos=0.25,above,font=\scriptsize]{có} (k.north);
+\draw[->] (j.east) -| node[pos=0.25,above,font=\scriptsize]{không} (l.north);
+\draw[->] (k.south) |- (m.west);
+\draw[->] (l.south) |- (m.east);
+\draw[->] (m.south) -- ++(0,-0.4) -- ++(6.0,0) |- (s.east);
+\end{tikzpicture}

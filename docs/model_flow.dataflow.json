@@ -1,0 +1,416 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "SteadyDet-N — luồng bên trong mô hình",
+    "output": "docs/model_flow.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "duong-chinh",
+        "label": "Đường chính",
+        "focus": [
+          "input",
+          "stem",
+          "p2",
+          "p3",
+          "p4",
+          "p5",
+          "attn"
+        ],
+        "note": "Ảnh đi qua stem hai nhánh rồi xuống bốn mức backbone, ngữ cảnh chỉ thêm ở P5."
+      },
+      {
+        "id": "neck-top-down",
+        "label": "Neck top-down",
+        "focus": [
+          "n5",
+          "n4",
+          "n3",
+          "n2"
+        ],
+        "note": "Mọi mức chiếu kênh trước khi cộng; riêng nhánh P2 hạ xuống 24 kênh cho rẻ."
+      },
+      {
+        "id": "bon-head",
+        "label": "Bốn head",
+        "focus": [
+          "h2",
+          "h3",
+          "h4",
+          "h5"
+        ],
+        "note": "Cùng một LiteHead cho cả bốn mức, hợp đồng ra (B,5,H,W) giống hệt nhau."
+      }
+    ],
+    "viewBox": [
+      1080,
+      600
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "đường chính"
+        },
+        "security": {
+          "label": "chỉ ở mức P5"
+        },
+        "default": {
+          "label": "chiếu kênh 1×1"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "label": "Ảnh vào & Stem"
+    },
+    {
+      "label": "Backbone — bốn mức"
+    },
+    {
+      "label": "Ngữ cảnh P5"
+    },
+    {
+      "label": "Neck — FPN top-down"
+    },
+    {
+      "label": "Head & đầu ra"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "input",
+      "type": "external",
+      "label": "Ảnh vào",
+      "sublabel": "1 × 3 × 640 × 640",
+      "stage": 0,
+      "row": 0,
+      "tag": "RGB",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "stem",
+      "type": "cloud",
+      "label": "EdgeContextStem",
+      "sublabel": "24c · 320² · 12.2 %",
+      "stage": 0,
+      "row": 1,
+      "tag": "12.2 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "p2",
+      "type": "backend",
+      "label": "stage_p2 · UIBBlock",
+      "sublabel": "48c · 160² · 10.0 %",
+      "stage": 1,
+      "row": 0,
+      "tag": "10.0 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "p3",
+      "type": "backend",
+      "label": "stage_p3 · CSPUIB ×2",
+      "sublabel": "96c · 80² · 27.4 %",
+      "stage": 1,
+      "row": 1,
+      "tag": "27.4 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "p4",
+      "type": "backend",
+      "label": "stage_p4 · CSPUIB ×2",
+      "sublabel": "144c · 40² · 17.8 %",
+      "stage": 1,
+      "row": 2,
+      "tag": "17.8 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "p5",
+      "type": "backend",
+      "label": "stage_p5 · CSPUIB ×2",
+      "sublabel": "192c · 20² · 8.4 %",
+      "stage": 1,
+      "row": 3,
+      "tag": "8.4 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "attn",
+      "type": "security",
+      "label": "AreaAttentionBlock",
+      "sublabel": "cửa sổ 3×3 · 20² · 5.6 %",
+      "stage": 2,
+      "row": 3,
+      "tag": "5.6 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "n2",
+      "type": "messagebus",
+      "label": "td_p2 · UIBBlock",
+      "sublabel": "n2 — 24c · 160²",
+      "stage": 3,
+      "row": 0,
+      "tag": "kênh giảm",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "n3",
+      "type": "messagebus",
+      "label": "td_p3 · UIBBlock",
+      "sublabel": "n3 — 48c · 80²",
+      "stage": 3,
+      "row": 1,
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "n4",
+      "type": "messagebus",
+      "label": "td_p4 · UIBBlock",
+      "sublabel": "n4 — 48c · 40²",
+      "stage": 3,
+      "row": 2,
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "n5",
+      "type": "messagebus",
+      "label": "reduce_p5 · Conv 1×1",
+      "sublabel": "n5 — 48c · 20²",
+      "stage": 3,
+      "row": 3,
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "h2",
+      "type": "frontend",
+      "label": "LiteHead P2",
+      "sublabel": "(B, 5, 160, 160) · stride 4",
+      "stage": 4,
+      "row": 0,
+      "tag": "0.9 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "h3",
+      "type": "frontend",
+      "label": "LiteHead P3",
+      "sublabel": "(B, 5, 80, 80) · stride 8",
+      "stage": 4,
+      "row": 1,
+      "tag": "0.7 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "h4",
+      "type": "frontend",
+      "label": "LiteHead P4",
+      "sublabel": "(B, 5, 40, 40) · stride 16",
+      "stage": 4,
+      "row": 2,
+      "tag": "0.2 %",
+      "width": 144,
+      "height": 56
+    },
+    {
+      "id": "h5",
+      "type": "frontend",
+      "label": "LiteHead P5",
+      "sublabel": "(B, 5, 20, 20) · stride 32",
+      "stage": 4,
+      "row": 3,
+      "tag": "0.04 %",
+      "width": 144,
+      "height": 56
+    }
+  ],
+  "flows": [
+    {
+      "id": "f-in",
+      "from": "input",
+      "to": "stem",
+      "label": "3 kênh · 640²",
+      "classification": "ảnh gốc",
+      "variant": "emphasis",
+      "labelDy": 53
+    },
+    {
+      "id": "f-stem-p2",
+      "from": "stem",
+      "to": "p2",
+      "label": "24c · 320² → s2",
+      "classification": "P1 → P2",
+      "variant": "emphasis",
+      "labelDy": -5
+    },
+    {
+      "id": "f-p2-p3",
+      "from": "p2",
+      "to": "p3",
+      "label": "48c · 160² → s2",
+      "classification": "P2 → P3",
+      "variant": "emphasis",
+      "labelDy": 30
+    },
+    {
+      "id": "f-p3-p4",
+      "from": "p3",
+      "to": "p4",
+      "label": "96c · 80² → s2",
+      "classification": "P3 → P4",
+      "variant": "emphasis",
+      "labelDy": 30
+    },
+    {
+      "id": "f-p4-p5",
+      "from": "p4",
+      "to": "p5",
+      "label": "144c · 40² → s2",
+      "classification": "P4 → P5",
+      "variant": "emphasis",
+      "labelDy": 30
+    },
+    {
+      "id": "f-p5-attn",
+      "from": "p5",
+      "to": "attn",
+      "label": "192c · 20²",
+      "classification": "chỉ ở mức sâu nhất",
+      "variant": "security",
+      "labelDy": 53
+    },
+    {
+      "id": "f-attn-n5",
+      "from": "attn",
+      "to": "n5",
+      "label": "lat_p5 1×1 · 192 → 48",
+      "classification": "chiếu kênh",
+      "labelDy": 53
+    },
+    {
+      "id": "f-p4-n4",
+      "from": "p4",
+      "to": "n4",
+      "label": "lat_p4 1×1 · 144 → 48",
+      "classification": "chiếu kênh"
+    },
+    {
+      "id": "f-p3-n3",
+      "from": "p3",
+      "to": "n3",
+      "label": "lat_p3 1×1 · 96 → 48",
+      "classification": "chiếu kênh"
+    },
+    {
+      "id": "f-p2-n2",
+      "from": "p2",
+      "to": "n2",
+      "label": "lat_p2 1×1 · 48 → 24",
+      "classification": "chiếu kênh, hạ nửa"
+    },
+    {
+      "id": "f-n5-n4",
+      "from": "n5",
+      "to": "n4",
+      "label": "up ×2 + cộng",
+      "classification": "top-down",
+      "variant": "emphasis",
+      "labelDy": -20
+    },
+    {
+      "id": "f-n4-n3",
+      "from": "n4",
+      "to": "n3",
+      "label": "up ×2 + cộng",
+      "classification": "top-down",
+      "variant": "emphasis",
+      "labelDy": -20
+    },
+    {
+      "id": "f-n3-n2",
+      "from": "n3",
+      "to": "n2",
+      "label": "p3_to_p2 1×1 + up ×2",
+      "classification": "top-down",
+      "variant": "emphasis",
+      "labelDy": -20
+    },
+    {
+      "id": "f-n2-h2",
+      "from": "n2",
+      "to": "h2",
+      "label": "24c · 160²",
+      "classification": "người tí xíu",
+      "labelDy": 53
+    },
+    {
+      "id": "f-n3-h3",
+      "from": "n3",
+      "to": "h3",
+      "label": "48c · 80²",
+      "classification": "người nhỏ",
+      "labelDy": 53
+    },
+    {
+      "id": "f-n4-h4",
+      "from": "n4",
+      "to": "h4",
+      "label": "48c · 40²",
+      "classification": "người vừa",
+      "labelDy": 53
+    },
+    {
+      "id": "f-n5-h5",
+      "from": "n5",
+      "to": "h5",
+      "label": "48c · 20²",
+      "classification": "người to / gần",
+      "labelDy": 53
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Đường chính",
+      "items": [
+        "Xuống bốn mức P2–P5 rồi quay ngược lên qua neck top-down một chiều.",
+        "Cả bốn mức ra cùng một hợp đồng: (B, 5, H, W) = cls(1) + box(4)."
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Nhánh P2 cố tình mỏng",
+      "items": [
+        "P2 có 160×160 = 25 600 ô — mức đắt nhất về không gian.",
+        "Đúng một UIBBlock, neck hạ còn 24 kênh: cả nhánh chỉ ~13 % compute."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Head gần như miễn phí",
+      "items": [
+        "Bốn LiteHead cộng lại chỉ 1.8 % compute của cả mạng.",
+        "Attention chỉ ở P5 vì chi phí của nó tỉ lệ với số ô đặc trưng."
+      ]
+    }
+  ]
+}

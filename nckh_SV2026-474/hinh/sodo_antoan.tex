@@ -1,0 +1,14 @@
+% Máy trạng thái thang mất mục tiêu
+\begin{tikzpicture}[
+  font=\footnotesize, >={Stealth[length=2mm]},
+  s/.style={circle, draw=black!60, align=center, minimum size=19mm, inner sep=1pt, fill=white},
+]
+\node[s, fill=xanh!15] (F) {FOLLOW\\\scriptsize bám theo};
+\node[s, fill=cam!12, right=3.2cm of F] (C) {COAST\\\scriptsize vận tốc $\times0{,}5$};
+\node[s, fill=black!8, right=3.2cm of C] (H) {HOVER\\\scriptsize vận tốc 0};
+\draw[->] (F) to[bend left=18] node[above,font=\scriptsize,align=center]{mất mục tiêu} (C);
+\draw[->] (C) to[bend left=18] node[below,font=\scriptsize]{thấy lại} (F);
+\draw[->] (C) -- node[above,font=\scriptsize,align=center]{mất $\ge$ 3\,s} (H);
+\draw[->] (H) to[bend left=35] node[below,font=\scriptsize]{thấy lại mục tiêu} (F);
+\draw[->] (H) edge[loop right] node[right,font=\scriptsize,align=left]{đứng yên đến khi\\người lái gạt\\công tắc chế độ} (H);
+\end{tikzpicture}

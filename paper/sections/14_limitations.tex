@@ -1,0 +1,48 @@
+% ==================================================================
+% 5. Limitations. Doi khung 2026-07-26: muc "augmentation control is missing"
+% DA XOA vi da chay doi chung do (no chinh la ket qua chinh bay gio).
+% file: sections/14_limitations.tex
+% ==================================================================
+\section{Limitations}
+\label{sec:limitations}
+
+\subsubsection{The corruption model is synthetic, and it is the load-bearing assumption.}
+VisDrone-Shake is built from the known mechanisms of rotorcraft image degradation,
+but its parameters bracket flight rather than being calibrated against accelerometer
+spectra measured on our own airframe. Every result in this paper is therefore a
+statement about a \emph{model} of vibration, and we make no claim about the
+magnitude of the effect on any particular aircraft. Only measurement can settle
+that: flying the same detector with a synchronised IMU log, fitting $\mathcal{T}$
+to the accelerometer spectrum, and re-evaluating. That is the single most valuable
+extension of this work, and until it is done the ordering of the models under
+vibration is better trusted than the absolute numbers.
+
+\medskip\noindent\textbf{One dataset, one corruption family.}
+Every number here comes from the person subset of a single benchmark. VisDrone is
+the standard choice for this task and its instance statistics are the ones our
+detector targets, but a corruption robustness result measured on one dataset is a
+statement about that dataset until it is repeated. We also model one corruption
+family, the one rotors produce; nothing here speaks to rain, fog, low light or
+motion of the subject rather than the camera, all of which a fielded UAV also meets.
+
+\medskip\noindent\textbf{The scope of the regime is bounded on one side only.}
+The gain reproduces on both of our detectors and is absent on the one outside
+architecture we tried. Section~\ref{sec:generality} rejects pretraining, object
+scale and remaining headroom as explanations, which narrows the cause to the
+architecture or the loss without identifying it, and one non-responding model
+cannot. We have therefore demonstrated a large effect within one detector family
+and one negative instance outside it, with the boundary unknown. A practitioner
+should treat the regime as worth trying rather than as established for their
+detector, and should run the two controls of Table~\ref{tab:main} when they do.
+
+\medskip\noindent\textbf{Cost, tuning and statistical power.}
+Why the consistency term underperforms is measured but not explained: we offer the
+reading that the detection loss never reaches the corrupted image, without testing
+it, so take the ordering as measured and the reason as conjecture. Clean accuracy
+falls by $9.7\%$, roughly a third of that from the finetuning itself, and we did not
+try to recover the rest by annealing the corruption probability late in training.
+We report no sweep over $p$ or the severity distribution, so those values are
+reasonable rather than tuned. Each configuration is trained once, so our error bars
+capture evaluation but not training variance. Frames are processed independently,
+so the temporal redundancy vibration itself creates, successive frames blurring
+along different directions, is available only to the downstream tracker.

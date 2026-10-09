@@ -1,0 +1,39 @@
+% ==================================================================
+% 2. Related Work   (file: sections/04_related_work.tex)
+% ==================================================================
+\section{Related Work}
+\label{sec:related}
+
+\subsubsection{Robustness to corruption.}
+ImageNet-C~\cite{hendrycks2019benchmarking} established the mean corruption
+protocol we adapt, later extended to detection~\cite{michaelis2019benchmarking}.
+Those benchmarks sample a broad corruption taxonomy suited to general vision; on a
+multirotor the distribution is concentrated instead, set by rotor dynamics and
+exposure time, so we build a domain-specific protocol rather than reuse a generic
+one. Motion deblurring~\cite{nah2017deepdeblur} attacks the same degradation by
+restoring the image, adding a second network to the critical path; we leave the
+inference graph untouched.
+
+\subsubsection{Consistency regularisation.}
+Agreement between perturbed views underpins semi-supervised
+learning~\cite{sajjadi2016regularization,tarvainen2017mean,sohn2020fixmatch} and
+self-supervised representation learning~\cite{chen2020simclr,grill2020byol}. Our
+use differs in purpose: the data are fully labelled, so the term is not a substitute
+for supervision but a directed statement about which nuisance to discard. The
+closest supervised analogue is consistency-based domain
+adaptation~\cite{french2018selfensembling}, where the perturbation models a domain
+gap rather than a sensing process.
+
+\subsubsection{Efficient aerial detection.}
+VisDrone~\cite{zhu2021visdrone} is dominated by instances below $32\times32$ pixels,
+in the tiny-object regime of~\cite{yu2020tinyperson,cheng2023sod}. Efficient
+detectors here combine depthwise-separable
+backbones~\cite{qin2024mnv4,sandler2018mobilenetv2}, cross-stage partial
+connections~\cite{wang2020cspnet}, feature pyramids~\cite{tan2020efficientdet} and
+anchor-free heads~\cite{ge2021yolox}, with RemDet~\cite{chen2025remdet} targeting
+small-object downsampling and recent YOLO generations moving to NMS-free
+prediction~\cite{wang2024yolov10}; IoU losses are unstable for tiny boxes,
+motivating NWD~\cite{wang2021nwd} blended with CIoU~\cite{zheng2020diou} alongside
+\cite{li2020gfl} and~\cite{feng2021tood}. All of it optimises clean accuracy per
+unit of compute. We take a detector from this family and ask a different question:
+how much of that accuracy survives the aircraft it is meant to fly on.

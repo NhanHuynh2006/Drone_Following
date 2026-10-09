@@ -1,0 +1,41 @@
+% =====================================================================
+%  KẾT LUẬN VÀ KIẾN NGHỊ
+% =====================================================================
+\chuongkhongso{Kết luận và kiến nghị}
+
+\section*{1. Kết luận}
+\addcontentsline{toc}{section}{1. Kết luận}
+
+Đề tài ``\tendetai'' đã hoàn thành các nội dung đăng ký trong thuyết minh và đạt các kết quả chính sau.
+
+\textbf{Về mô hình nhận dạng người.} Đề tài xây dựng mô hình SteadyDet-N với 1,17 triệu tham số và 4,6 GFLOPs, giữ mức dự đoán độ phân giải cao cho người nhỏ nhưng làm mỏng nhánh này để giảm chi phí 2,8 lần so với phiên bản trước. Chạy INT8 trên NPU Hailo-8L gắn trên máy bay, mô hình đạt \textbf{AP@0,5 = 0,917} và \textbf{F1 = 0,880} trên dữ liệu bay thật, vượt chỉ tiêu độ chính xác 70\% của thuyết minh, với tốc độ đầu-cuối \textbf{30 khung hình/giây} ổn định.
+
+\textbf{Về độ bền trước rung động.} Bằng một giao thức đánh giá có cố định seed, lặp ba lần và một chương trình đo duy nhất, đề tài chỉ ra rằng mọi bộ phát hiện nhỏ gọn được thử (5 mô hình công khai và 2 mô hình của đề tài) đều mất 74--83\% độ chính xác khi ảnh bị suy giảm do rung. Phương pháp huấn luyện nhận biết rung đề xuất nâng tỷ lệ giữ độ chính xác của SteadyDet-N từ 16,8\% lên 36,2\% và AP ở mức rung bay tiến lên 4,2 lần, không tốn chi phí suy luận. Nhờ đó, mô hình nhỏ và rẻ nhất trong bảng so sánh vượt cả bốn mô hình YOLO bản nano khi rung. Các thí nghiệm đối chứng xác nhận tác dụng không đến từ việc huấn luyện thêm, và cho thấy biến thể ràng buộc nhất quán phức tạp hơn lại kém hơn. Trên dữ liệu bay thật, xử lý rung làm AP@0,75 tăng khoảng 80\% với khoảng tin cậy không chứa 0.
+
+\textbf{Về triển khai trên thiết bị biên.} Mô hình được lượng tử hoá và triển khai thành công trên Raspberry Pi~5 + Hailo-8L. Đề tài định lượng được tổn thất INT8 phụ thuộc kích thước đối tượng, chỉ ra rằng trên NPU này số context là yếu tố quyết định tốc độ (SteadyDet-N nhanh hơn YOLO26-n 1,70 lần), và phát hiện, sửa hai lỗi phía camera làm tăng tốc độ hệ thống từ 15 lên 30 khung hình/giây mà không đổi mô hình.
+
+\textbf{Về điều khiển và tích hợp.} Chương trình điều khiển bám người hoàn chỉnh gồm theo vết OC-SORT, khoá và tìm lại mục tiêu, ước lượng khoảng cách pinhole có bộ lọc Kalman, ba bộ PID trong cấu trúc servo thị giác lai, lớp an toàn nhiều tầng và giao tiếp MAVLink 30\,Hz với ArduPilot ở chế độ GUIDED. Lớp an toàn tuân theo nguyên tắc người lái luôn giữ quyền chế độ bay và được khoá bằng kiểm thử tự động. Hệ thống được kiểm thử qua bảy tầng, từ 25 phép kiểm tra tự động tới bay thử ngoài bãi; toàn bộ chuỗi bám người (phát hiện, theo vết, khoá mục tiêu, tính lệnh điều khiển) đã được chạy trên video của chuyến bay thử và khoá, bám được người đi bộ trong khung hình.
+
+\section*{2. Kiến nghị}
+\addcontentsline{toc}{section}{2. Kiến nghị}
+
+\subsection*{2.1. Hướng phát triển của đề tài}
+
+\begin{enumerate}
+\item \textbf{Hiệu chuẩn mô hình rung bằng dữ liệu thật.} Nhật ký bay của hệ thống đã ghi mức rung đo từ bộ điều khiển bay cùng dòng với chất lượng phát hiện. Cần bay có chủ đích ở các mức rung khác nhau, trích phổ gia tốc từ nhật ký của ArduPilot để hiệu chuẩn tham số toán tử rung, thay cho các giá trị hiện được chọn để bao quát điều kiện bay.
+\item \textbf{Mở rộng tập đánh giá bay thật.} Thu video gốc từ camera (không qua màn hình trạm mặt đất) ở nhiều độ cao (3, 5, 8, 12\,m), nhiều người, nhiều bối cảnh và điều kiện ánh sáng, gán nhãn thành một benchmark đủ lớn cho miền bay thấp.
+\item \textbf{Đưa mô hình nhận biết rung lên NPU.} Biên dịch phiên bản nhánh triển khai đã tinh chỉnh nhận biết rung thành HEF, và thử khối chú ý thuần tích chập để lấy lại phần độ chính xác mất khi bỏ khối self-attention.
+\item \textbf{Mở rộng thử nghiệm bay bám.} Bay theo quy trình ở Phụ lục~C với nhiều kịch bản chuyển động của người, đo sai số giữ khoảng cách và thời gian bám liên tục; tinh chỉnh các hệ số PID dựa trên nhật ký; bổ sung gửi đồng thời vị trí, vận tốc và gia tốc đặt.
+\item \textbf{Nhận dạng lại theo ngoại hình.} Bổ sung một mô hình trích đặc trưng nhỏ để tìm lại đúng người sau khi bị che khuất hoặc rời khung lâu.
+\item \textbf{Xác định ranh giới áp dụng của phương pháp huấn luyện nhận biết rung} bằng cách thử trên nhiều họ kiến trúc và hàm mất mát khác nhau, nhằm tìm ra yếu tố quyết định việc mô hình có phản hồi với phương pháp hay không.
+\end{enumerate}
+
+\subsection*{2.2. Lĩnh vực nên ứng dụng kết quả nghiên cứu}
+
+\begin{itemize}
+\item \textbf{Tìm kiếm cứu nạn:} hệ thống xử lý hoàn toàn trên máy bay nên hoạt động được ở vùng không có sóng di động sau thiên tai, lũ lụt.
+\item \textbf{Giám sát an ninh, tuần tra:} bám theo đối tượng di chuyển trong khuôn viên nhà máy, khu công nghiệp, khu vực biên giới.
+\item \textbf{Quay phim tự động:} thể thao ngoài trời, sự kiện, sản xuất nội dung.
+\item \textbf{Giáo dục và đào tạo:} quy trình trọn vẹn từ dữ liệu tới điều khiển bay, cùng mã nguồn và các bộ kiểm thử, dùng làm học liệu thực hành cho các học phần thị giác máy tính, trí tuệ nhân tạo nhúng và điều khiển tự động tại \truong.
+\item \textbf{Các thiết bị thị giác trên nền rung:} phương pháp huấn luyện nhận biết rung chỉ thay đổi dữ liệu huấn luyện nên có thể áp dụng cho camera trên robot di động, xe tự hành, máy nông nghiệp.
+\end{itemize}

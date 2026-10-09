@@ -1,5 +1,5 @@
 """
-PFDet-Nano v14 Loss Function
+SteadyDet v14 Loss Function
 ============================
 
 Loss components and their references (all peer-reviewed):

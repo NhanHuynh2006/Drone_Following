@@ -41,7 +41,7 @@ def _load_checkpoint(ckpt_or_path, device='cpu'):
 
 
 def build_model_from_checkpoint(ckpt_or_path, device='cpu', use_ema=False):
-    """Build PFDet model and load weights from a checkpoint path or dict."""
+    """Build SteadyDet model and load weights from a checkpoint path or dict."""
     ckpt = _load_checkpoint(ckpt_or_path, device=device)
     version = normalize_model_version(ckpt.get('model_version', ckpt.get('cfg', {}).get('model', {}).get('version', 'v14')))
     cfg = ckpt.get('cfg', {})

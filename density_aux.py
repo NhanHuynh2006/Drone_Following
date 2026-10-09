@@ -1,5 +1,5 @@
 """
-density_aux.py — Density-guided auxiliary supervision for PFDet-Nano v15
+density_aux.py — Density-guided auxiliary supervision for SteadyDet-W
 ========================================================================
 
 ĐÓNG GÓP CHÍNH của paper. Thêm một head phụ dự đoán density map (mật độ người),
@@ -53,7 +53,7 @@ class DensityHead(nn.Module):
 # ============================================================
 class PFDetNanoV15Density(PFDetNanoV15):
     """
-    PFDet-Nano v15 với density head phụ.
+    SteadyDet-W với density head phụ.
 
     forward(x)                 -> giống hệt model gốc (list 4 head outputs). DÙNG KHI INFERENCE.
     forward(x, return_aux=True)-> (det_outs, aux) với aux = {'density':..., 'neck_feats':[...]}

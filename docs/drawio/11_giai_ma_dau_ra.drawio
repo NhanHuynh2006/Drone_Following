@@ -1,0 +1,45 @@
+<mxfile host="app.diagrams.net" agent="pfdet-drone-follow" type="device">
+  <diagram id="Giải_mã_đầu_ra_của_SteadyDet-N" name="Giải mã đầu ra của SteadyDet-N">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="820"
+        math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="Từ tensor ra tới hộp người — đường giải mã" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=22;fontFamily=Helvetica;fontColor=#102A43;fontStyle=1" vertex="1" parent="1"><mxGeometry x="60" y="25" width="1200" height="34" as="geometry"/></mxCell>
+        <mxCell id="t2" value="box_ops_np.py:78 decode_predictions_np · chạy một hàm duy nhất cho cả 4 mức vì hợp đồng head giống nhau" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#627D98;fontStyle=0" vertex="1" parent="1"><mxGeometry x="60" y="55" width="1200" height="40" as="geometry"/></mxCell>
+        <mxCell id="n3" value="(B, 5, H, W)
+mỗi mức một tensor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#455A64;fontColor=#263238;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="70" y="150" width="260" height="110" as="geometry"/></mxCell>
+        <mxCell id="n4" value="kênh 0 → sigmoid
+= điểm tin cậy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="410" y="150" width="260" height="110" as="geometry"/></mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n3" target="n4"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n6" value="lọc điểm ≥ conf
+(deploy: 0.25)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="750" y="150" width="260" height="110" as="geometry"/></mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n4" target="n6"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n8" value="giữ top-500 mỗi mức
+trước NMS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="1090" y="150" width="260" height="110" as="geometry"/></mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n6" target="n8"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n10" value="giải toạ độ:
+cx = (x + σ(t₀) − 0.5)·s
+cy = (y + σ(t₁) − 0.5)·s
+w = exp(t₂)·s,  h = exp(t₃)·s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="70" y="370" width="260" height="110" as="geometry"/></mxCell>
+        <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n8" target="n10"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n12" value="gộp 4 mức
++ NMS IoU 0.45" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#455A64;fontColor=#263238;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="410" y="370" width="260" height="110" as="geometry"/></mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n10" target="n12"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n14" value="lọc rác deploy:
+diện tích ≥ 200 px²
+tỉ lệ cạnh ≤ 6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="750" y="370" width="260" height="110" as="geometry"/></mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n12" target="n14"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="n16" value="hộp người cuối" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=1.5;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;arcSize=12;dashed=0;opacity=100;" vertex="1" parent="1"><mxGeometry x="1090" y="370" width="260" height="110" as="geometry"/></mxCell>
+        <mxCell id="e17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#37474F;strokeWidth=2;dashed=0;fontSize=11;fontFamily=Helvetica;fontColor=#37474F;endArrow=classic;startArrow=none;curved=0;labelBackgroundColor=#FFFFFF;jettySize=auto;orthogonalLoop=1;" edge="1" parent="1" source="n14" target="n16"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="t18" value="BA CHI TIẾT QUAN TRỌNG
+• Không có DFL, không có anchor box. Toạ độ tâm là độ lệch trong ô (sigmoid, kẹp trong ±0.5 ô); cạnh là exp(t)·stride,
+  clamp t trong [−4, 4] để INT8 không tràn. Decode là số học thuần → chạy được bằng NumPy trên CPU Pi 5 trong ~1 ms.
+• conf ngưỡng KHÁC NHAU theo từng bản HEF. Bản đang deploy: 0.25 cho F1 0.880; bản _fair cũ là 0.30. Đổi HEF là phải đo lại.
+• Hai bộ lọc cuối (min_box_px, max_aspect) CHỈ có ở đường deploy, không có lúc đánh giá paper — vì INT8 làm hộp kém khít
+  (AP75 rớt ~30 %) nên vài hộp dẹt lọt lưới NMS." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontFamily=Helvetica;fontColor=#455A64;fontStyle=0" vertex="1" parent="1"><mxGeometry x="70" y="600" width="1300" height="200" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

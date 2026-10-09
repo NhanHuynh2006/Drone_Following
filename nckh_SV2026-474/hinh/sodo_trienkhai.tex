@@ -1,0 +1,27 @@
+% Quy trình đưa mô hình từ PyTorch lên NPU Hailo-8L
+\begin{tikzpicture}[
+  font=\footnotesize, >={Stealth[length=2mm]},
+  st/.style={draw=black!60, rounded corners=2pt, align=center, minimum height=11mm, text width=2.45cm, inner sep=2pt, fill=white},
+  pc/.style={st, fill=black!5},
+  hw/.style={st, fill=xanh!14},
+  note/.style={font=\scriptsize, text=black!70, align=center, text width=2.5cm}
+]
+\node[pc] (a) {Checkpoint PyTorch\\(FP32, bỏ self-attention)};
+\node[pc, right=6mm of a] (b) {Xuất ONNX\\opset 11, kích thước tĩnh};
+\node[pc, right=6mm of b] (c) {DFC: phân tích đồ thị\\4 bản đồ đầu ra};
+\node[pc, right=6mm of c] (d) {DFC: lượng tử hoá INT8\\64 ảnh hiệu chuẩn (tập huấn luyện)};
+\node[pc, right=6mm of d] (e) {DFC: biên dịch\\$\rightarrow$ tệp HEF (4 context)};
+\foreach \x/\y in {a/b,b/c,c/d,d/e} \draw[->] (\x) -- (\y);
+\node[note, below=1mm of a] {tinh chỉnh 20 epoch\\có COCO-person};
+\node[note, below=1mm of b] {gộp BN vào Conv,\\\texttt{dynamo=False}};
+
+\node[font=\footnotesize\bfseries, anchor=west] at ($(a.north west)+(0,0.35)$) {Máy tính x86 (biên dịch một lần)};
+
+\node[hw, below=3.0cm of b] (f) {Camera C270\\khung $640\times480$};
+\node[hw, right=6mm of f] (g) {Tiền xử lý CPU\\letterbox 640};
+\node[hw, right=6mm of g] (h) {Suy luận INT8\\NPU Hailo-8L};
+\node[hw, right=6mm of h] (i) {Giải mã + NMS\\CPU (NumPy)};
+\foreach \x/\y in {f/g,g/h,h/i} \draw[->] (\x) -- (\y);
+\draw[->, dashed] (e.south) -- ++(0,-0.75) -| (h.north);
+\node[font=\footnotesize\bfseries, anchor=west] at ($(f.north west)+(0,0.35)$) {Raspberry Pi~5 trên máy bay (mỗi khung hình)};
+\end{tikzpicture}

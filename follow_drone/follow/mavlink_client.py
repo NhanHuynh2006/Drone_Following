@@ -49,6 +49,21 @@ class MAVLinkClient:
             'last_heartbeat': 0.0,
             'altitude_agl': 0.0,        # meters
             'home_position': None,
+            # --- bổ sung 2026-08-27: đủ để nuôi bảng điều khiển giám sát và,
+            #     quan trọng hơn, để GHI LẠI RUNG THẬT trong lúc bay. Rung là trục
+            #     nghiên cứu của đề tài; ArduPilot đo sẵn nên không lấy là phí.
+            'vibe': None,               # (x, y, z) m/s^2
+            'clipping': None,           # 3 bộ đếm bão hoà gia tốc kế, phải là 0
+            'climb': None,              # m/s
+            'groundspeed': None,
+            'heading': None,            # độ
+            'ekf_var': None,
+            'prearm_ok': None,
+            'prearm_msg': None,
+            'cpu_load': None,
+            'vcc': None,
+            'statustext': None,
+            'statustext_ts': None,
         }
 
         self.running = False
@@ -94,25 +109,48 @@ class MAVLinkClient:
         # Wait briefly for first state messages
         time.sleep(1.0)
 
+    # Bản tin cần, kèm chu kỳ (µs) sẽ xin NẾU THIẾU.
+    _WANT = {
+        'ATTITUDE': 100000,             # 10 Hz — vòng điều khiển cần
+        'LOCAL_POSITION_NED': 100000,   # 10 Hz
+        'VFR_HUD': 100000,              # 10 Hz — độ cao, tốc độ lên/xuống, hướng
+        'GLOBAL_POSITION_INT': 200000,  #  5 Hz
+        'GPS_RAW_INT': 200000,          #  5 Hz
+        'SYS_STATUS': 200000,           #  5 Hz
+        'VIBRATION': 500000,            #  2 Hz — RUNG, trục nghiên cứu của đề tài
+        'EKF_STATUS_REPORT': 500000,    #  2 Hz
+        'BATTERY_STATUS': 500000,       #  2 Hz
+        'HOME_POSITION': 5000000,       # 0.2 Hz
+    }
+
     def _request_data_streams(self):
-        """Request high-rate data streams from FCU."""
-        # Set message intervals (microseconds)
-        intervals = {
-            mavutil.mavlink.MAVLINK_MSG_ID_LOCAL_POSITION_NED: 100000,   # 10 Hz
-            mavutil.mavlink.MAVLINK_MSG_ID_ATTITUDE: 100000,             # 10 Hz
-            mavutil.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT: 200000,  # 5 Hz
-            mavutil.mavlink.MAVLINK_MSG_ID_BATTERY_STATUS: 1000000,      # 1 Hz
-            mavutil.mavlink.MAVLINK_MSG_ID_GPS_RAW_INT: 200000,          # 5 Hz
-            mavutil.mavlink.MAVLINK_MSG_ID_SYS_STATUS: 500000,           # 2 Hz
-            mavutil.mavlink.MAVLINK_MSG_ID_HOME_POSITION: 5000000,       # 0.2 Hz
-        }
-        for msg_id, interval_us in intervals.items():
+        """Xin CÁC BẢN TIN CÒN THIẾU.
+
+        ⚠️ Đừng xin bừa tất cả. ArduPilot qua USB đã tự phát ATTITUDE / VFR_HUD /
+        GLOBAL_POSITION_INT ở 10 Hz và SYS_STATUS / GPS_RAW_INT ở 5 Hz. Gửi
+        SET_MESSAGE_INTERVAL với chu kỳ DÀI hơn sẽ **bóp** nhịp đang tốt xuống —
+        bản cũ của hàm này đặt GPS 5 Hz xuống 200000 µs và BATTERY 1 Hz, đo thật
+        trên Pixhawk6C ngày 2026-08-27 thấy nó làm giảm nhịp telemetry.
+        """
+        # nghe 2.5 giây xem xe TỰ phát sẵn những gì
+        seen, t0 = set(), time.time()
+        while time.time() - t0 < 2.5:
+            msg = self.master.recv_match(blocking=True, timeout=0.5)
+            if msg is not None:
+                seen.add(msg.get_type())
+                self._handle_message(msg)
+
+        comp = self.target_component or 1
+        for name, interval_us in self._WANT.items():
+            if name in seen:
+                continue
+            msg_id = getattr(mavutil.mavlink, f'MAVLINK_MSG_ID_{name}', None)
+            if msg_id is None:
+                continue
             self.master.mav.command_long_send(
-                self.target_system, self.target_component,
+                self.target_system, comp,
                 mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
-                0,
-                msg_id, interval_us,
-                0, 0, 0, 0, 0,
+                0, msg_id, interval_us, 0, 0, 0, 0, 0,
             )
 
     def _heartbeat_loop(self):
@@ -163,6 +201,16 @@ class MAVLinkClient:
                 self.state['altitude_agl'] = -msg.z  # NED Z is down
             elif mtype == 'ATTITUDE':
                 self.state['attitude'] = (msg.roll, msg.pitch, msg.yaw)
+            elif mtype == 'SYS_STATUS':
+                self.state['cpu_load'] = round(msg.load / 10.0, 1)
+                # MAV_SYS_STATUS_PREARM_CHECK = 0x10000000.
+                # (Đừng đoán bit: 0x20000000 là OBSTACLE_AVOIDANCE, từng nhầm.)
+                PREARM = 0x10000000
+                if msg.onboard_control_sensors_present & PREARM:
+                    ok = bool(msg.onboard_control_sensors_health & PREARM)
+                    self.state['prearm_ok'] = ok
+                    if ok:
+                        self.state['prearm_msg'] = None
             elif mtype == 'BATTERY_STATUS':
                 # voltages[0] is in millivolts
                 if msg.voltages and msg.voltages[0] != 65535:
@@ -172,6 +220,33 @@ class MAVLinkClient:
                 self.state['gps_fix'] = msg.fix_type
                 self.state['gps_eph'] = msg.eph
                 self.state['gps_sats'] = msg.satellites_visible
+            elif mtype == 'VFR_HUD':
+                self.state['climb'] = msg.climb
+                self.state['groundspeed'] = msg.groundspeed
+                self.state['heading'] = msg.heading
+                if msg.alt:
+                    self.state['altitude_agl'] = msg.alt
+            elif mtype == 'VIBRATION':
+                self.state['vibe'] = (round(msg.vibration_x, 2),
+                                      round(msg.vibration_y, 2),
+                                      round(msg.vibration_z, 2))
+                self.state['clipping'] = (msg.clipping_0, msg.clipping_1, msg.clipping_2)
+            elif mtype == 'EKF_STATUS_REPORT':
+                self.state['ekf_var'] = {
+                    'vel': round(msg.velocity_variance, 3),
+                    'pos_h': round(msg.pos_horiz_variance, 3),
+                    'pos_v': round(msg.pos_vert_variance, 3),
+                    'mag': round(msg.compass_variance, 3),
+                }
+            elif mtype == 'POWER_STATUS':
+                self.state['vcc'] = round(msg.Vcc / 1000.0, 2)
+            elif mtype == 'STATUSTEXT':
+                txt = msg.text.decode() if isinstance(msg.text, bytes) else str(msg.text)
+                self.state['statustext'] = txt
+                self.state['statustext_ts'] = time.time()
+                if txt.startswith('PreArm:') or txt.startswith('Arm:'):
+                    self.state['prearm_ok'] = False
+                    self.state['prearm_msg'] = txt
             elif mtype == 'GLOBAL_POSITION_INT':
                 # Use relative altitude as backup AGL
                 if self.state.get('altitude_agl', 0) == 0:

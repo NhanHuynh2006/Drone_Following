@@ -1,4 +1,4 @@
-# PFDet-Nano **v17** → Hailo (Raspberry Pi 5 + AI Kit/HAT)
+# SteadyDet-N **v17** → Hailo (Raspberry Pi 5 + AI Kit/HAT)
 
 > Cập nhật cho **v17** (khác v15: đã BỎ LSKBlock, head đổi thành LiteHead, P2 mỏng).
 > Đã kiểm ONNX v17 thật: op duy nhất Hailo có thể chê = **AreaAttention ở P5** (xem mục 4). Còn lại sạch.
@@ -7,7 +7,7 @@
 - Model custom **không cần lib convert riêng**. Hailo Dataflow Compiler (DFC) nhận thẳng ONNX. `hailomz` chỉ cho model Model Zoo.
 - Convert chỉ chạy trên **x86_64 Linux** (Ubuntu 20/22), KHÔNG chạy trên Pi. Dùng máy Legion Ubuntu.
 - HEF **static**: fix input size lúc export (khuyên **320** cho Pi; hoặc 512 nếu Hailo gánh nổi + cần chính xác hơn).
-- **Detection chạy trên Hailo NPU; điều khiển bay (follow_px4 C++ MAVSDK) vẫn chạy trên CPU Pi 5** — chỉ thay phần inference từ ONNX Runtime sang HailoRT (decode+NMS vẫn CPU numpy như cũ).
+- **Detection chạy trên Hailo NPU; điều khiển bay (`follow_drone/`, Python pymavlink, ArduPilot GUIDED) vẫn chạy trên CPU Pi 5** — chỉ thay phần inference từ ONNX Runtime sang HailoRT (decode+NMS vẫn CPU numpy như cũ).
 
 ## 1. Cài môi trường (trên Legion)
 ```bash
@@ -48,8 +48,49 @@ v17 đã bỏ LSKBlock, nên **không còn** vấn đề softmax-channel như v1
 
 **3 cách xử lý (theo thứ tự nên thử):**
 
-### ✅ Cách A (KHUYÊN — đơn giản nhất cho v17): bỏ AreaAttention, finetune ngắn
-P5 (stride 32) đóng góp ÍT cho người của bạn (3-10m rơi vào P3/P4; tiny ở P2). Bỏ attention P5 gần như không mất AP.
+### ✅ Cách A (đơn giản nhất cho v17): bỏ AreaAttention, finetune ngắn
+
+> ⚠️ **ĐO LẠI 2026-08-27: "gần như không mất AP" là SAI trên domain bay thấp.**
+> Trên 92 frame bay thật 3-6m (`data/flight_val`), cùng giao thức, cùng decode:
+>
+> | checkpoint | F1 tốt nhất | conf | recall | precision |
+> |---|---|---|---|---|
+> | `train_v17_deploy` (CÓ AreaAttention) | **0.882** | 0.25 | 0.815 | 0.962 |
+> | `train_v17_hailo` (bỏ AreaAttention, finetune 20ep) | 0.768 | 0.20 | 0.793 | 0.745 |
+> | HEF INT8 từ checkpoint trên | 0.697 | 0.30 | 0.576 | 0.883 |
+>
+> Mất **0.114 F1 ở bước finetune** — lớn gấp 1.6× mức mất do INT8 (0.071).
+>
+> **Nguyên nhân KHÔNG phải do bỏ attention, mà do một lỗi config:**
+> `configs/train_config_v17_hailo.yaml` để `extra_enable_epoch: 100` trong khi `epochs: 20`.
+> `train_v3.py:819` là `want_coco = extra_enable_epoch <= epoch < extra_disable_epoch`
+> → **COCO person chưa bao giờ được bật**. 20 epoch đó finetune thuần VisDrone, kéo model
+> ngược về domain bay cao và xoá khả năng bắt người gần mà `train_v17_deploy` đã học.
+> Log xác nhận: `pos_s4=63, pos_s8=9, pos_s16=0, pos_s32=0` — toàn bộ positive rơi vào P2.
+>
+> **✅ ĐÃ SỬA VÀ ĐO LẠI (2026-08-27 tối).** Train lại 20 epoch với
+> `configs/train_config_v17_hailo_coco.yaml` (`extra_enable_epoch: 0`):
+>
+> | checkpoint | F1 trên flight_val |
+> |---|---|
+> | `train_v17_deploy` (giữ attention + COCO) | 0.882 |
+> | **`train_v17_hailo_coco`** (bỏ attention, CÓ COCO) | **0.836** |
+> | `train_v17_hailo` (bỏ attention, MẤT COCO) | 0.768 |
+>
+> Bật COCO lấy lại **0.068 trên 0.114** khoảng cách. Vậy con số đúng là: **bỏ AreaAttention
+> tốn 0.046 F1** trên domain bay thấp — không phải "gần như không mất" như câu gốc, nhưng
+> cũng không phải toàn bộ 0.114 như thoạt nhìn. Phần lớn là do lỗi config, không phải do
+> kiến trúc.
+>
+> Muốn lấy nốt 0.046 đó thì dùng **Cách B** (`ConvAttnBlock`) bên dưới — giữ được ý tưởng
+> attention mà Hailo vẫn compile. Chưa làm.
+>
+> Chi tiết: `runs/retrain_coco_2026-08-27.md`.
+>
+> Và khi compile lại, dùng `--calib-dir` trỏ ảnh ĐÚNG domain bay (3-6m) thay vì
+> `data/visdrone/train/images`, đúng như mục 3 đã khuyên.
+
+P5 (stride 32) đóng góp ÍT cho người tí xíu (3-10m rơi vào P3/P4; tiny ở P2).
 ```bash
 # 1. Tạo config Hailo: copy train_config_v17_deploy.yaml, đổi:
 #      use_area_attention: false     + pretrained: "./runs/train_v17_deploy/best.pt"  + epochs: 15  + lr thấp

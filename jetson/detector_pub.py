@@ -1,5 +1,7 @@
 """
 detector_pub.py — Chạy model (ONNX) trên Jetson, ĐẨY target qua UDP cho bộ điều khiển C++ (follow_px4).
+
+⚠️ NHÁNH CŨ (PX4/MAVSDK). Máy bay của đề tài nay chạy ArduPilot → dùng follow_drone/.
 ======================================================================================================
 
 Tách detection (Python/ONNX, nặng) khỏi control (C++, mượt 50Hz) — kiến trúc companion-computer chuẩn.

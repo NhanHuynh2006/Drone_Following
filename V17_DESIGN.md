@@ -1,4 +1,4 @@
-# PFDet-Nano v17 — Thiết kế dựa trên SOTA (drone tiny-person, **Jetson Nano B01**)
+# SteadyDet-N — Thiết kế dựa trên SOTA (drone tiny-person, **Jetson Nano B01**)
 
 Mục tiêu: **nhanh nhất + chính xác nhất** cho người-nhìn-từ-drone, deploy **Jetson Nano B01**
 (GPU Maxwell 128-core + TensorRT), giữ đóng góp **vibration-consistency**.
@@ -52,7 +52,7 @@ Mục tiêu: **nhanh nhất + chính xác nhất** cho người-nhìn-từ-drone
 
 ---
 
-## 3. Kiến trúc PFDet-Nano v17 (đề xuất)
+## 3. Kiến trúc SteadyDet-N (đề xuất)
 
 ```
 Input (deploy 416–512, train multiscale 384–768)

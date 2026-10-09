@@ -1,0 +1,37 @@
+% Sơ đồ huấn luyện nhận biết rung (trên) và biến thể ràng buộc nhất quán (dưới)
+\begin{tikzpicture}[
+  font=\footnotesize, >={Stealth[length=2mm]},
+  box/.style={draw=black!60, rounded corners=2pt, align=center, minimum height=9mm, inner sep=3pt, fill=white},
+  op/.style={box, fill=cam!14},
+  net/.style={box, fill=xanh!14, minimum width=2.1cm},
+  loss/.style={box, fill=black!7},
+  dec/.style={diamond, draw=black!60, aspect=2.2, inner sep=1pt, align=center, fill=white, font=\scriptsize}
+]
+\node[font=\footnotesize\bfseries, anchor=west] at (-0.4,1.1) {(a) Huấn luyện nhận biết rung (phương pháp đề xuất)};
+\node[box] (x) at (0,0) {Lô ảnh $x$\\+ nhãn $y$};
+\node[dec, right=6mm of x] (d) {xác suất\\$p=0{,}5$};
+\node[op, right=7mm of d] (T) {Toán tử rung $\mathcal{T}$\\nhoè $L,\theta$ + nhiễu $\sigma$ + sáng $b$};
+\node[net, right=7mm of T] (f) {Mạng\\$f_\theta$};
+\node[loss, right=7mm of f] (L) {$\mathcal{L}_{\det}\big(f_\theta(\hat{x}), y\big)$\\nhãn giữ nguyên};
+\draw[->] (x) -- (d);
+\draw[->] (d) -- node[above,font=\scriptsize]{có} (T);
+\draw[->] (T) -- node[above,font=\scriptsize]{$\hat x$} (f);
+\draw[->] (d.south) -- ++(0,-0.55) -| node[pos=0.25,below,font=\scriptsize]{không: $\hat x = x$} (f.south);
+\draw[->] (f) -- (L);
+
+\begin{scope}[yshift=-3.75cm]
+\node[font=\footnotesize\bfseries, anchor=west] at (-0.4,1.5) {(b) Biến thể ràng buộc nhất quán (đối chứng, cho kết quả kém hơn)};
+\node[box] (x2) at (0,0) {Lô ảnh $x$\\+ nhãn $y$};
+\node[net] (fc) at (4.2,0.75) {$f_\theta(x)$ nhánh sạch};
+\node[op] (T2) at (2.0,-0.75) {$\mathcal{T}$};
+\node[net] (fv) at (4.2,-0.75) {$f_\theta(\tilde x)$ nhánh rung};
+\node[loss, anchor=west] (Ld) at (7.4,0.75) {$\mathcal{L}_{\det}(f_\theta(x), y)$};
+\node[loss, anchor=west] (sg) at (7.4,-0.75) {$\lambda\,\mathcal{L}_{\text{cons}}\big(f_\theta(\tilde x),\ \mathrm{sg}[f_\theta(x)]\big)$};
+\draw[->] (x2.east) -- ++(0.35,0) |- (fc.west);
+\draw[->] (x2.east) -- ++(0.35,0) |- (T2.west);
+\draw[->] (T2) -- node[above,font=\scriptsize]{$\tilde x$} (fv);
+\draw[->] (fc) -- (Ld);
+\draw[->] (fv) -- (sg);
+\draw[->, dashed] (fc.east) ++(0.2,0) -- node[left,font=\scriptsize, pos=0.5]{dừng gradient} ($(sg.north west)+(0.4,0)$);
+\end{scope}
+\end{tikzpicture}

@@ -1,3 +1,4 @@
+# ⚠️ NHANH CU — PX4/MAVSDK Offboard. May bay nay chay ArduPilot -> dung follow_drone/.
 # Build: bộ điều khiển bay-theo PX4 (Jetson, C++ MAVSDK)
 # ------------------------------------------------------
 # Cần MAVSDK v2 cài sẵn trên Jetson (xem DEPLOY_GUIDE.md).

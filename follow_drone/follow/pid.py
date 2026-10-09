@@ -102,12 +102,20 @@ class YawPID:
     Sign convention: bbox right of center → positive yaw rate (turn right).
     """
 
-    def __init__(self, image_width, fx, Kp=2.0, Kd=0.3, rate_max=1.5):
+    def __init__(self, image_width, fx, Kp=2.0, Ki=0.0, Kd=0.3, rate_max=1.5,
+                 integral_max=0.2):
+        # Ki mặc định 0: vòng yaw KHÔNG nên có tích phân. Sai lệch yaw là góc, và
+        # nó tự về 0 khi máy bay xoay tới; thêm tích phân chỉ tích luỹ rồi gây vọt
+        # lố sau mỗi lần mục tiêu ra khỏi khung. Vẫn nhận tham số Ki để khớp với
+        # config (config đặt 0.0) và để ai muốn thử thì có sẵn, kèm chặn tích luỹ.
         self.image_width = image_width
         self.fx = fx
         self.Kp = Kp
+        self.Ki = Ki
         self.Kd = Kd
         self.rate_max = rate_max
+        self.integral_max = integral_max
+        self.integral = 0.0
         self.prev_error = 0.0
         self.prev_time = None
 
@@ -131,13 +139,19 @@ class YawPID:
 
         P = self.Kp * error_rad
         D = self.Kd * (error_rad - self.prev_error) / dt
+        I = 0.0
+        if self.Ki:
+            self.integral = _clip(self.integral + error_rad * dt,
+                                  -self.integral_max, self.integral_max)
+            I = self.Ki * self.integral
         self.prev_error = error_rad
 
         # Positive error_rad (target right of center) → positive yaw rate (turn right)
-        yaw_rate = P + D
+        yaw_rate = P + I + D
         return _clip(yaw_rate, -self.rate_max, self.rate_max)
 
     def reset(self):
+        self.integral = 0.0
         self.prev_error = 0.0
         self.prev_time = None
 

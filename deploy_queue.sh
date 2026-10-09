@@ -15,6 +15,11 @@ FVAL_L=data/flight_val/labels
 exec 7>/tmp/deploy_queue.lock
 flock -n 7 || { echo "[deploy_queue] instance khác đang chạy, thoát"; exit 0; }
 
+# GUARD (thêm 2026-07-25): đã xong hết thì THOÁT NGAY.
+# Không có dòng này, cron @reboot sẽ chạy lại phần EVAL (ăn GPU) và tranh với
+# ablation_queue.sh đang train. Marker đã có nghĩa là không còn gì phải làm.
+[ -f "$Q/DEPLOY_ALL_DONE" ] && { echo "[deploy_queue] ĐÃ XONG HẾT TỪ TRƯỚC (DEPLOY_ALL_DONE) -> thoát"; exit 0; }
+
 log() { echo "[$(date '+%F %T')] $*" | tee -a "$Q/deploy_queue.log"; }
 
 train_stage() {

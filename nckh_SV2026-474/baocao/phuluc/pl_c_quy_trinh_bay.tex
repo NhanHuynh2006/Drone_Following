@@ -1,0 +1,74 @@
+% =====================================================================
+%  PHỤ LỤC C. QUY TRÌNH VẬN HÀNH BAY
+% =====================================================================
+\chapter{Quy trình vận hành bay bám người}
+\label{pl:c}
+
+\section*{Bước 0 -- Chuẩn bị tham số (thực hiện trước, trong nhà)}
+Đặt đủ các tham số ở Bảng~\ref{tab:plthamso} bằng Mission Planner, ghi và khởi động lại bộ điều khiển bay. Lưu ý ArduPilot 4.7 dùng tên và đơn vị mới (Bảng~\ref{tab:pldoiten}). Chưa sửa xong năm tham số đầu thì không bay tự động.
+
+\section*{Bước 1 -- Kiểm tra trên Pi trước khi ra bãi}
+Chạy \texttt{./run.sh check}, yêu cầu 0 lỗi: HailoRT, thư viện, tệp HEF, camera, chạy thử mô hình, nhiệt độ, dung lượng đĩa và đồng bộ đồng hồ NTP (cần để căn thời gian ảnh với nhật ký bay).
+
+\section*{Bước 2 -- Khởi động phần mềm ngoài bãi}
+\begin{enumerate}
+\item Cửa sổ 1: \texttt{./run.sh mux} để chia cổng MAVLink.
+\item Cửa sổ 2: \texttt{main.py} (thêm \texttt{--no-fly} khi chỉ quan sát).
+\item Mở \texttt{http://pi5.local:8080} trên laptop hoặc điện thoại cùng mạng.
+\end{enumerate}
+Không chạy song song chương trình trạm mặt đất riêng vì NPU chỉ phục vụ một tiến trình.
+
+\section*{Bước 3 -- Kiểm tra trước khi arm (trên bảng giám sát)}
+\begin{table}[H]
+\centering
+\caption{Điều kiện bắt buộc trước khi arm}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Ô trên bảng giám sát} & \textbf{Yêu cầu}\\
+\midrule
+Sẵn sàng bay & ``SẴN SÀNG ARM'' màu xanh\\
+GPS & Định vị 3D trở lên, $\ge$ 8 vệ tinh, HDOP < 2,0\\
+Rung & Cả ba trục < 30\,m/s², bão hoà 0/0/0\\
+Pin & > 15,5\,V khi chưa quay động cơ\\
+Nhiệt Pi & < 70\,°C, cờ giảm xung 0x0\\
+Cần ga & Ở vị trí thấp nhất\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Bước 3b -- Bay tay để khảo sát (khuyến nghị trước lần giao quyền đầu)}
+Chạy \texttt{main.py --no-fly} và bay tay. Chương trình chạy đủ chuỗi xử lý và đẩy lên bảng giám sát nhưng không gửi lệnh nào. Dùng nhật ký CSV (độ cao, số phát hiện, điểm tin cậy trên cùng dòng) để chọn độ cao nhận diện tốt.
+
+\section*{Bước 4 -- Giao quyền bay bám}
+\begin{enumerate}
+\item Cất cánh ở LOITER bằng tay, lên khoảng 5\,m, bay treo ổn định.
+\item Trên Pi chạy \texttt{main.py --no-takeoff}.
+\item Người lái gạt công tắc sang GUIDED; kiểm tra ô ``chế độ bay'' trên bảng giám sát (tuỳ chọn này không tự chuyển GUIDED).
+\item Máy bay khoá người có hộp lớn nhất; dùng nút ``Đổi mục tiêu'' nếu khoá nhầm.
+\item Lấy lại quyền bất cứ lúc nào bằng cách gạt công tắc sang chế độ khác; phần mềm im lặng ngay. Ctrl+C trên Pi gửi vận tốc 0 và không đổi chế độ, người lái tự hạ cánh.
+\end{enumerate}
+
+\section*{Bước 5 -- Sau chuyến bay}
+Kéo nhật ký bám người (\texttt{logs/flight\_*.csv}), nhật ký ArduPilot (\texttt{.bin} trên thẻ nhớ Pixhawk) và video thu riêng về máy tính bằng \texttt{pull\_flight\_data.sh} để phân tích và bổ sung dữ liệu đánh giá.
+
+\section*{Xử lý sự cố thường gặp}
+\begin{table}[H]
+\centering
+\caption{Sự cố thường gặp và cách xử lý}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Hiện tượng} & \textbf{Nguyên nhân và cách xử lý}\\
+\midrule
+{\footnotesize\texttt{HAILO\_OUT\_OF\_}\-\texttt{PHYSICAL\_DEVICES}} & Tiến trình khác đang giữ NPU; tắt tiến trình đó rồi chạy lại\\
+Cổng serial ``returned no data'' & Hai tiến trình cùng mở \texttt{/dev/ttyACM0}; dùng \texttt{mavmux.py}\\
+\texttt{PreArm: Need Position Estimate} & Chưa có GPS; ra chỗ thoáng, chờ $\ge$ 8 vệ tinh\\
+Camera chỉ 15 khung/giây & Bộ đệm bằng 1 hoặc tự phơi sáng; dùng cấu hình \texttt{cam\_ctl.py}\\
+Máy bay đứng yên khi đã chạy chương trình & Chưa gạt sang GUIDED; kiểm tra ô chế độ bay\\
+Không khoá được người & Người quá xa (trên khoảng 8\,m) hoặc ngưỡng quá cao; ngưỡng đang dùng 0,25\\
+\bottomrule
+\end{tabularx}
+\end{table}

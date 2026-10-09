@@ -41,7 +41,7 @@ def main():
     nc = res.get("no-COCO (paper baseline)")
     co = res.get("COCO (deploy)")
 
-    lines = [f"# QUYẾT ĐỊNH HƯỚNG PAPER (tự động {datetime.datetime.now():%Y-%m-%d %H:%M})", ""]
+    lines = [f"# QUYẾT ĐỊNH HƯỚNG BÀI BÁO (tự động {datetime.datetime.now():%Y-%m-%d %H:%M})", ""]
     lines.append("## Số liệu (VisDrone-val @640, AP@.5:.95 / AP50 / AP75)")
     for name, r in res.items():
         if r:
@@ -58,8 +58,8 @@ def main():
         lines.append("")
         # quy tắc: gap AP50 < 0.03 -> nhỏ -> SYSTEM ; ngược lại -> model-only
         if abs(gap_ap50) < 0.03 and abs(gap_ap) < 0.02:
-            rec = ("SYSTEM PAPER (model COCO + deploy). Gap NHỎ trên val, mà COCO tốt hơn cho 3-10m "
-                   "-> dùng model COCO cho cả paper lẫn bay, thêm phần Hailo + PX4 control + bay thật.")
+            rec = ("BÀI BÁO KIỂU SYSTEM (model COCO + deploy). Gap NHỎ trên val, mà COCO tốt hơn cho 3-10m "
+                   "-> dùng model COCO cho cả paper lẫn bay, thêm phần Hailo + ArduPilot control + bay thật.")
         else:
             rec = ("MODEL-ONLY (no-COCO). Gap LỚN trên benchmark -> COCO hy sinh số quá nhiều. "
                    "Viết model-only (vibration + efficiency), deploy để future work.")

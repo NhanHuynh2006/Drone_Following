@@ -25,7 +25,10 @@ from torch.utils.data import DataLoader
 
 
 def load_weights(model, ckpt_path, device):
-    ckpt = torch.load(ckpt_path, map_location="cpu")
+    # weights_only=False: từ torch 2.6 mặc định đổi thành True và checkpoint của repo
+    # này chứa numpy scalar (AP đã lưu) nên bị từ chối. Đây là checkpoint do chính
+    # repo sinh ra nên tin được. Cùng lý do với models/__init__.py:_load_checkpoint.
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     if isinstance(ckpt, dict):
         state = ckpt.get("ema", ckpt.get("model", ckpt.get("state_dict", ckpt)))
         # đôi khi 'ema'/'model' là cả nn.Module đã pickle
@@ -78,14 +81,23 @@ def main():
 
     # ---- model (tự nhận version từ checkpoint, hoặc --version) ----
     import torch as _t
-    from models import build_model, normalize_model_version
-    _ck = _t.load(args.weights, map_location="cpu", weights_only=False)
-    ver = args.version or (_ck.get("model_version") if isinstance(_ck, dict) else None) \
-          or (_ck.get("cfg", {}).get("model", {}).get("version", "v15") if isinstance(_ck, dict) else "v15")
-    ver = normalize_model_version(ver)
-    model = build_model(ver, profile=args.profile)
-    model = load_weights(model, args.weights, device)
-    print(f"[model] {ver} profile={args.profile} params={sum(p.numel() for p in model.parameters())/1e6:.2f}M")
+    from models import build_model, normalize_model_version, build_model_from_checkpoint
+
+    # build_model_from_checkpoint đọc CẢ cfg['model'] của checkpoint (use_area_attention,
+    # activation, area...) chứ không chỉ version. Bản cũ gọi build_model(ver, profile=...)
+    # nên với checkpoint đã GỠ AreaAttention nó vẫn dựng model CÓ attention -> 10 lớp bị
+    # khởi tạo ngẫu nhiên, in ra "missing=10" mà vẫn chạy tiếp và cho AP sai.
+    # Phát hiện 2026-08-28 khi đo runs/train_v17_hailo_coco.
+    if args.version:
+        ver = normalize_model_version(args.version)
+        model = build_model(ver, profile=args.profile)
+        model = load_weights(model, args.weights, device)
+        mcfg = {'profile': args.profile}
+    else:
+        model, _ck, ver, mcfg = build_model_from_checkpoint(args.weights, device=device,
+                                                            use_ema=True)
+    print(f"[model] {ver} cfg={mcfg} "
+          f"params={sum(p.numel() for p in model.parameters())/1e6:.2f}M")
 
     # ---- data ----
     from datasets import VisDronePersonDataset, collate_fn

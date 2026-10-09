@@ -1,5 +1,5 @@
 """
-eval_coco.py — Đánh giá CHUẨN (pycocotools) cho PFDet-Nano
+eval_coco.py — Đánh giá CHUẨN (pycocotools) cho SteadyDet-N
 ===========================================================
 
 Thay cho hàm evaluate() hiện tại (chỉ cho 1 con AP@0.5). Cung cấp đầy đủ:

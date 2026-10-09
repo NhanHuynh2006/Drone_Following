@@ -258,7 +258,7 @@ def run_camera(model, strides, img_size, source, conf_thr, nms_iou, use_onnx=Fal
                     (10, 75), cv2.FONT_HERSHEY_SIMPLEX,
                     0.5, (200, 200, 200), 1, cv2.LINE_AA)
 
-        cv2.imshow("PFDet-Nano Pi5 Simulation", vis)
+        cv2.imshow("SteadyDet-N Pi5 Simulation", vis)
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
@@ -278,7 +278,7 @@ def run_camera(model, strides, img_size, source, conf_thr, nms_iou, use_onnx=Fal
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PFDet-Nano Pi 5 Simulation")
+    parser = argparse.ArgumentParser(description="SteadyDet-N Pi 5 Simulation")
     parser.add_argument("--weights", required=True, help="Path to .pt weights")
     parser.add_argument("--source", default="0", help="Camera index or video path")
     parser.add_argument("--conf", type=float, default=0.3, help="Confidence threshold")

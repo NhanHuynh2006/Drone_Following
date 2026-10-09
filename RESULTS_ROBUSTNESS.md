@@ -1,4 +1,4 @@
-# Robustness "VisDrone-Shake" — PFDet-Nano v15 light @640
+# Robustness "VisDrone-Shake" — SteadyDet-W light @640
 
 Đo bằng `eval_robustness.py`: AP@.5:.95 ở 4 mức rung (motion blur + noise + dao động sáng).
 **retain_% = mCP / AP_clean** = giữ được bao nhiêu % AP khi rung. Cao = robust.

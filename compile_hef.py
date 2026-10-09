@@ -61,6 +61,10 @@ def main():
     ap.add_argument('--name', default='pfdet_v17')
     ap.add_argument('--end-nodes', nargs='*', default=None,
                     help='Tên các node ONNX làm output (chỉ cần khi parser gợi ý)')
+    ap.add_argument('--calib-n', type=int, default=64,
+                    help='So anh calibration. DFC muon 1024; 64 la it, no se canh bao '
+                         '"didn\'t have enough data for dataset_size of 1024". Nhieu anh '
+                         '= luong tu hoa sat thuc te hon, doi lai compile lau hon.')
     ap.add_argument('--opt-level', type=int, default=2,
                     help='model_optimization_flavor optimization_level (0-4)')
     args = ap.parse_args()
@@ -69,8 +73,19 @@ def main():
 
     # ---------- 1) PARSE: ONNX -> HAR ----------
     print(f'\n===== PARSE ({args.hw_arch}) =====')
+    # Doc TEN INPUT thang tu file ONNX thay vi gan cung 'input': moi exporter dat ten
+    # khac nhau (SteadyDet='input', Ultralytics='images'). Gan cung -> parser bao
+    # "start_node_names and net_input_shapes keys must contain the same names".
+    import onnx as _onnx
+    _m = _onnx.load(args.onnx)
+    _init = {i.name for i in _m.graph.initializer}
+    _inputs = [i.name for i in _m.graph.input if i.name not in _init]
+    if len(_inputs) != 1:
+        raise SystemExit(f'ONNX co {len(_inputs)} input {_inputs}; script nay chi ho tro 1.')
+    _in_name = _inputs[0]
+    print(f'[parse] input ONNX = {_in_name!r}')
     parse_kwargs = dict(
-        net_input_shapes={'input': [1, 3, args.img_size, args.img_size]},
+        net_input_shapes={_in_name: [1, 3, args.img_size, args.img_size]},
     )
     if args.end_nodes:
         parse_kwargs['end_node_names'] = args.end_nodes
@@ -90,7 +105,7 @@ def main():
     )
     runner.load_model_script(model_script)
 
-    calib = load_calib(args.calib_dir, args.img_size)
+    calib = load_calib(args.calib_dir, args.img_size, n=args.calib_n)
     runner.optimize(calib)
     har_q = f'{args.name}_quantized.har'
     runner.save_har(har_q)

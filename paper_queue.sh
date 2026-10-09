@@ -14,6 +14,11 @@ SUMMARY=$Q/SUMMARY.txt
 exec 9>/tmp/paper_queue.lock
 flock -n 9 || { echo "[queue] đã có instance khác đang chạy, thoát"; exit 0; }
 
+# GUARD (thêm 2026-07-25): đã xong hết thì THOÁT NGAY.
+# Không có dòng này, cron @reboot sẽ chạy lại phần EVAL (ăn GPU) và tranh với
+# ablation_queue.sh đang train. Marker đã có nghĩa là không còn gì phải làm.
+[ -f "$Q/ALL_DONE" ] && { echo "[paper_queue] ĐÃ XONG HẾT TỪ TRƯỚC (ALL_DONE) -> thoát"; exit 0; }
+
 log() { echo "[$(date '+%F %T')] $*" | tee -a "$Q/queue.log"; }
 
 # train 1 stage với auto-resume khi crash (tối đa 80 lần)
@@ -44,8 +49,8 @@ eval_stage() {
         | grep -E "\[robust\]" >> "$SUMMARY"
 }
 
-log "========== BẮT ĐẦU HÀNG CHỜ PAPER =========="
-[ -f "$SUMMARY" ] || echo "PAPER QUEUE SUMMARY — bắt đầu $(date)" > "$SUMMARY"
+log "========== BẮT ĐẦU HÀNG CHỜ NHÁNH CHUẨN =========="
+[ -f "$SUMMARY" ] || echo "SUMMARY NHÁNH CHUẨN — bắt đầu $(date)" > "$SUMMARY"
 
 # --- 1) BASELINE (no-COCO) ---
 train_stage configs/train_config_v17_light.yaml runs/train_v17_light && touch "$Q/1_light_done"

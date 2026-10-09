@@ -1,5 +1,5 @@
 """
-PFDet-Nano v15 — Drone Person Detector
+SteadyDet-W — Drone Person Detector
 =======================================
 
 Improvements over v14:
@@ -69,7 +69,7 @@ def build_activation(name='silu', act=True):
 def resolve_model_profile(profile='balanced'):
     profile = str(profile).lower().strip()
     if profile not in MODEL_PROFILES:
-        raise ValueError(f"Unknown PFDet profile: {profile!r}. Available: {sorted(MODEL_PROFILES)}")
+        raise ValueError(f"Unknown SteadyDet profile: {profile!r}. Available: {sorted(MODEL_PROFILES)}")
     return dict(MODEL_PROFILES[profile])
 
 
@@ -426,7 +426,7 @@ class DecoupledHead(nn.Module):
 
 class PFDetNanoV15(nn.Module):
     """
-    PFDet-Nano v15 — Drone Person Detector (improved from v14).
+    SteadyDet-W — Drone Person Detector (improved from v14).
 
     Architecture:
       EdgeContextStem

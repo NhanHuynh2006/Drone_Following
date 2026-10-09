@@ -1,4 +1,4 @@
-# Kết quả — PFDet-Nano v15 light @640, VisDrone val (548 ảnh)
+# Kết quả — SteadyDet-W light @640, VisDrone val (548 ảnh)
 
 > **Cấu trúc paper (chốt):** đóng góp CHÍNH = **vibration-consistency** (kháng rung/nhoè khi bay).
 > density head + crowd-loc (từ run C) + KD = các dòng **ablation phụ**. Đo bằng 2 thước:

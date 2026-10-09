@@ -1,0 +1,48 @@
+% Sơ đồ kiến trúc SteadyDet-N (profile light, ảnh vào 640x640)
+\begin{tikzpicture}[
+  font=\footnotesize, >={Stealth[length=2mm]},
+  blk/.style={draw=black!60, rounded corners=2pt, align=center, minimum height=8.5mm, inner sep=2pt, fill=white},
+  bb/.style={blk, fill=black!6, minimum width=3.3cm},
+  nk/.style={blk, fill=xanh!10, minimum width=2.2cm},
+  hd/.style={blk, fill=cam!12, minimum width=2.4cm},
+  p2/.style={dashed, thick},
+  lab/.style={font=\scriptsize, text=black!65}
+]
+% backbone
+\node[blk, minimum width=3.3cm, fill=black!2] (in) at (0,0) {Ảnh vào\\$640\times640\times3$};
+\node[bb, below=4mm of in] (stem) {EdgeContextStem\\$P_1$: $320^2$, 24 kênh};
+\node[bb, below=4mm of stem, p2] (s2) {UIB (1 khối, bước 2)\\$P_2$: $160^2$, 48 kênh};
+\node[bb, below=4mm of s2] (s3) {CSP-UIB (2 khối)\\$P_3$: $80^2$, 96 kênh};
+\node[bb, below=4mm of s3] (s4) {CSP-UIB (2 khối)\\$P_4$: $40^2$, 144 kênh};
+\node[bb, below=4mm of s4] (s5) {CSP-UIB (2 khối)\\$P_5$: $20^2$, 192 kênh};
+\node[bb, below=4mm of s5, fill=xanh!22] (att) {Window self-attention\\(chỉ ở $P_5$)};
+\foreach \a/\b in {in/stem,stem/s2,s2/s3,s3/s4,s4/s5,s5/att} \draw[->] (\a) -- (\b);
+
+% neck (top-down)
+\node[nk, right=2.3cm of att] (n5) {Conv $1\times1$\\48 kênh};
+\node[nk, above=9.5mm of n5] (n4) {UIB\\48 kênh};
+\node[nk, above=9.5mm of n4] (n3) {UIB\\48 kênh};
+\node[nk, above=9.5mm of n3, p2] (n2) {UIB\\24 kênh};
+\draw[->] (att) -- node[lab,above]{chiếu $1\times1$} (n5);
+\draw[->] (s4.east) -- ++(0.9,0) |- (n4.west);
+\draw[->] (s3.east) -- ++(0.7,0) |- (n3.west);
+\draw[->] (s2.east) -- ++(0.5,0) |- (n2.west);
+\draw[->, xanh, thick] (n5) -- node[lab,right]{$\uparrow2$, cộng} (n4);
+\draw[->, xanh, thick] (n4) -- node[lab,right]{$\uparrow2$, cộng} (n3);
+\draw[->, xanh, thick] (n3) -- node[lab,right]{$1\times1$, $\uparrow2$, cộng} (n2);
+
+% heads
+\node[hd, right=1.9cm of n2, p2] (h2) {LiteHead\\ra $160^2\times5$};
+\node[hd, right=1.9cm of n3] (h3) {LiteHead\\ra $80^2\times5$};
+\node[hd, right=1.9cm of n4] (h4) {LiteHead\\ra $40^2\times5$};
+\node[hd, right=1.9cm of n5] (h5) {LiteHead\\ra $20^2\times5$};
+\foreach \a/\b in {n2/h2,n3/h3,n4/h4,n5/h5} \draw[->] (\a) -- (\b);
+
+\node[lab, above=1mm of s2.north east, anchor=south west, xshift=-4mm] {};
+\node[font=\footnotesize\bfseries] at (0,1.0) {Backbone};
+\node[font=\footnotesize\bfseries] at (n2 |- 0,1.0) {FPN neck (từ trên xuống)};
+\node[font=\footnotesize\bfseries] at (h2 |- 0,1.0) {Head};
+\node[draw=black!40, rounded corners=2pt, fill=black!3, align=left, font=\scriptsize, text width=3.9cm, below=6mm of h5] (lh)
+ {\textbf{LiteHead:} DW $3\times3$ + PW $1\times1$ dùng chung $\rightarrow$ 1 kênh điểm người + 4 kênh hộp (hồi quy trực tiếp, không DFL).\\[2pt]
+  Nét đứt: nhánh $P_2$ bước 4 được làm mỏng (1 khối, nửa số kênh neck, head depthwise separable).};
+\end{tikzpicture}

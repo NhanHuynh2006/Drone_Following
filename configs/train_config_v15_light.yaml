@@ -1,4 +1,4 @@
-# PFDet-Nano v15 Light Training Configuration
+# SteadyDet-W Light Training Configuration
 # Target: Raspberry Pi 5 (~20 FPS at 320px inference)
 # Compare fair with v14 light (same base_c=24, neck_c=48, num_bifpn=1)
 # v15 improvements: CSPUIBStage + LSKBlock in backbone + STAL loss

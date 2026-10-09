@@ -1,5 +1,5 @@
 """
-PFDet-Nano v15 Loss Function
+SteadyDet-W Loss Function
 ============================
 
 Improvements over v14 (all from YOLOv26, arXiv 2509.25164):

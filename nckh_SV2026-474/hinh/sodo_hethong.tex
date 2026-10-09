@@ -1,0 +1,45 @@
+% Kiến trúc tổng thể hệ thống UAV bám người
+\begin{tikzpicture}[
+  font=\footnotesize, >={Stealth[length=2mm]},
+  m/.style={draw=black!60, rounded corners=2pt, align=center, minimum height=11mm, text width=2.6cm, inner sep=2pt, fill=white},
+  pi/.style={m, fill=xanh!12},
+  hw/.style={m, fill=black!6},
+  fc/.style={m, fill=cam!14},
+  lb/.style={font=\scriptsize, fill=white, inner sep=1pt}
+]
+% hàng 1: nhận thức
+\node[hw] (cam) at (0,0) {Camera C270\\30 khung/giây};
+\node[pi] (det) at (3.6,0) {Phát hiện người\\SteadyDet-N INT8};
+\node[hw] (npu) at (3.6,1.9) {NPU Hailo-8L};
+\node[pi] (trk) at (7.2,0) {Theo vết\\OC-SORT};
+\node[pi] (sel) at (10.8,0) {Chọn \& khoá\\mục tiêu};
+% hàng 2: điều khiển
+\node[pi] (dist) at (10.8,-2.2) {Ước lượng khoảng cách\\pinhole + Kalman};
+\node[pi] (servo) at (7.2,-2.2) {Servo thị giác\\3 bộ PID};
+\node[pi] (safe) at (3.6,-2.2) {Lớp an toàn\\giới hạn + thang mất MT};
+\node[pi] (mav) at (0,-2.2) {MAVLink client\\30\,Hz, chỉ khi GUIDED};
+% hàng 3: phần cứng bay + người
+\node[fc] (px) at (0,-4.8) {Pixhawk 6C\\ArduPilot};
+\node[hw] (mot) at (3.6,-4.8) {Bộ điều tốc\\+ động cơ};
+\node[hw, text width=3.0cm] (web) at (7.2,-4.8) {Bảng giám sát web\\(laptop, điện thoại)};
+\node[hw] (rc) at (10.8,-4.8) {Tay điều khiển RC\\(người lái)};
+
+\draw[->] (cam) -- (det);
+\draw[<->] (det) -- (npu);
+\draw[->] (det) -- (trk);
+\draw[->] (trk) -- (sel);
+\draw[->] (sel) -- (dist);
+\draw[->] (dist) -- (servo);
+\draw[->] (servo) -- (safe);
+\draw[->] (safe) -- (mav);
+\draw[<->] (mav) -- node[lb,right]{USB, MAVLink v2} (px);
+\draw[->] (px) -- (mot);
+\draw[->, dashed] (servo.south) ++(-0.4,0) -- ++(0,-1.45) node[lb,pos=0.5,left]{hình + trạng thái} ;
+\draw[<-, dashed] ($(web.north)+(0.4,0)$) -- node[lb,right]{nút đổi mục tiêu} ($(servo.south)+(0.4,0)$);
+\draw[->, thick, draw=cam] (rc.south) -- ++(0,-0.55) -| node[lb,pos=0.25,below]{gạt công tắc chế độ bay (luôn ưu tiên)} (px.south);
+
+\begin{scope}[on background layer]
+\node[draw=black!45, dashed, rounded corners=4pt, inner sep=7pt, fit=(det)(npu)(trk)(sel)(dist)(servo)(safe)(mav),
+      label={[font=\footnotesize\bfseries, anchor=north east]north east:{Raspberry Pi 5 — chương trình \texttt{main.py}}}] {};
+\end{scope}
+\end{tikzpicture}

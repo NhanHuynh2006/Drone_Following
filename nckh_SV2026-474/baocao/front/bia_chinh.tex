@@ -1,0 +1,33 @@
+% ---------------- Mẫu PL01: Trang bìa chính ----------------
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \draw[line width=2.2pt] ($(current page.north west)+(2.6cm,-1.6cm)$) rectangle ($(current page.south east)+(-1.6cm,1.6cm)$);
+  \draw[line width=0.6pt] ($(current page.north west)+(2.75cm,-1.75cm)$) rectangle ($(current page.south east)+(-1.75cm,1.75cm)$);
+\end{tikzpicture}
+\begin{center}
+\setstretch{1.2}
+{\large BỘ GIÁO DỤC VÀ ĐÀO TẠO}\\[2pt]
+{\large\bfseries \TRUONG}\\[-2pt]
+\rule{5cm}{0.6pt}
+
+\vspace{3.2cm}
+{\LARGE\bfseries BÁO CÁO TỔNG KẾT}\\[14pt]
+{\Large\bfseries ĐỀ TÀI NGHIÊN CỨU KHOA HỌC CỦA SINH VIÊN}
+
+\vspace{1.8cm}
+\begin{minipage}{0.9\textwidth}\centering\setstretch{1.25}
+{\LARGE\bfseries \TENDETAI}
+\end{minipage}
+
+\vspace{0.8cm}
+{\Large\bfseries Mã số: \madetai}
+
+\vfill
+\begin{tabular}{@{}l@{\hspace{0.6em}}l@{}}
+\large\bfseries Chủ nhiệm đề tài: & \large \chunhiem
+\end{tabular}
+
+\vspace{2.6cm}
+{\large\bfseries TP Hồ Chí Minh, \thangnam}
+\end{center}
+\clearpage

@@ -1,5 +1,5 @@
 """
-PFDet-Nano v5 Architecture Diagram Generator
+SteadyDet-N v5 Architecture Diagram Generator
 Creates a publication-quality architecture diagram.
 """
 
@@ -49,7 +49,7 @@ def draw_curved_arrow(x1, y1, x2, y2, color='#546E7A', connectionstyle="arc3,rad
 # ═══════════════════════════════════════════════════
 # TITLE
 # ═══════════════════════════════════════════════════
-ax.text(10, 12.5, 'PFDet-Nano v5 Architecture', ha='center', va='center',
+ax.text(10, 12.5, 'SteadyDet-N v5 Architecture', ha='center', va='center',
         fontsize=18, fontweight='bold', color='#1A237E')
 ax.text(10, 12.0, 'Lightweight Anchor-Free Person Detector  |  ~900K params  |  Input: 416×416',
         ha='center', va='center', fontsize=9, color='#455A64')

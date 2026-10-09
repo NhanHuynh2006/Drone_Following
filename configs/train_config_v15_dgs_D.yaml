@@ -1,4 +1,4 @@
-# PFDet-Nano v15 — Ablation D (final): DGS đầy đủ + Knowledge Distillation (booster)
+# SteadyDet-W — Ablation D (final): DGS đầy đủ + Knowledge Distillation (booster)
 # Đóng góp chính của paper. So sánh với A (baseline 0.235) và B (chỉ density).
 # Run QUAN TRỌNG NHẤT (xem BEST_PLAN_DATA_DRIVEN.md mục 6).
 
@@ -25,7 +25,7 @@ dgs:
   crowd_alpha: 1.0           # cơ chế 2: bật crowd-loc (=0 để tắt cho ablation B)
 
 # ---- Knowledge Distillation (booster — KHÔNG phải đóng góp) ----
-# Teacher = PFDet-Nano BALANCED 2M (tự train trước, profile: balanced).
+# Teacher = SteadyDet-N BALANCED 2M (tự train trước, profile: balanced).
 # SỬA teacher_ckpt thành đường dẫn checkpoint teacher của bạn.
 kd:
   use_kd: true

@@ -1,5 +1,5 @@
 """
-PFDet-Nano v17 — FLOPs-efficient cho drone tiny-person (Jetson Nano B01, TensorRT FP16).
+SteadyDet-N — FLOPs-efficient cho drone tiny-person (Jetson Nano B01, TensorRT FP16).
 =========================================================================================
 
 Vấn đề v15: params nhỏ (1.0M) NHƯNG FLOPs cao (12.9 GFLOPs@640) vì xử lý P2 (160×160) quá nặng
@@ -51,7 +51,7 @@ class LiteHead(nn.Module):
 
 
 # ============================================================
-#  PFDet-Nano v17
+#  SteadyDet-N
 # ============================================================
 class PFDetNanoV17(nn.Module):
     strides = [4, 8, 16, 32]

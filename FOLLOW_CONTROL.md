@@ -1,6 +1,6 @@
 # Hệ thống điều khiển Drone Follow Person — Phân tích chi tiết
 
-> **Mục tiêu:** drone tự động bay theo người được phát hiện bởi PFDet-Nano v15.
+> **Mục tiêu:** drone tự động bay theo người được phát hiện bởi SteadyDet-W.
 > **Hardware:** Raspberry Pi 5 (companion computer) + Pixhawk 6C (FCU) + Mission Planner (GCS).
 > **Output cuối cùng:** drone giữ khoảng cách an toàn 5m phía sau người, theo dõi liên tục, có failsafe đầy đủ.
 
@@ -139,7 +139,7 @@ Trước khi vào nội dung, đây là các thuật ngữ tiếng Anh sẽ xu�
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Raspberry Pi 5 (Companion Computer)                                     │
 │                                                                          │
-│  Camera ──► PFDet-Nano v15 ──► OC-SORT ──► Target Selection ──► EKF     │
+│  Camera ──► SteadyDet-W ──► OC-SORT ──► Target Selection ──► EKF     │
 │  (USB/CSI)    (detection)      (tracking)    (chọn 1 ID)      (smooth)  │
 │                                                                  │       │
 │                                                                  ▼       │
@@ -233,7 +233,7 @@ Mỗi module dưới đây có cấu trúc:
 ## 2.1. Multi-Object Tracking: OC-SORT
 
 ### Vấn đề
-Detector (PFDet-Nano v15) chỉ output bboxes của người trong từng frame, **không biết đâu là cùng 1 người qua các frame**. Nếu drone đang follow A mà detection thay đổi ID giữa các frame → drone sẽ "nhảy" qua người khác, mất follow.
+Detector (SteadyDet-W) chỉ output bboxes của người trong từng frame, **không biết đâu là cùng 1 người qua các frame**. Nếu drone đang follow A mà detection thay đổi ID giữa các frame → drone sẽ "nhảy" qua người khác, mất follow.
 
 Yêu cầu cụ thể:
 - **Gán ID nhất quán** cho cùng 1 người qua nhiều frame
@@ -252,7 +252,7 @@ Yêu cầu cụ thể:
 **Pipeline mỗi frame:**
 
 ```
-1. Detection từ PFDet → list bboxes [(x1,y1,x2,y2,score), ...]
+1. Detection từ SteadyDet → list bboxes [(x1,y1,x2,y2,score), ...]
 
 2. Predict step:
    - Mỗi track active có Kalman filter với state 8-dim:
@@ -1180,7 +1180,7 @@ follow_drone/
 │   ├── camera_thread.py      # Capture frame
 │   └── preprocess.py
 ├── detection/
-│   ├── pfdet_runner.py       # PFDet-Nano v15 inference
+│   ├── pfdet_runner.py       # SteadyDet-W inference
 │   └── postprocess.py
 ├── tracking/
 │   ├── ocsort.py              # OC-SORT (copy từ noahcao/OC_SORT)
@@ -1266,7 +1266,7 @@ safety:
 
 ## 5.1. End-to-end stack
 
-PFDet-Nano v15 detector trên Pi 5 → **OC-SORT** lock single target ID → **pinhole distance** từ bbox height (1.7m assumption) → **2.5D hybrid visual servoing** (IBVS for yaw + gimbal pitch, PBVS for forward range) → **6-D world-frame EKF** smoothing → **3 cascade PID** → (vx, vy, vz, yaw_rate) @ 10 Hz → **pymavlink** sang **Pixhawk 6C / ArduPilot Copter GUIDED mode** → ArduPilot inner loops handle attitude. Mission Planner luôn connected để monitor + emergency override. Failsafe ladder: target-lost → Loiter → RTL, ArduPilot 3s GUIDED timeout, two-tier battery RTL/Land, polygonal geofence.
+SteadyDet-W detector trên Pi 5 → **OC-SORT** lock single target ID → **pinhole distance** từ bbox height (1.7m assumption) → **2.5D hybrid visual servoing** (IBVS for yaw + gimbal pitch, PBVS for forward range) → **6-D world-frame EKF** smoothing → **3 cascade PID** → (vx, vy, vz, yaw_rate) @ 10 Hz → **pymavlink** sang **Pixhawk 6C / ArduPilot Copter GUIDED mode** → ArduPilot inner loops handle attitude. Mission Planner luôn connected để monitor + emergency override. Failsafe ladder: target-lost → Loiter → RTL, ArduPilot 3s GUIDED timeout, two-tier battery RTL/Land, polygonal geofence.
 
 ## 5.2. Reference papers
 

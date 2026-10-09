@@ -15,6 +15,7 @@ Output YOLO format:
 
 import os
 import sys
+import shutil
 import argparse
 from glob import glob
 from PIL import Image
@@ -83,7 +84,7 @@ def convert_annotation(ann_path, img_path, out_path, min_size=10, person_categor
 
 
 def convert_split(src_images, src_annotations, dst_images, dst_labels,
-                  min_size=10, person_categories=None):
+                  min_size=10, person_categories=None, copy_images=False):
     """Convert a full split (train/val/test)."""
     os.makedirs(dst_images, exist_ok=True)
     os.makedirs(dst_labels, exist_ok=True)
@@ -108,10 +109,18 @@ def convert_split(src_images, src_annotations, dst_images, dst_labels,
         if img_path is None:
             continue
 
-        # Create symlink or copy image
+        # Symlink (mặc định, tiết kiệm đĩa) hoặc COPY (tự chứa).
+        #
+        # ⚠️ Symlink là lý do bộ data này từng hỏng: xoá thư mục VisDrone gốc đi là
+        # toàn bộ ảnh trong data/visdrone thành liên kết chết, mà lỗi chỉ lộ ra lúc
+        # train. Dùng --copy cho bộ data thật; đĩa tốn thêm ~1.5 GB, rẻ hơn nhiều so
+        # với việc phải tải và dựng lại.
         dst_img = os.path.join(dst_images, os.path.basename(img_path))
         if not os.path.exists(dst_img):
-            os.symlink(os.path.abspath(img_path), dst_img)
+            if copy_images:
+                shutil.copy2(img_path, dst_img)
+            else:
+                os.symlink(os.path.abspath(img_path), dst_img)
 
         # Convert annotation
         out_label = os.path.join(dst_labels, stem + '.txt')
@@ -134,6 +143,9 @@ def main():
     parser.add_argument("--min-size", type=int, default=10, help="Minimum bbox side in pixels")
     parser.add_argument("--include-people", action="store_true",
                         help="Also include VisDrone category 2 (group/people boxes)")
+    parser.add_argument("--copy", action="store_true",
+                        help="COPY ảnh thay vì tạo symlink -> bộ data tự chứa, không "
+                             "chết khi xoá thư mục nguồn. KHUYÊN DÙNG.")
     args = parser.parse_args()
 
     print(f"Converting VisDrone dataset from {args.src} to {args.dst}")
@@ -165,6 +177,7 @@ def main():
             os.path.join(args.dst, split_name, 'labels'),
             min_size=args.min_size,
             person_categories=person_categories,
+            copy_images=args.copy,
         )
 
     print(f"\nDone! Dataset saved to {args.dst}")

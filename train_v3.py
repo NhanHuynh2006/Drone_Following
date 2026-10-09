@@ -1,5 +1,5 @@
 """
-Training script for PFDet-Nano v14.
+Training script for SteadyDet v14.
 ===================================
 Optimized for Drone Person Detection (VisDrone/UAVDT).
 - Đã ÉP CỨNG in ảnh/mAP mỗi 5 Epoch.
@@ -442,7 +442,7 @@ def plot_training_curves(csv_path, save_dir, model_name="v6"):
                 precision_list.append(float(row['precision']))
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle(f'PFDet-Nano {model_name} Training', fontsize=14, fontweight='bold')
+    fig.suptitle(f'SteadyDet-N {model_name} Training', fontsize=14, fontweight='bold')
 
     axes[0, 0].plot(epochs, train_loss, 'b-', label='Total Loss')
     axes[0, 0].set_title('Total Loss'); axes[0, 0].legend()
@@ -506,9 +506,15 @@ def main():
     use_density       = bool(dgs_cfg.get('use_density', False))
     use_kd            = bool(kd_cfg.get('use_kd', False))
     use_vib           = bool(vib_cfg.get('use_vib', False))
+    # vib.mode: 'consistency' = đóng góp chính (2 forward + ép nhất quán, loss detect trên ảnh SẠCH)
+    #           'aug'         = ĐỐI CHỨNG cho paper: chỉ dùng rung như augmentation (1 forward,
+    #                           loss detect trên ảnh RUNG), KHÔNG có consistency term. Dùng để trả
+    #                           lời "gain có phải chỉ do thấy ảnh rung?" -> bắt buộc có cho reviewer.
+    vib_mode          = str(vib_cfg.get('mode', 'consistency')).lower()
+    vib_aug_prob      = float(vib_cfg.get('aug_prob', 0.5))
     density_scale_idx = int(dgs_cfg.get('density_scale_idx', 1))
     kd_feat_on        = use_kd and bool(kd_cfg.get('use_feature_kd', True))
-    vib_feat_on       = use_vib and bool(vib_cfg.get('use_feature', True))
+    vib_feat_on       = use_vib and vib_mode == 'consistency' and bool(vib_cfg.get('use_feature', True))
 
     # neck_feats (forward return_aux) cần khi: density loss, KD-feature, hoặc vib-feature.
     # -> dùng chung density wrapper; density LOSS chỉ bật khi use_density.
@@ -536,7 +542,7 @@ def main():
         'v16': 'PFDetLossV16 (STAL+ProgLoss)',
         'v17': 'PFDetLossV15 (FLOPs-efficient: P2 mỏng + LiteHead)',
     }.get(model_name, 'PFDetLossV14')
-    print(f"[MODEL] PFDet-Nano {model_name.upper()} | {train_p/1e6:.3f}M params | "
+    print(f"[MODEL] SteadyDet-N {model_name.upper()} | {train_p/1e6:.3f}M params | "
           f"Loss: {loss_name}")
     if device.type == 'cuda':
         # Multi-scale đổi 11 size khác nhau -> cudnn.benchmark sẽ re-benchmark + cache workspace
@@ -706,7 +712,10 @@ def main():
     vibloss_fn = None
     lambda_vib = float(vib_cfg.get('lambda_vib', 0.5))
     vib_warmup = int(vib_cfg.get('warmup_epochs', 15))
-    if use_vib:
+    if use_vib and vib_mode == 'aug':
+        print(f"[VIB] chế độ ĐỐI CHỨNG 'aug': rung dùng làm augmentation "
+              f"(p={vib_aug_prob}), KHÔNG có consistency loss | warmup={vib_warmup} epoch")
+    if use_vib and vib_mode == 'consistency':
         vibloss_fn = VibConsistencyLoss(
             temperature=float(vib_cfg.get('temperature', 2.0)),
             conf_thr=float(vib_cfg.get('conf_thr', 0.1)),
@@ -840,6 +849,12 @@ def main():
             if batch_idx % grad_accumulate == 0:
                 optimizer.zero_grad(set_to_none=True)
 
+            # ĐỐI CHỨNG 'aug': rung ảnh TRƯỚC forward -> loss detect tính trên ảnh rung.
+            # Khác 'consistency' (loss detect trên ảnh sạch + ép nhánh rung khớp nhánh sạch).
+            if use_vib and vib_mode == 'aug' and epoch >= vib_warmup \
+                    and random.random() < vib_aug_prob:
+                imgs = corrupt_batch(imgs, severity=None).clamp_(0.0, 1.0)
+
             cur_img_size = criterion.img_size
             with torch.amp.autocast('cuda', enabled=use_amp):
                 if need_aux:
@@ -881,7 +896,7 @@ def main():
                     loss_dict['kd'] = kd_logs['kd_total']
 
                 # Vibration-consistency: forward ảnh RUNG, ép khớp dự đoán ảnh SẠCH (preds=anchor)
-                if use_vib and epoch >= vib_warmup:
+                if use_vib and vib_mode == 'consistency' and epoch >= vib_warmup:
                     imgs_vib = corrupt_batch(imgs, severity=None)   # rung ngẫu nhiên sev 1-3
                     if vib_feat_on:
                         v_out, v_aux = model(imgs_vib, return_aux=True)

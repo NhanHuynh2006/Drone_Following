@@ -1,0 +1,158 @@
+\babel@toc {vietnamese}{}\relax 
+\contentsline {chapter}{DANH MỤC BẢNG BIỂU}{v}{section*.2}%
+\contentsline {chapter}{DANH MỤC HÌNH ẢNH}{vii}{section*.4}%
+\contentsline {chapter}{DANH MỤC CÁC TỪ VIẾT TẮT}{ix}{chapter*.6}%
+\contentsline {chapter}{THÔNG TIN KẾT QUẢ NGHIÊN CỨU CỦA ĐỀ TÀI}{xi}{section*.7}%
+\contentsline {chapter}{\MakeUppercase []{Mở đầu}}{1}{chapter*.8}%
+\contentsline {section}{1. Tổng quan tình hình nghiên cứu thuộc lĩnh vực đề tài}{1}{section*.9}%
+\contentsline {section}{2. Lý do chọn đề tài}{2}{section*.9}%
+\contentsline {section}{3. Mục tiêu đề tài}{3}{section*.9}%
+\contentsline {section}{4. Phương pháp nghiên cứu}{3}{Item.3}%
+\contentsline {section}{5. Đối tượng và phạm vi nghiên cứu}{4}{Item.3}%
+\contentsline {section}{6. Nội dung nghiên cứu và mức độ hoàn thành}{4}{Item.3}%
+\contentsline {section}{7. Bố cục báo cáo}{5}{table.caption.10}%
+\contentsline {chapter}{\numberline {1}Cơ sở lý thuyết}{6}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Bài toán phát hiện đối tượng}{6}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}Định nghĩa}{6}{subsection.1.1.1}%
+\contentsline {subsection}{\numberline {1.1.2}Loại bỏ hộp không cực đại}{6}{subsection.1.1.2}%
+\contentsline {section}{\numberline {1.2}Mạng nơ-ron tích chập cho phát hiện đối tượng}{7}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Bộ phát hiện hai giai đoạn và một giai đoạn}{7}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Kim tự tháp đặc trưng}{7}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}Head anchor-free}{7}{subsection.1.2.3}%
+\contentsline {subsection}{\numberline {1.2.4}Họ YOLO và bộ phát hiện dựa trên Transformer}{7}{subsection.1.2.4}%
+\contentsline {section}{\numberline {1.3}Các khối xây dựng mạng hiệu quả}{8}{section.1.3}%
+\contentsline {subsection}{\numberline {1.3.1}Tích chập depthwise separable}{8}{subsection.1.3.1}%
+\contentsline {subsection}{\numberline {1.3.2}Kết nối từng phần liên tầng và tái tham số hoá}{8}{subsection.1.3.2}%
+\contentsline {subsection}{\numberline {1.3.3}Self-attention theo cửa sổ}{8}{subsection.1.3.3}%
+\contentsline {section}{\numberline {1.4}Phát hiện người có kích thước nhỏ từ UAV}{9}{section.1.4}%
+\contentsline {subsection}{\numberline {1.4.1}Giữ mức phân giải cao}{9}{subsection.1.4.1}%
+\contentsline {subsection}{\numberline {1.4.2}Khoảng cách Wasserstein chuẩn hoá}{9}{subsection.1.4.2}%
+\contentsline {subsection}{\numberline {1.4.3}Hàm mất mát hồi quy CIoU và phân loại theo chất lượng}{9}{subsection.1.4.3}%
+\contentsline {section}{\numberline {1.5}Suy giảm ảnh do rung động của UAV}{10}{section.1.5}%
+\contentsline {subsection}{\numberline {1.5.1}Nguồn gốc vật lý}{10}{subsection.1.5.1}%
+\contentsline {subsection}{\numberline {1.5.2}Độ bền của mạng nơ-ron trước ảnh suy giảm}{10}{subsection.1.5.2}%
+\contentsline {section}{\numberline {1.6}Lượng tử hoá mô hình và bộ tăng tốc nơ-ron}{11}{section.1.6}%
+\contentsline {subsection}{\numberline {1.6.1}Lượng tử hoá INT8}{11}{subsection.1.6.1}%
+\contentsline {subsection}{\numberline {1.6.2}Bộ tăng tốc Hailo-8L}{11}{subsection.1.6.2}%
+\contentsline {section}{\numberline {1.7}Theo vết đa đối tượng}{11}{section.1.7}%
+\contentsline {subsection}{\numberline {1.7.1}Bộ lọc Kalman}{11}{subsection.1.7.1}%
+\contentsline {subsection}{\numberline {1.7.2}Từ SORT tới OC-SORT}{12}{subsection.1.7.2}%
+\contentsline {section}{\numberline {1.8}Mô hình camera và ước lượng khoảng cách}{12}{section.1.8}%
+\contentsline {section}{\numberline {1.9}Điều khiển servo thị giác và bộ điều khiển PID}{13}{section.1.9}%
+\contentsline {subsection}{\numberline {1.9.1}Servo thị giác}{13}{subsection.1.9.1}%
+\contentsline {subsection}{\numberline {1.9.2}Bộ điều khiển PID}{13}{subsection.1.9.2}%
+\contentsline {section}{\numberline {1.10}Bộ điều khiển bay ArduPilot và giao thức MAVLink}{13}{section.1.10}%
+\contentsline {section}{\numberline {1.11}Các chỉ số đánh giá}{14}{section.1.11}%
+\contentsline {section}{\numberline {1.12}Kết luận chương}{14}{section.1.12}%
+\contentsline {chapter}{\numberline {2}Dữ liệu và phương pháp đánh giá}{16}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Yêu cầu đối với dữ liệu}{16}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Các bộ dữ liệu}{16}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}VisDrone-person}{16}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}COCO-person}{17}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}Tập bay thật flight\_val}{17}{subsection.2.2.3}%
+\contentsline {section}{\numberline {2.3}Hai nhánh mô hình}{18}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Tiền xử lý và data augmentation}{18}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Giao thức mô phỏng rung VisDrone-Shake}{19}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Mô hình suy giảm}{19}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}Giao thức phải được cố định seed ngẫu nhiên}{20}{subsection.2.5.2}%
+\contentsline {section}{\numberline {2.6}Một chương trình đo duy nhất cho mọi mô hình}{20}{section.2.6}%
+\contentsline {section}{\numberline {2.7}Quy tắc chọn checkpoint}{21}{section.2.7}%
+\contentsline {section}{\numberline {2.8}Đánh giá trên miền triển khai}{21}{section.2.8}%
+\contentsline {section}{\numberline {2.9}Môi trường thực nghiệm}{22}{section.2.9}%
+\contentsline {section}{\numberline {2.10}Kết luận chương}{22}{section.2.10}%
+\contentsline {chapter}{\numberline {3}Mô hình SteadyDet-N và phương pháp huấn luyện nhận biết rung}{23}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Yêu cầu thiết kế}{23}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Quá trình phát triển kiến trúc}{23}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Kiến trúc SteadyDet-N}{24}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Backbone}{25}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}FPN neck mỏng}{26}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Head LiteHead}{26}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}So sánh hai phiên bản}{27}{subsection.3.3.4}%
+\contentsline {section}{\numberline {3.4}Hàm mất mát}{27}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Quy trình huấn luyện}{28}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Huấn luyện nhận biết rung}{29}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}Ý tưởng}{29}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}Phương pháp}{29}{subsection.3.6.2}%
+\contentsline {subsection}{\numberline {3.6.3}Biến thể ràng buộc nhất quán}{30}{subsection.3.6.3}%
+\contentsline {subsection}{\numberline {3.6.4}Thiết lập tinh chỉnh}{31}{subsection.3.6.4}%
+\contentsline {subsection}{\numberline {3.6.5}Biến thể không dùng NMS}{31}{subsection.3.6.5}%
+\contentsline {section}{\numberline {3.7}Kết luận chương}{31}{section.3.7}%
+\contentsline {chapter}{\numberline {4}Kết quả thực nghiệm của mô hình}{33}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Kết quả chính và các thí nghiệm đối chứng}{33}{section.4.1}%
+\contentsline {subsection}{\numberline {4.1.1}Mọi bộ phát hiện nhỏ gọn đều sụp đổ khi rung}{33}{subsection.4.1.1}%
+\contentsline {subsection}{\numberline {4.1.2}Huấn luyện nhận biết rung tăng gấp đôi tỷ lệ giữ độ chính xác}{34}{subsection.4.1.2}%
+\contentsline {subsection}{\numberline {4.1.3}Đối chứng 1: tác dụng không đến từ việc huấn luyện thêm}{34}{subsection.4.1.3}%
+\contentsline {subsection}{\numberline {4.1.4}Đối chứng 2: ràng buộc nhất quán kém hơn phương pháp đơn giản}{34}{subsection.4.1.4}%
+\contentsline {section}{\numberline {4.2}Tính tổng quát và giới hạn của phương pháp}{35}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Lặp lại trên một kiến trúc khác}{35}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}Không có tác dụng trên YOLO11-n}{35}{subsection.4.2.2}%
+\contentsline {section}{\numberline {4.3}So sánh với các mô hình phát hiện nhẹ}{37}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Trên ảnh sạch, SteadyDet-N không dẫn đầu}{37}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}Khi rung, thứ hạng đảo ngược}{38}{subsection.4.3.2}%
+\contentsline {subsection}{\numberline {4.3.3}Độ bền không phải là sản phẩm phụ của độ chính xác}{39}{subsection.4.3.3}%
+\contentsline {section}{\numberline {4.4}Kiểm chứng trên dữ liệu bay thật}{39}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Cả hai cách xử lý rung đều có tác dụng trên rung thật}{40}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Chọn dữ liệu theo miền triển khai, không theo benchmark}{41}{subsection.4.4.2}%
+\contentsline {section}{\numberline {4.5}Thảo luận}{41}{section.4.5}%
+\contentsline {chapter}{\numberline {5}Triển khai mô hình trên thiết bị biên}{43}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Nền tảng phần cứng}{43}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Chuẩn bị mô hình cho trình biên dịch}{44}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Loại bỏ khối self-attention}{44}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Một lỗi cấu hình và cách phát hiện}{44}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Xuất ONNX}{44}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}Lượng tử hoá và biên dịch}{45}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Độ chính xác sau lượng tử hoá}{45}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}Chọn tệp HEF triển khai}{45}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}Tổn thất INT8 phụ thuộc kích thước đối tượng}{45}{subsection.5.4.2}%
+\contentsline {subsection}{\numberline {5.4.3}Chọn ngưỡng tin cậy vận hành}{47}{subsection.5.4.3}%
+\contentsline {section}{\numberline {5.5}Tốc độ suy luận trên NPU}{47}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}Tốc độ theo từng khung và theo lô}{47}{subsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.5.2}So sánh với YOLO26-n trên cùng một chip}{48}{subsection.5.5.2}%
+\contentsline {section}{\numberline {5.6}Độ trễ đầu-cuối với camera thật}{49}{section.5.6}%
+\contentsline {subsection}{\numberline {5.6.1}Hai lỗi phía camera làm hệ thống kẹt ở 15 khung hình/giây}{49}{subsection.5.6.1}%
+\contentsline {subsection}{\numberline {5.6.2}Phân tích độ trễ từng chặng}{50}{subsection.5.6.2}%
+\contentsline {section}{\numberline {5.7}Kết luận chương}{51}{section.5.7}%
+\contentsline {chapter}{\numberline {6}Hệ thống điều khiển máy bay bám theo người}{52}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Kiến trúc tổng thể}{52}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Vòng lặp điều khiển}{53}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Theo vết đa đối tượng}{54}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Chọn và khoá mục tiêu}{55}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Ước lượng khoảng cách}{56}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Servo thị giác và bộ điều khiển PID}{57}{section.6.6}%
+\contentsline {section}{\numberline {6.7}Lớp an toàn}{58}{section.6.7}%
+\contentsline {section}{\numberline {6.8}Giao tiếp MAVLink và lựa chọn nhịp gửi lệnh}{59}{section.6.8}%
+\contentsline {subsection}{\numberline {6.8.1}Kiểm tra liên lạc}{59}{subsection.6.8.1}%
+\contentsline {subsection}{\numberline {6.8.2}Chọn nhịp gửi lệnh 30\,Hz}{60}{subsection.6.8.2}%
+\contentsline {section}{\numberline {6.9}Bảng giám sát và ghi nhật ký}{61}{section.6.9}%
+\contentsline {section}{\numberline {6.10}Kết luận chương}{61}{section.6.10}%
+\contentsline {chapter}{\numberline {7}Tích hợp và kiểm thử toàn hệ thống}{62}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Cấu hình hệ thống tích hợp}{62}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Quy trình kiểm thử phân tầng}{63}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Kiểm thử tự động}{63}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Bay thử}{64}{section.7.4}%
+\contentsline {subsection}{\numberline {7.4.1}Chuyến bay thu dữ liệu và video thử nghiệm}{64}{subsection.7.4.1}%
+\contentsline {subsection}{\numberline {7.4.2}Vòng bám người trên video bay thử}{65}{subsection.7.4.2}%
+\contentsline {subsection}{\numberline {7.4.3}Quy trình bay bám tự động}{66}{subsection.7.4.3}%
+\contentsline {section}{\numberline {7.5}Đánh giá mức độ đạt mục tiêu}{67}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Hạn chế}{67}{section.7.6}%
+\contentsline {section}{\numberline {7.7}Kết luận chương}{68}{section.7.7}%
+\contentsline {chapter}{\MakeUppercase []{Kết luận và kiến nghị}}{69}{chapter*.52}%
+\contentsline {section}{1. Kết luận}{69}{section*.53}%
+\contentsline {section}{2. Kiến nghị}{70}{section*.53}%
+\contentsline {chapter}{TÀI LIỆU THAM KHẢO}{72}{section*.54}%
+\renewcommand {\cftchappresnum }{PHỤ LỤC }
+\setlength {\cftchapnumwidth }{6.2em}
+\contentsline {chapter}{\numberline {A}Cấu hình phần cứng và tham số hệ thống}{77}{appendix.A}%
+\contentsline {section}{\numberline {A.1}Tham số an toàn trên bộ điều khiển bay (ArduPilot Copter 4.7.0)}{77}{section.A.1}%
+\contentsline {section}{\numberline {A.2}Tham số chính của chương trình bám người (\texttt {config.yaml})}{79}{section.A.2}%
+\contentsline {section}{\numberline {A.3}Siêu tham số huấn luyện}{80}{section.A.3}%
+\contentsline {chapter}{\numberline {B}Chương trình máy tính}{81}{appendix.B}%
+\contentsline {section}{\numberline {B.1}Cấu trúc mã nguồn}{81}{section.B.1}%
+\contentsline {section}{\numberline {B.2}Các lệnh tái lập kết quả}{82}{section.B.2}%
+\contentsline {section}{\numberline {B.3}Trích đoạn mã nguồn tiêu biểu}{82}{section.B.3}%
+\contentsline {chapter}{\numberline {C}Quy trình vận hành bay bám người}{84}{appendix.C}%
+\contentsline {chapter}{\numberline {D}Minh chứng sản phẩm đề tài}{87}{appendix.D}%
+\contentsline {section}{\numberline {D.1}Danh mục sản phẩm nộp kèm}{87}{section.D.1}%
+\contentsline {section}{\numberline {D.2}Hình ảnh sản phẩm}{88}{section.D.2}%
+\contentsline {chapter}{\numberline {E}Poster và standee của đề tài}{89}{appendix.E}%
+\contentsline {chapter}{\numberline {F}Bản sao thuyết minh và hợp đồng đã được phê duyệt}{91}{appendix.F}%

@@ -37,7 +37,12 @@ class CameraThread:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_FPS, self.fps)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # always latest frame
+        # BUFFERSIZE=1 RỚT ĐÚNG MỘT NỬA KHUNG (30 -> 15 fps): với một bộ đệm, trong
+        # lúc app đang giữ buffer thì driver không có chỗ ghi khung kế nên bỏ luôn.
+        # Đo trên C270 + Pi 5 ngày 2026-08-27, xem runs/pi_camera_measured_2026-08-27.md.
+        # Dùng 2 — vẫn lấy được khung mới nhất (độ cũ p50 chỉ 15.7 ms) vì luồng đọc
+        # luôn ghi đè khung mới.
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
 
         # Warmup
         for _ in range(5):

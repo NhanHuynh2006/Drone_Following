@@ -1,0 +1,84 @@
+% ==================================================================
+% 4.6 Trien khai Hailo / Pi 5   (file: sections/13_exp_deploy.tex)
+% CAP NHAT 2026-08-27: da do that het, bo TODO. Khong con cau "186 FPS" tran.
+% Neu thieu trang: cat tu doan "Sustained throughput" tro xuong.
+% ==================================================================
+\subsection{Edge Deployment}
+\label{sec:deploy}
+
+The detector compiles for a Hailo-8L accelerator attached to a Raspberry~Pi~5.
+Measured with \texttt{hailortcli benchmark} at batch size one, the accelerator
+runs the network at $112.55$\,FPS ($8.40$\,ms) at $320\times320$ and $63.66$\,FPS
+($15.26$\,ms) at $640\times640$. We report batch-one figures because a
+follow-the-target controller consumes frames as they arrive: batching four frames
+raises throughput to $188.78$\,FPS but also raises per-frame latency from $8.40$ to
+$17.05$\,ms, and gathering the batch from a $30$\,FPS camera adds a further
+$133$\,ms of waiting. Throughput and latency must not be conflated at this scale.
+
+\textbf{End-to-end, with a real camera.} Accelerator throughput is not what the
+control loop experiences. Over a two-minute continuous run at $640\times640$ with a
+USB camera ($3{,}594$ frames), the median stage breakdown is $12.47$\,ms waiting for
+the camera, $0.99$\,ms preprocessing, $17.72$\,ms inference and $0.84$\,ms decoding
+plus NMS, for $32.04$\,ms end to end ($p_{99}=36.15$\,ms), i.e.\ $30.0$\,FPS. The
+three compute stages together occupy $19.55$\,ms of the $33.3$\,ms frame budget, a
+$59\%$ duty cycle; the remainder is idle time waiting on the sensor. The deployed
+system is therefore \emph{camera-bound, not model-bound}, which is the relevant
+statement for a robustness mechanism that claims to cost no inference time.
+
+\textbf{Sustained throughput.} Frame rate held at $29.9$\,FPS in the first minute
+and $30.0$\,FPS in the last, with the system-on-chip at $48.5^\circ$C and the
+hardware throttling flag at zero throughout. We observed no thermal degradation at
+this duty cycle.
+
+\textbf{Quantisation cost, measured.} The accelerator executes INT8, and at this
+model scale that is not free. On the $548$-image VisDrone person validation split
+at $640\times640$, using the same decoding and NMS as the FP32 evaluation path:
+
+\begin{center}
+\small
+\begin{tabular}{lccc}
+\toprule
+ & FP32 & INT8 (Hailo-8L) & relative drop \\
+\midrule
+AP@[.50:.95] & $0.1775$ & $0.1584$ & $-10.8\%$ \\
+AP@0.50      & $0.4946$ & $0.4625$ & $\phantom{0}-6.5\%$ \\
+AP@0.75      & $0.0742$ & $0.0555$ & $-25.2\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Both rows come from the \emph{same} scoring code: FP32 predictions are dumped in the
+identical format the accelerator produces and scored by the identical function, so the
+difference is attributable to quantisation and not to two evaluation harnesses
+disagreeing.
+
+The pattern is informative: AP@0.50 falls by $6.5\%$ while AP@0.75 falls by a quarter,
+so INT8 loosens box regression rather than losing objects. This is consistent with a
+$1.17$\,M-parameter detector in which classification logits tolerate quantisation but
+coordinate regression loses resolution. It also revises a pessimistic earlier result of
+ours, in which naive post-training quantisation of an ONNX graph reduced AP from $0.18$
+to $0.009$: per-layer calibration inside the dataflow compiler is substantially better
+than that. Every accuracy number elsewhere in this paper still comes from the FP32 path.
+
+The cost is also \emph{scale-dependent}, which matters for anyone reading these numbers
+as a deployment budget. VisDrone validation is dominated by very small people, the regime
+in which coordinate quantisation hurts most. On a held-out set of $92$ frames captured at
+$3$ to $6$\,m --- where a person spans a large fraction of the frame --- the same pair of
+models is indistinguishable at the operating threshold, with $F_1$ of $0.836$ (FP32) and
+$0.880$ (INT8), a gap well inside the sampling error of $92$ frames. The honest summary is
+that INT8 costs about $6.5\%$ AP@0.50 on small targets and close to nothing on the targets
+this system is actually built to follow.
+
+One practical detail is worth recording because it cost us a measurable amount of
+accuracy. Calibration images should follow the \emph{training} distribution, not merely
+the source dataset: a calibration set drawn only from the aerial corpus produced a
+noticeably weaker model than one mixing aerial and close-range images in the same
+proportion used during training. Increasing the calibration set beyond that point did not
+help, and in our measurements slightly hurt.
+
+A second deployment cost must be stated. Compilation required removing the windowed
+attention block, as the dataflow compiler did not support its reshape patterns, so
+the deployed network is purely convolutional and smaller ($0.875$\,M parameters).
+The conversion is therefore not accuracy-neutral, and the FP32 numbers above are
+those of the converted network, not of the full model evaluated in
+Section~\ref{sec:mainresults}.

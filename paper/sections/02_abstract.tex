@@ -1,0 +1,38 @@
+% ==================================================================
+% Abstract + keywords   (file: sections/02_abstract.tex)
+% Doi khung 2026-07-26: phuong phap chinh = augmentation, consistency = ket qua am.
+% Doi khung 2026-07-27a: them claim TRIEN KHAI (mCP).
+% Doi khung 2026-07-27b: MODEL dung ten chinh. Abstract mo bang detector, va noi
+%   ro "khong nua nao du mot minh" - do la lap luan giu cho kien truc la dong gop.
+% ==================================================================
+\begin{abstract}
+We present SteadyDet-N, the nano variant of our SteadyDet family: a
+$1.17$\,M-parameter, $4.6$-GFLOP anchor-free person
+detector for multirotor UAVs, and show that it leads every compact baseline we
+measured on the metric its deployment depends on, while losing to all of them on
+the benchmark. That metric is accuracy under airframe vibration. Multirotors
+vibrate whenever the rotors turn, and under a single evaluation protocol with
+seeded corruption and error bars every compact detector we tested retains at most a
+quarter of its clean average precision and is effectively blind at the moderate
+severity of ordinary forward flight. The detector does not survive this by
+architecture alone; untreated, it is the worst network in our table. What closes
+the gap is deliberately plain. We replace half of each training batch with a copy
+corrupted by a physically motivated model of motion blur, sensor noise and exposure
+oscillation, and compute the ordinary detection loss on it. The corruption
+preserves object coordinates so the labels stay valid, and it exists only during
+training, so the deployed network is unchanged. Retention rises from
+$16.8 \pm 0.7\%$ to $36.2 \pm 0.7\%$ and accuracy under moderate vibration by
+$4.2\times$, at a cost of $9.7\%$ clean AP, enough to overtake all four YOLO nano
+variants under vibration and a transformer of $28\times$ the size at the severity
+of ordinary flight. Neither half suffices alone: the same regime applied to
+YOLO11-n changes nothing, from scratch or from pretrained weights, and we rule out
+pretraining, object scale and remaining headroom as explanations. Two further
+controls make the result interpretable. Finetuning for the same $120$ epochs
+without corruption leaves retention unchanged ($16.9 \pm 0.7\%$), and a consistency
+formulation we expected to be stronger reaches only $30.0 \pm 0.6\%$ at $1.8\times$
+the training cost. We report both negative results in full, since together they
+identify what accuracy under vibration actually depends on.
+\end{abstract}
+
+\keywords{Tiny object detection \and Robustness \and Data augmentation \and UAV
+\and Edge deployment.}

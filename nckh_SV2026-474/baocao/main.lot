@@ -1,0 +1,42 @@
+\babel@toc {vietnamese}{}\relax 
+\contentsline {table}{\numberline {1}{\ignorespaces Đối chiếu nội dung thuyết minh với kết quả thực hiện}}{5}{table.caption.10}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {2.1}{\ignorespaces Thống kê ba bộ dữ liệu sau chuẩn hoá (lớp duy nhất \textit {person})}}{18}{table.caption.12}%
+\contentsline {table}{\numberline {2.2}{\ignorespaces Tham số ba mức rung của giao thức VisDrone-Shake}}{19}{table.caption.13}%
+\contentsline {table}{\numberline {2.3}{\ignorespaces Môi trường phần cứng và phần mềm dùng trong đề tài}}{22}{table.caption.15}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces So sánh cấu trúc và chi phí của SteadyDet-W và SteadyDet-N (ảnh vào $640\times 640$)}}{27}{table.caption.17}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Kết quả trên VisDrone-person, ảnh $640\times 640$. Trong mỗi khối, các dòng chỉ khác nhau đúng một yếu tố và dùng chung lịch trình, learning rate và phép tăng cường. Cột có rung: trung bình $\pm $ độ lệch chuẩn qua 3 hạt giống}}{33}{table.caption.20}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces So sánh với năm mô hình công khai trên VisDrone-person, mọi dòng đo bằng cùng một chương trình. mCP: AP@[.50:.95] trung bình ba mức rung, tức độ chính xác \textit {khi bay}. Các mô hình YOLO và RT-DETR khởi tạo từ trọng số huấn luyện sẵn trên COCO, còn SteadyDet huấn luyện từ đầu, điều này có lợi cho mô hình đối chứng}}{37}{table.caption.22}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Kết quả trên 92 khung hình bay thật ($\approx $6\,m), cùng chương trình đo. Trong mỗi nhóm, ba mô hình giống hệt kiến trúc và chỉ khác cách xử lý rung}}{40}{table.caption.25}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {5.1}{\ignorespaces So sánh các tệp HEF trên 92 khung bay thật; mỗi tệp dùng ngưỡng tin cậy cho F1 cao nhất của chính nó}}{45}{table.caption.28}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces Độ chính xác FP32 và INT8 của mô hình triển khai, cùng một chương trình chấm điểm}}{46}{table.caption.29}%
+\contentsline {table}{\numberline {5.3}{\ignorespaces Thông lượng và độ trễ theo batch size trên Hailo-8L (mô hình $320\times 320$)}}{48}{table.caption.32}%
+\contentsline {table}{\numberline {5.4}{\ignorespaces SteadyDet-N và YOLO26-n trên cùng Hailo-8L, ảnh $640\times 640$, lô 1}}{48}{table.caption.33}%
+\contentsline {table}{\numberline {5.5}{\ignorespaces Độ trễ từng chặng của chuỗi xử lý trên Raspberry Pi~5 + Hailo-8L (ms), 3.594 khung}}{50}{table.caption.36}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {6.1}{\ignorespaces Tham số bộ theo vết OC-SORT}}{55}{table.caption.40}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces Diễn biến hành vi khi mất mục tiêu (tính từ lần cuối nhìn thấy)}}{56}{table.caption.41}%
+\contentsline {table}{\numberline {6.3}{\ignorespaces Tham số ba bộ điều khiển PID}}{57}{table.caption.42}%
+\contentsline {table}{\numberline {6.4}{\ignorespaces Ngân sách độ trễ từ ảnh tới lệnh theo nhịp gửi (ms)}}{60}{table.caption.44}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {7.1}{\ignorespaces Các thành phần của hệ thống tích hợp}}{62}{table.caption.46}%
+\contentsline {table}{\numberline {7.2}{\ignorespaces Các tầng kiểm thử và kết quả}}{63}{table.caption.47}%
+\contentsline {table}{\numberline {7.3}{\ignorespaces Kết quả vòng bám người trên video bay thử 21/07/2026 (3.961 khung)}}{66}{table.caption.50}%
+\contentsline {table}{\numberline {7.4}{\ignorespaces Đối chiếu kết quả với mục tiêu và yêu cầu khoa học trong thuyết minh}}{67}{table.caption.51}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {A.1}{\ignorespaces Tham số ArduPilot cần chỉnh trước khi bay tự động}}{77}{table.caption.56}%
+\contentsline {table}{\numberline {A.2}{\ignorespaces Một số tham số ArduPilot đã đổi tên và đơn vị ở phiên bản 4.7}}{78}{table.caption.57}%
+\contentsline {table}{\numberline {A.3}{\ignorespaces Tham số cấu hình chính của chương trình}}{79}{table.caption.58}%
+\contentsline {table}{\numberline {A.4}{\ignorespaces Siêu tham số huấn luyện SteadyDet-N}}{80}{table.caption.59}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {C.1}{\ignorespaces Điều kiện bắt buộc trước khi arm}}{85}{table.caption.60}%
+\contentsline {table}{\numberline {C.2}{\ignorespaces Sự cố thường gặp và cách xử lý}}{86}{table.caption.61}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {D.1}{\ignorespaces Danh mục sản phẩm nộp kèm hồ sơ nghiệm thu}}{87}{table.caption.62}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
