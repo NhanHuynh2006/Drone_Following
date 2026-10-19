@@ -43,14 +43,22 @@ set_text(els[0], "MÁY BAY KHÔNG NGƯỜI LÁI TỰ ĐỘNG THEO DÕI CON NGƯ�
 
 # ---- bảng thông tin
 tbl = d.tables[0]
+# Lấy thẳng từ ../thongtin.tex để bản docx và bản LaTeX không lệch nhau.
+TT = open("/home/nhanhuynh/Documents/pfdet_drone_follow/nckh_SV2026-474/thongtin.tex",
+          encoding="utf-8").read()
+def tt(key):
+    m = re.search(r"\\newcommand\{\\" + key + r"\}\{(.*?)\}\s*$", TT, re.M)
+    return m.group(1) if m else ""
+
 vals = {
-    0: "Huỳnh Lê Thành Nhân",
-    1: "",
-    2: "Trịnh Trần Quốc Bảo",
-    3: "PGS.TS. Lê Mỹ Hà",
-    4: "0937395656",
-    5: "24119068@student.hcmute.edu.vn",
+    0: tt("chunhiem"),
+    1: tt("ngaysinh"),
+    2: tt("thanhvien"),
+    3: tt("gvhd"),
+    4: tt("dienthoai"),
+    5: tt("emailchunhiem"),
 }
+assert all(vals.values()), "thiếu thông tin trong thongtin.tex: " + str(vals)
 for i, row in enumerate(tbl.rows):
     if i in vals:
         c = row.cells[-1]
