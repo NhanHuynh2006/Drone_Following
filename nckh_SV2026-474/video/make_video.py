@@ -95,7 +95,8 @@ bar(os.path.join(HERE, "_bar1.png"),
     "Hộp xanh: người được phát hiện  •  Dấu thập: tâm khung hình")
 bar(os.path.join(HERE, "_bar2.png"),
     "Phần 2 — Vòng bám người: phát hiện → OC-SORT → khoá mục tiêu → lệnh quay hướng",
-    "Xanh lá: mục tiêu đang khoá (FOLLOW)  •  Cam: vị trí dự đoán khi mất phát hiện (COAST)  •  Vệt vàng: quỹ đạo")
+    "Xanh lá: mục tiêu đang khoá  •  Xám: người được phát hiện nhưng chưa khoá  •  "
+    "Cam: vị trí dự đoán khi mất phát hiện  •  Vệt vàng: quỹ đạo")
 
 enc = ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", "-preset", "medium", "-crf", "20"]
 sil = ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]

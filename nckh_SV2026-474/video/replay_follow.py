@@ -77,6 +77,7 @@ def main():
     f_big, f_mid, f_small = (ImageFont.truetype(F_B, 22), ImageFont.truetype(F_R, 19),
                              ImageFont.truetype(F_R, 16))
     trail, lost_since, n = [], None, 0
+    last_size = None          # (w,h) hộp quan sát gần nhất của mục tiêu đang khoá
     stats = {"frames": 0, "follow": 0, "coast": 0, "hover": 0}
     logf = open(LOG, "w", newline="")
     log = csv.writer(logf)
@@ -115,6 +116,7 @@ def main():
             state = "FOLLOW"
             x1, y1, x2, y2 = target["box"]
             cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+            last_size = (x2 - x1, y2 - y1)
             err_px = cx - CENTER[0]
             yaw_err = math.degrees(err_px / FX)
             yaw_rate = math.degrees(yaw_pid.compute(cx - CENTER[0] + W / 2, t))
@@ -125,12 +127,28 @@ def main():
             state = "COAST" if t - lost_since < COAST_S else "HOVER"
             cx = cy = None
         # Khi mất phát hiện trong thời gian giữ khoá, bộ chọn vẫn giữ ID; OC-SORT vẫn có hộp dự đoán.
+        # Trạng thái Kalman có cả vận tốc diện tích và tỷ lệ khung, nên nếu vẽ thẳng hộp dự đoán
+        # thì lúc mất phát hiện lâu hộp phình to rồi co lại liên tục — người xem tưởng lỗi nhận
+        # diện. Hộp dự đoán chỉ để nói "người đang ở quanh đâu", nên giữ nguyên kích thước của
+        # lần quan sát cuối và chỉ cho tâm hộp chạy theo dự đoán. Không ảnh hưởng số liệu: mọi
+        # dòng nhật ký đều lấy từ hộp đã khớp với phát hiện thật.
         pred_box = None
-        if target is None and selector.locked_id is not None:
+        if target is None and state == "COAST" and selector.locked_id is not None and last_size:
             trk = tracker.get_track_by_id(selector.locked_id)
             if trk is not None:
-                pred_box = [float(v) for v in trk.get_box()]
-        trail = trail[-45:] if state != "HOVER" else []
+                bx = [float(v) for v in trk.get_box()]
+                pcx, pcy = (bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2
+                bw, bh = last_size
+                if -bw <= pcx <= W + bw and -bh <= pcy <= H + bh:
+                    pred_box = [pcx - bw / 2, pcy - bh / 2, pcx + bw / 2, pcy + bh / 2]
+        # Vệt quỹ đạo: mất phát hiện thì rút ngắn dần cho tắt hẳn sau ~0,7 s, thay vì đứng
+        # nguyên một vệt vàng cũ trên màn hình suốt lúc không có ai.
+        if state == "HOVER":
+            trail = []
+        elif target is None:
+            trail = trail[2:]
+        else:
+            trail = trail[-45:]
         stats["frames"] += 1
         stats[state.lower()] += 1
         log.writerow([f"{t:.3f}", len(dets), target["id"] if target else "", state,
@@ -163,7 +181,8 @@ def main():
         d.rounded_rectangle((12, 12, 372, 170), 8, fill=(0, 0, 0, 150))
         d.text((24, 20), f"TRẠNG THÁI: {state}", font=f_big, fill=tuple(int(c) for c in color[::-1]))
         lock_txt = (f"Mục tiêu khoá: ID {target['id']}" if target else
-                    (f"Mục tiêu khoá: ID {selector.locked_id} (dự đoán)" if selector.locked_id is not None else "Mục tiêu khoá: —"))
+                    (f"Mục tiêu khoá: ID {selector.locked_id} (dự đoán)" if selector.locked_id is not None
+                     else ("Mục tiêu khoá: — (đang tìm lại)" if state == "COAST" else "Mục tiêu khoá: —")))
         d.text((24, 52), lock_txt, font=f_mid, fill="white")
         d.text((24, 78), f"Số người phát hiện: {len(dets)}", font=f_mid, fill="white")
         d.text((24, 104), "Sai số hướng: " + ("—" if yaw_err is None else f"{yaw_err:+.1f}°"), font=f_mid, fill="white")
