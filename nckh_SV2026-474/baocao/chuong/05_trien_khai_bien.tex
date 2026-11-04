@@ -66,7 +66,7 @@ Tệp dùng 64 ảnh hiệu chuẩn cho F1 cao nhất và recall 0,837, tức b�
 
 \subsection{Tổn thất INT8 phụ thuộc kích thước đối tượng}
 
-Để đo đúng tổn thất do lượng tử hoá, dự đoán FP32 (trên GPU) và INT8 (trên NPU) của cùng một mô hình được xuất ra cùng một định dạng và chấm bằng cùng một hàm, trên cả hai miền dữ liệu (Bảng~\ref{tab:int8}, Hình~\ref{fig:int8}).
+Để đo đúng tổn thất do lượng tử hoá, dự đoán FP32 (trên GPU) và INT8 (trên NPU) của cùng một mô hình được xuất ra cùng một định dạng và chấm bằng cùng một hàm, trên cả hai miền dữ liệu (Bảng~\ref{tab:int8}).
 
 \begin{table}[H]
 \centering
@@ -87,13 +87,6 @@ AR@100 & 0,3041 & 0,2869 & $-$5,7\% & 0,5489 & 0,5337 & $-$2,8\%\\
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{int8.pdf}
-\caption{Độ chính xác FP32 và INT8 trên hai miền dữ liệu. Trên người rất nhỏ, INT8 làm hộp kém khít (AP@0,75 giảm 25\%); trên người ở độ cao bay thực tế, hai bản gần như trùng nhau}
-\label{fig:int8}
-\end{figure}
-
 Trên VisDrone-val, AP@0,5 chỉ giảm 6,5\% còn AP@0,75 giảm 25,2\%: lượng tử hoá không làm mất đối tượng mà làm hộp kém khít. Điều này phù hợp với phân tích ở Chương~\ref{chap:lythuyet}: điểm tin cậy chịu được lượng tử hoá, còn toạ độ hộp mất độ phân giải, và với người chỉ vài điểm ảnh, sai lệch nhỏ đó đủ làm IoU tụt dưới 0,75. Trên dữ liệu bay thật, người chiếm hàng nghìn điểm ảnh nên cùng sai lệch gần như không đáng kể: hai bản khác nhau không quá 0,035 ở mọi chỉ số, nằm trong sai số lấy mẫu của 92 khung. Phát biểu chính xác là: \textbf{INT8 tốn khoảng 6,5\% AP@0,5 với người rất nhỏ và gần như không tốn gì với người ở độ cao bay 3--6\,m}. Kết quả này cũng điều chỉnh một kết luận bi quan trước đó của nhóm, khi lượng tử hoá sau huấn luyện đơn giản trên ONNX từng làm AP sụp từ 0,18 xuống 0,009; hiệu chuẩn theo từng lớp của DFC tốt hơn nhiều.
 
 \textbf{Chỉ tiêu độ chính xác của đề tài.} Mô hình đang chạy trên máy bay đạt AP@0,5 = 0,917 trên dữ liệu bay thật, vượt chỉ tiêu 70\% trong thuyết minh. Con số này là của đúng mô hình INT8 trên NPU chứ không phải của một checkpoint trên máy tính huấn luyện. Lưu ý không so sánh trực tiếp con số 0,917 với 0,7613 ở Bảng~\ref{tab:baythat}: hai con số thuộc hai checkpoint khác nhau và được tính bằng hai đường giải mã khác nhau; Bảng~\ref{tab:baythat} dùng để so sánh \textit{dữ liệu và cách xử lý rung}, còn Bảng~\ref{tab:int8} dùng để đánh giá \textit{hệ thống triển khai}.
@@ -104,7 +97,7 @@ Ngưỡng tin cậy quyết định trực tiếp hành vi trên máy bay: quá 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.5\textwidth]{nguong_conf.pdf}
+\includegraphics[width=0.45\textwidth]{nguong_conf.pdf}
 \caption{F1 của mô hình triển khai theo ngưỡng tin cậy trên 92 khung bay thật}
 \label{fig:nguong}
 \end{figure}
@@ -155,33 +148,19 @@ YOLO26-n & 2,38 & 5,2 & 6 & 37,46 & 24,79\\
 \end{tabular}
 \end{table}
 
-SteadyDet-N \textbf{nhanh hơn 1,70 lần} với 49\% số tham số và 88\% chi phí tính toán (Bảng~\ref{tab:yolo26hailo}, Hình~\ref{fig:hailo}). Mức chênh lệch tốc độ lớn hơn nhiều so với mức chênh lệch GFLOPs; cơ chế nằm ở số context: SteadyDet-N vừa 4 context còn YOLO26-n cần 6, và mỗi lần chuyển context NPU phải nạp lại trọng số qua PCIe. Trên loại chip này, giảm kích thước mô hình để giảm số context quan trọng không kém giảm số phép tính. Hai tệp HEF trong phép so sánh này được hiệu chuẩn bằng ảnh kiểm định, nên chỉ dùng để so tốc độ, không dùng để lấy độ chính xác. Số tham số và GFLOPs của YOLO26-n ở đây được tính trên đồ thị đã xuất để biên dịch, nên khác một chút so với Bảng~\ref{tab:sosanh}.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{hailo.pdf}
-\caption{Trái: tốc độ SteadyDet-N và YOLO26-n trên cùng Hailo-8L. Phải: độ trễ phần cứng tăng theo batch size dù thông lượng tăng}
-\label{fig:hailo}
-\end{figure}
+SteadyDet-N \textbf{nhanh hơn 1,70 lần} với 49\% số tham số và 88\% chi phí tính toán (Bảng~\ref{tab:yolo26hailo}). Mức chênh lệch tốc độ lớn hơn nhiều so với mức chênh lệch GFLOPs; cơ chế nằm ở số context: SteadyDet-N vừa 4 context còn YOLO26-n cần 6, và mỗi lần chuyển context NPU phải nạp lại trọng số qua PCIe. Trên loại chip này, giảm kích thước mô hình để giảm số context quan trọng không kém giảm số phép tính. Hai tệp HEF trong phép so sánh này được hiệu chuẩn bằng ảnh kiểm định, nên chỉ dùng để so tốc độ, không dùng để lấy độ chính xác. Số tham số và GFLOPs của YOLO26-n ở đây được tính trên đồ thị đã xuất để biên dịch, nên khác một chút so với Bảng~\ref{tab:sosanh}.
 
 \section{Độ trễ đầu-cuối với camera thật}
 \label{sec:e2e}
 
 \subsection{Hai lỗi phía camera làm hệ thống kẹt ở 15 khung hình/giây}
 
-Lần đo đầu tiên với camera thật chỉ đạt 15,4 khung hình/giây, trong khi NPU mới dùng khoảng 17,8\,ms trong ngân sách 33,3\,ms. Đo tách riêng từng chặng cho thấy nút cổ chai không nằm ở mô hình mà ở camera, do hai lỗi độc lập nhân với nhau (Hình~\ref{fig:camera}):
+Lần đo đầu tiên với camera thật chỉ đạt 15,4 khung hình/giây, trong khi NPU mới dùng khoảng 17,8\,ms trong ngân sách 33,3\,ms. Đo tách riêng từng chặng cho thấy nút cổ chai không nằm ở mô hình mà ở camera, do hai lỗi độc lập nhân với nhau:
 \begin{enumerate}
 \item \textbf{Bộ đệm camera bằng 1.} Tham số \texttt{CAP\_PROP\_BUFFERSIZE = 1} vốn được đặt để luôn lấy khung mới nhất, nhưng khi ứng dụng đang giữ bộ đệm duy nhất, trình điều khiển không có chỗ ghi khung kế tiếp nên bỏ luôn khung đó: 30 khung/giây thành đúng 15,0. Tăng lên 2 cho 30,0 khung/giây, còn độ cũ của khung đo được chỉ trung vị 15,7\,ms, bằng nửa chu kỳ khung như lý thuyết.
 \item \textbf{Tự phơi sáng tự hạ tốc độ khung.} Khi thiếu sáng, firmware của camera kéo dài thời gian phơi sáng quá 1/30\,s và tự giảm tốc độ khung (đo được 24,9 khung/giây ở thời gian phơi sáng 1/25\,s). Cờ UVC dùng để cấm hành vi này bị firmware bỏ qua. Đề tài giải quyết bằng cách khoá phơi sáng thủ công và tự viết bộ điều chỉnh độ sáng bằng phần mềm (SoftAE) có trần thời gian phơi sáng cứng: đo độ sáng trung bình mỗi khung rồi điều chỉnh thời gian phơi sáng và độ khuếch đại. Kết quả: độ sáng bám giá trị đặt, tốc độ khung giữ 30,1.
 \end{enumerate}
 Sau khi sửa cả hai, tốc độ tăng từ 11,1 lên 30,0 khung hình/giây mà không thay đổi dòng nào của mô hình. Tần số lưới điện của camera cũng được đặt về 50\,Hz theo điện lưới Việt Nam để tránh sọc nhấp nháy dưới đèn huỳnh quang.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{camera_fps.pdf}
-\caption{Tốc độ khung thực tế của chuỗi xử lý với bốn cấu hình camera}
-\label{fig:camera}
-\end{figure}
 
 \subsection{Phân tích độ trễ từng chặng}
 
@@ -209,7 +188,7 @@ Giải mã + NMS & 0,84 & 0,84 & 0,87 & 0,88 & 7,57\\
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{do_tre.pdf}
+\includegraphics[width=0.88\textwidth]{do_tre.pdf}
 \caption{Phân bổ độ trễ trung vị theo chặng so với ngân sách 33,3\,ms của vòng lặp 30\,Hz}
 \label{fig:dotre}
 \end{figure}

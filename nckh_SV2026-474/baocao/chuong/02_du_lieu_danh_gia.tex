@@ -125,25 +125,7 @@ Khi so sánh mô hình FP32 và INT8, cả hai được xuất dự đoán ra c�
 
 \section{Môi trường thực nghiệm}
 
-\begin{table}[H]
-\centering
-\caption{Môi trường phần cứng và phần mềm dùng trong đề tài}
-\label{tab:moitruong}
-\small
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
-\toprule
-\textbf{Hạng mục} & \textbf{Cấu hình}\\
-\midrule
-Máy huấn luyện & Máy tính xách tay GPU NVIDIA RTX 4060 Laptop 8\,GB, RAM 14\,GB, CUDA; PyTorch; Ultralytics 8.4 cho các mô hình đối chứng\\
-Máy tính trên UAV & Raspberry Pi~5 (Debian 12, nhân 6.12, aarch64), Python 3.11\\
-Bộ tăng tốc & Hailo-8L qua PCIe, HailoRT 4.20.0; biên dịch bằng Hailo Dataflow Compiler 3.34 trên máy x86\\
-Camera & Logitech C270 HD, USB, MJPG, tối đa $1280\times720$ ở 30 khung hình/giây\\
-Bộ điều khiển bay & Holybro Pixhawk~6C, ArduPilot Copter 4.7.0, kết nối USB, MAVLink v2\\
-Phần mềm hỗ trợ & Mission Planner (cấu hình tham số), pymavlink, OpenCV, NumPy, SciPy\\
-\bottomrule
-\end{tabularx}
-\end{table}
+Mô hình được huấn luyện trên máy tính xách tay có GPU NVIDIA RTX 4060 Laptop 8\,GB với PyTorch, dùng Ultralytics 8.4 cho các mô hình đối chứng. Việc lượng tử hoá và biên dịch cho NPU chạy trên máy x86 bằng Hailo Dataflow Compiler 3.34. Máy tính trên UAV là Raspberry Pi~5 (Debian 12, Python 3.11) với HailoRT 4.20.0, camera Logitech C270 và bộ điều khiển bay Holybro Pixhawk~6C chạy ArduPilot Copter 4.7.0; chi tiết từng thành phần và cách nối ở Bảng~\ref{tab:phancung} của Chương~\ref{chap:tichhop}.
 
 \section{Kết luận chương}
 

@@ -62,7 +62,7 @@ Kết quả này trái với kỳ vọng ban đầu của nhóm. Biến thể r�
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.94\textwidth]{duong_cong_rung.pdf}
+\includegraphics[width=0.82\textwidth]{duong_cong_rung.pdf}
 \caption{AP@[.50:.95] theo mức rung. Mô hình gốc (nét đứt) có AP sạch cao hơn nhưng giảm nhanh nhất; sau huấn luyện nhận biết rung (nét liền xanh), SteadyDet-N vượt YOLO11-n và RT-DETR-l từ mức rung 2. Thanh sai số: độ lệch chuẩn qua 3 hạt giống}
 \label{fig:duongcong}
 \end{figure}
@@ -131,21 +131,14 @@ SteadyDet-W có huấn luyện nhận biết rung dẫn đầu toàn bảng vớ
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.94\textwidth]{retain.pdf}
+\includegraphics[width=0.84\textwidth]{retain.pdf}
 \caption{Tỷ lệ giữ độ chính xác khi rung của mọi mô hình. Bốn thế hệ YOLO bản nano nằm sát nhau ở 19--20\% dù khác nhau về kiến trúc; hai mô hình của đề tài sau huấn luyện nhận biết rung đứng đầu}
 \label{fig:retain}
 \end{figure}
 
 \subsection{Độ bền không phải là sản phẩm phụ của độ chính xác}
 
-Hình~\ref{fig:danhdoi} biểu diễn AP sạch theo mCP. Các mô hình công khai tập trung ở góc phải dưới: độ chính xác sạch cao hơn nhưng không bền hơn; bốn thế hệ YOLO trải dài bốn năm và ba trường phái thiết kế nhưng retain chỉ cách nhau khoảng một điểm phần trăm. RT-DETR-l đạt 25,6\% nhờ số tham số gấp 28 lần. Hendrycks và Dietterich đã ghi nhận hiện tượng tương tự với mô hình phân loại ImageNet~\cite{hendrycks2019imagenetc}: độ bền tương đối gần như không cải thiện qua nhiều năm tiến bộ kiến trúc. Kết quả của đề tài cho thấy điều này cũng đúng với bộ phát hiện nhẹ trên ảnh UAV. Hệ quả thực tiễn là \textbf{độ bền phải được đo và tối ưu riêng}; các mũi tên trong hình cho thấy thay đổi phân phối huấn luyện mang lại mức tăng độ bền lớn với mức giảm độ chính xác sạch nhỏ.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.94\textwidth]{danh_doi.pdf}
-\caption{AP trên ảnh sạch và mCP khi rung, mỗi điểm là một mô hình. Mũi tên xanh: tác dụng của huấn luyện nhận biết rung trên hai mô hình của đề tài}
-\label{fig:danhdoi}
-\end{figure}
+Đặt AP sạch cạnh mCP của Bảng~\ref{tab:sosanh} thấy rõ: các mô hình công khai đều ở nhóm độ chính xác sạch cao hơn nhưng không bền hơn; bốn thế hệ YOLO trải dài bốn năm và ba trường phái thiết kế nhưng retain chỉ cách nhau khoảng một điểm phần trăm. RT-DETR-l đạt 25,6\% nhờ số tham số gấp 28 lần. Hendrycks và Dietterich đã ghi nhận hiện tượng tương tự với mô hình phân loại ImageNet~\cite{hendrycks2019imagenetc}: độ bền tương đối gần như không cải thiện qua nhiều năm tiến bộ kiến trúc. Kết quả của đề tài cho thấy điều này cũng đúng với bộ phát hiện nhẹ trên ảnh UAV. Hệ quả thực tiễn là \textbf{độ bền phải được đo và tối ưu riêng}: thay đổi phân phối huấn luyện mang lại mức tăng độ bền lớn với mức giảm độ chính xác sạch nhỏ.
 
 \section{Kiểm chứng trên dữ liệu bay thật}
 \label{sec:baythat}
@@ -172,13 +165,6 @@ Chỉ VisDrone & ràng buộc nhất quán & 0,0909 & 0,0283 & 0,0093 & 0,3772\\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.94\textwidth]{bay_that.pdf}
-\caption{Kết quả trên dữ liệu bay thật theo nhóm dữ liệu huấn luyện. Nhóm có COCO-person (trái) chính xác gấp nhiều lần nhóm chỉ VisDrone (phải); trong nhóm có COCO, cả hai cách xử lý rung làm AP@0,75 tăng gần gấp đôi}
-\label{fig:baythat}
-\end{figure}
 
 \subsection{Cả hai cách xử lý rung đều có tác dụng trên rung thật}
 

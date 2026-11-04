@@ -81,37 +81,4 @@ python3 tests/test_safety_no_mode_change.py   # 11 phep kiem tra
 
 \section{Trích đoạn mã nguồn tiêu biểu}
 
-\textbf{Toán tử rung} (\texttt{vib\_consistency.py}):
-\begin{lstlisting}[language=Python]
-_PRESETS = {1: (5, 0.02, 0.10), 2: (9, 0.04, 0.20), 3: (15, 0.06, 0.30)}
-
-def corrupt_batch(imgs, severity=None, angle=None):
-    if severity is None:
-        severity = random.choice([1, 2, 3])
-    L, ns, br = _PRESETS.get(int(severity), _PRESETS[2])
-    ang = random.uniform(0, 180) if angle is None else angle
-    k = motion_blur_kernel(L, ang, imgs.device, imgs.dtype)   # (L, L)
-    w = k.view(1, 1, *k.shape).repeat(imgs.shape[1], 1, 1, 1)
-    out = F.conv2d(imgs, w, padding=k.shape[0] // 2, groups=imgs.shape[1])
-    out = out + torch.randn_like(out) * ns                     # nhieu cam bien
-    out = out * (1.0 + random.uniform(-br, br))                # dao dong sang
-    return out
-\end{lstlisting}
-
-\textbf{Thang mất mục tiêu không đổi chế độ bay} (\texttt{follow\_drone/follow/safety.py}):
-\begin{lstlisting}[language=Python]
-def update_target_status(self, target_present):
-    now = time.time()
-    if target_present:
-        self.target_lost_since = None
-        self.current_state = SafetyState.FOLLOW
-        return SafetyState.FOLLOW
-    if self.target_lost_since is None:
-        self.target_lost_since = now
-        return SafetyState.COAST
-    elapsed = now - self.target_lost_since
-    # Nguoi lai so huu che do bay: KHONG goi set_mode o bat cu dau.
-    new_state = SafetyState.COAST if elapsed < self.t_coast_end else SafetyState.HOVER
-    self.current_state = new_state
-    return new_state
-\end{lstlisting}
+Toàn bộ mã nguồn, bao gồm phần huấn luyện, phần lượng tử hoá và chương trình bám người, được công khai tại kho lưu trữ nêu ở đầu phụ lục này. Ba tệp phản ánh rõ nhất các đóng góp của đề tài là \texttt{utils/vibration.py} (toán tử rung của giao thức VisDrone-Shake), \texttt{models/pfdet\_nano\_v17.py} (kiến trúc SteadyDet-N) và \texttt{follow\_drone/follow/safety.py} (lớp an toàn và thang mất mục tiêu).

@@ -117,13 +117,6 @@ Với người rất nhỏ ($A \ll 32^2$), $\omega \approx 1$ và NWD chiếm ư
 
 \textbf{Nhánh triển khai.} Mô hình được huấn luyện 400 epoch với batch size 12; dữ liệu COCO-person được trộn với tỷ lệ 25\% từ epoch 100 tới epoch 360. Khi cần triển khai lên NPU, mô hình này được tinh chỉnh thêm 20 epoch với learning rate $10^{-3}$ ở cấu hình không có khối self-attention (Chương~\ref{chap:trienkhai}).
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{huan_luyen.pdf}
-\caption{Hàm mất mát huấn luyện (trái, thang log) và AP@0,5 trên tập kiểm định ảnh sạch (phải) của SteadyDet-N nhánh chuẩn: 300 epoch huấn luyện gốc (xám) và 120 epoch tinh chỉnh nhận biết rung (xanh). Hàm mất mát tăng vọt khi bắt đầu tinh chỉnh vì một nửa số lô là ảnh đã bị làm rung}
-\label{fig:huanluyen}
-\end{figure}
-
 \section{Huấn luyện nhận biết rung}
 \label{sec:huanluyenrung}
 
