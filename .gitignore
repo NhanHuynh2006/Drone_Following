@@ -108,3 +108,10 @@ Phụ lục_HD_QT_PKHCN_NCKHSV.docx
 
 # Bản slide có nhúng video (64MB) — dựng lại bằng slides/make_pptx_nghiemthu.py
 nckh_SV2026-474/slides/SteadyDet-N_nghiem_thu.pptx
+
+# Thẻ mở đầu/giữa/kết của video — make_video.py sinh lại mỗi lần dựng
+nckh_SV2026-474/video/_intro.png
+nckh_SV2026-474/video/_mid.png
+nckh_SV2026-474/video/_outro.png
+# File khoá của LibreOffice khi đang mở tài liệu
+.~lock.*#
