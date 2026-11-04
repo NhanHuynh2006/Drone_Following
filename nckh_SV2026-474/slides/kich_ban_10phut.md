@@ -41,6 +41,10 @@ Cắt theo thứ tự này, cắt tới đâu đủ giờ thì dừng:
 
 - Mở **Presenter View** để thấy ghi chú và đồng hồ.
 - Thử phát video ở slide 13 **trên đúng máy chiếu** trước khi bắt đầu.
+  Video nằm **bên trong** `SteadyDet-N_nghiem_thu.pptx` (64 MB) — mở đúng file này,
+  không phải bản `_nhe` hay bản PDF. Cách phát: bấm **F5** vào chế độ trình chiếu rồi
+  bấm vào khung video, hoặc ở chế độ soạn thảo bấm vào video rồi nhấn nút Play.
+  Ở chế độ soạn thảo video trông y như một tấm ảnh — đó là bình thường.
 - Dự phòng: `SteadyDet-N_nghiem_thu.pdf` mở được mà không cần PowerPoint
   (video thành ảnh tĩnh — khi đó dùng slide 12 để nói thay).
 

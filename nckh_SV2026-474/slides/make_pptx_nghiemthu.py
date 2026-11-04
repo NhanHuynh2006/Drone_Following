@@ -237,9 +237,23 @@ def chuan_bi_anh(tmp):
            r"\definecolor{cam}{HTML}{EB6834}\definecolor{nhat}{HTML}{EEF4FC}"
            r"\begin{document}\input{%s}\end{document}")
     for ten in ("sodo_hethong", "sodo_kientruc", "sodo_huanluyen_rung"):
+        nguon = os.path.join(HINH, ten + ".tex")
+        if ten == "sodo_huanluyen_rung":
+            # Chỉ giữ phần (a) — phương pháp đề xuất. Phần (b) là đối chứng, trên
+            # slide bị thu nhỏ thì mũi tên "dừng gradient" cắt chéo qua chữ; nội
+            # dung phần (b) đã nói bằng một gạch đầu dòng bên phải.
+            goc = open(nguon, encoding="utf-8").read()
+            dau = goc.index(r"\begin{scope}[yshift=-3.75cm]")
+            cuoi = goc.index(r"\end{scope}") + len(r"\end{scope}")
+            goc = goc[:dau] + goc[cuoi:]
+            goc = goc.replace("(a) Huấn luyện nhận biết rung (phương pháp đề xuất)",
+                              "Huấn luyện nhận biết rung — phương pháp đề xuất")
+            nguon = os.path.join(tmp, ten + "_a.tex")
+            with open(nguon, "w", encoding="utf-8") as f:
+                f.write(goc)
         tex = os.path.join(tmp, "w_" + ten + ".tex")
         with open(tex, "w", encoding="utf-8") as f:
-            f.write(bia % os.path.join(HINH, ten + ".tex"))
+            f.write(bia % nguon)
         subprocess.run(["pdflatex", "-interaction=nonstopmode", tex],
                        cwd=tmp, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["pdftoppm", "-r", "220", "-png", "-singlefile",
@@ -310,8 +324,8 @@ def dung_slide(prs, P, tt):
          size=16.5, bullet="▸", truoc=14)
     dong(tf, "Các bộ đánh giá chuẩn **chỉ đo trên ảnh sạch** → không ai thấy lỗ hổng này.",
          size=16.5, bullet="▸", truoc=14)
-    hop(s, Inches(7.1), TRAN + Inches(3.95), Inches(5.7), Inches(0.95), fill=NHAT, line=VIEN)
-    t = txt(s, Inches(7.35), TRAN + Inches(4.12), Inches(5.2), Inches(0.7), size=15.5,
+    hop(s, Inches(7.1), TRAN + Inches(3.85), Inches(5.7), Inches(1.15), fill=NHAT, line=VIEN)
+    t = txt(s, Inches(7.35), TRAN + Inches(4.05), Inches(5.2), Inches(0.9), size=15.5,
             bold=True, color=DAM, space=1.1)
     t.paragraphs[0].runs[0].text = "→ Cần một bộ phát hiện chịu được rung, đủ nhẹ để chạy ngay trên máy bay."
 
@@ -342,20 +356,20 @@ def dung_slide(prs, P, tt):
     chu_thich_duoi(s, pic, "Hai miền dữ liệu: VisDrone (bay cao) và dữ liệu bay thật ở ~6 m")
     tf = txt(s, Inches(7.35), TRAN + Inches(0.2), Inches(5.45), Inches(4.5), size=16, space=1.15)
     dong(tf, "**VisDrone-person** — huấn luyện và so sánh chuẩn; người rất nhỏ.",
-         size=16, bullet="▸", truoc=0)
+         size=15.5, bullet="▸", truoc=0)
     dong(tf, "**COCO-person** — bổ sung người cự ly gần, đúng miền triển khai.",
-         size=16, bullet="▸", truoc=12)
+         size=15.5, bullet="▸", truoc=12)
     dong(tf, "**92 khung bay thật** gán nhãn tay — chỉ dùng để đánh giá.",
-         size=16, bullet="▸", truoc=12)
-    dong(tf, "**VisDrone-Shake**: 3 mức rung mô phỏng theo mô hình vật lý; nhoè không "
-             "làm dịch vật nên nhãn giữ nguyên.", size=16, bullet="▸", truoc=12)
-    hop(s, Inches(7.35), TRAN + Inches(3.5), Inches(5.45), Inches(1.35), fill=NHAT, line=VIEN)
-    t = txt(s, Inches(7.6), TRAN + Inches(3.68), Inches(4.95), Inches(1.1), size=14.5,
-            color=DAM, space=1.15)
+         size=15.5, bullet="▸", truoc=12)
+    dong(tf, "**VisDrone-Shake**: 3 mức rung mô phỏng; nhoè không làm dịch vật nên "
+             "nhãn giữ nguyên.", size=15.5, bullet="▸", truoc=12)
+    hop(s, Inches(7.35), TRAN + Inches(3.60), Inches(5.45), Inches(1.80), fill=NHAT, line=VIEN)
+    t = txt(s, Inches(7.62), TRAN + Inches(3.80), Inches(4.9), Inches(1.45), size=14,
+            color=DAM, space=1.2)
     dong(t, "Kỷ luật đo: cố định seed, lặp 3 lần, báo cáo độ lệch chuẩn, dùng chung "
-            "một chương trình đo.", size=14.5, bold=True, truoc=0)
+            "một chương trình đo.", size=14, bold=True, truoc=0)
     dong(t, "Không cố định seed → cùng một mô hình ra 17,0 / 17,1 / 17,6%.",
-         size=13.5, color=MO, truoc=4)
+         size=13, color=MO, truoc=6)
 
     # ------------------------------------------------------- 5. SteadyDet-N
     s = trang_moi(prs, "Mô hình đề xuất: SteadyDet-N", so=5, ghi_chu=(
@@ -380,15 +394,17 @@ def dung_slide(prs, P, tt):
         "khi chạy không thay đổi gì nên không tốn thêm một phép tính nào lúc suy luận. "
         "Nhóm cũng thử biến thể ràng buộc nhất quán, phức tạp hơn và tốn 1,8 lần thời gian "
         "huấn luyện nhưng kết quả kém hơn."))
-    anh(s, P("sodo_huanluyen_rung"), LE, TRAN + Inches(0.3), Inches(7.4), Inches(4.1))
-    tf = txt(s, Inches(8.3), TRAN + Inches(0.45), Inches(4.5), Inches(4.3), size=16.5, space=1.2)
+    pic = anh(s, P("sodo_huanluyen_rung"), LE, TRAN + Inches(0.25), W - 2 * LE, Inches(2.5))
+    chu_thich_duoi(s, pic, "Một nửa số ảnh mỗi lô đi qua toán tử rung; phần còn lại giữ nguyên")
+    tf = txt(s, LE, TRAN + Inches(3.35), Inches(6.0), Inches(2.4), size=16.5, space=1.2)
     dong(tf, "Thay **50% mỗi lô** bằng ảnh rung mô phỏng.", size=16.5, bullet="▸", truoc=0)
-    dong(tf, "**Nhãn giữ nguyên** — nhoè không làm dịch vật.", size=16.5, bullet="▸", truoc=14)
-    dong(tf, "Hàm mất mát **không đổi**, kiến trúc **không đổi**.", size=16.5, bullet="▸", truoc=14)
-    dong(tf, "**Không tốn chi phí khi suy luận** — chỉ thay dữ liệu huấn luyện.",
-         size=16.5, bullet="▸", truoc=14)
-    dong(tf, "Biến thể ràng buộc nhất quán: tốn **1,8×** thời gian, kết quả kém hơn.",
-         size=16.5, bullet="▸", truoc=14)
+    dong(tf, "**Nhãn giữ nguyên** — nhoè không làm dịch vật.", size=16.5, bullet="▸", truoc=16)
+    dong(tf, "Hàm mất mát **không đổi**, kiến trúc **không đổi**.", size=16.5, bullet="▸", truoc=16)
+    tf2 = txt(s, Inches(7.0), TRAN + Inches(3.35), Inches(5.8), Inches(2.4), size=16.5, space=1.2)
+    dong(tf2, "**Không tốn chi phí khi suy luận** — chỉ thay dữ liệu huấn luyện.",
+         size=16.5, bullet="▸", truoc=0)
+    dong(tf2, "Biến thể ràng buộc nhất quán (đối chứng): tốn **1,8×** thời gian huấn "
+              "luyện, kết quả **kém hơn**.", size=16.5, bullet="▸", truoc=16)
 
     # ======================================================= PHẦN KẾT QUẢ ===
     # ------------------------------- 7. kết quả chính trên VisDrone-person
@@ -547,6 +563,17 @@ def dung_slide(prs, P, tt):
     if os.path.exists(phim) and not NHE:
         s.shapes.add_movie(phim, khung_x, khung_y, khung_w, khung_h,
                            poster_frame_image=poster, mime_type="video/mp4")
+        # Nhắc người trình bày: trong PowerPoint phải ở chế độ trình chiếu (F5)
+        # hoặc bấm nút Play dưới khung thì video mới chạy.
+        nhan = hop(s, khung_x + khung_w - Inches(2.35), khung_y + Inches(0.12),
+                   Inches(2.2), Inches(0.42), fill=CAM, line=None)
+        tfn = nhan.text_frame
+        tfn.vertical_anchor = MSO_ANCHOR.MIDDLE
+        pn = tfn.paragraphs[0]
+        pn.alignment = PP_ALIGN.CENTER
+        rn = pn.add_run()
+        rn.text = "▶  Bấm để phát"
+        rn.font.size, rn.font.bold, rn.font.color.rgb, rn.font.name = Pt(13), True, TRANG, FONT
     else:
         pic = anh(s, poster, khung_x, khung_y, khung_w, khung_h)
         pic.click_action.hyperlink.address = "../video/video_bay_thu.mp4"
@@ -583,14 +610,14 @@ def dung_slide(prs, P, tt):
          size=15.5, bullet="3.", truoc=10)
     dong(tf, "Toàn bộ quy trình **tái lập được**: cố định seed, một chương trình đo.",
          size=15.5, bullet="4.", truoc=10)
-    hop(s, Inches(8.3), TRAN + Inches(2.75), Inches(4.5), Inches(2.3), fill=NHAT, line=VIEN)
-    tf = txt(s, Inches(8.55), TRAN + Inches(2.95), Inches(4.0), Inches(2.0), size=15, space=1.2)
+    hop(s, Inches(8.3), TRAN + Inches(2.70), Inches(4.5), Inches(2.55), fill=NHAT, line=VIEN)
+    tf = txt(s, Inches(8.55), TRAN + Inches(2.88), Inches(4.0), Inches(2.2), size=14.5, space=1.2)
     dong(tf, "Hướng phát triển", size=16, bold=True, color=DAM, truoc=0)
     dong(tf, "Mở rộng tập bay thật: nhiều độ cao, nhiều người, nhiều cảnh.",
-         size=14.5, bullet="▸", truoc=8)
+         size=14, bullet="▸", truoc=8)
     dong(tf, "Hiệu chuẩn mức rung bằng dữ liệu IMU thật từ nhật ký bay.",
-         size=14.5, bullet="▸", truoc=8)
-    dong(tf, "Bám nhiều mục tiêu và tránh vật cản.", size=14.5, bullet="▸", truoc=8)
+         size=14, bullet="▸", truoc=8)
+    dong(tf, "Bám nhiều mục tiêu và tránh vật cản.", size=14, bullet="▸", truoc=8)
 
     # ------------------------------------------------------- 15. cảm ơn
     s = prs.slides.add_slide(prs.slide_layouts[6])
