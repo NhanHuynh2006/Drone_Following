@@ -57,12 +57,10 @@ Khi in nhớ chọn **"Actual size" / "Kích thước thực" / tỷ lệ 100%**
 hay "Shrink oversized pages"; chọn đúng khổ giấy A3 và hướng giấy ngang.
 Gửi thẳng tệp PDF cho tiệm in (không chụp màn hình, không gửi qua ứng dụng nén ảnh).
 
-## In lại các trang đã đổi thuật ngữ
+## In lại cuốn báo cáo
 
-Sau khi đổi thuật ngữ chuyên ngành sang tiếng Anh (backbone, neck, head, seed, benchmark…),
-53 trong 111 trang của báo cáo có thay đổi:
+Báo cáo đã được rút gọn (thân bài 71 trang còn 63, cả cuốn 111 trang còn 103) nên
+cách đánh số trang thay đổi toàn bộ — **phải in lại cả cuốn**, không còn danh sách
+trang in lại riêng như bản trước. Bản 111 trang cũ giữ tại
+`baocao/main_111trang_banluu.pdf` để đối chiếu khi cần.
 
-- `baocao/trang_in_lai.pdf` — chỉ gồm đúng 53 trang đó, xếp theo thứ tự, khổ A4.
-- `baocao/DANH_SACH_TRANG_IN_LAI.txt` — bảng đối chiếu *trang PDF* ↔ *số trang in ở chân trang*.
-
-Cuốn báo cáo in một mặt nên chỉ cần rút tờ cũ ra và thay tờ mới vào đúng vị trí.
