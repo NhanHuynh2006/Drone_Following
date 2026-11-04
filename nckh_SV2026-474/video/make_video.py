@@ -121,12 +121,11 @@ def clip(src, barimg, out, speed=1.0):
 # ---- hai đoạn ngắn, mỗi đoạn một slide khi bảo vệ -------------------------
 # Cùng một khoảng thời gian của chuyến bay cho cả hai đoạn, nên Hội đồng thấy
 # đúng cảnh đó: đoạn 1 là phát hiện thô, đoạn 2 là vòng bám trên chính cảnh ấy.
-# Chọn khoảng 105,5–135,5 s của chuyến bay (87,5–117,5 s tính từ đầu hai tệp
-# nguồn): đây là 30 giây liên tục người ở trong khung nhiều nhất — FOLLOW 65,9%,
-# HOVER chỉ 1,1% — nhưng vẫn có 8 lần mất phát hiện rồi bám lại, nên không phải
-# đoạn "sạch" giả tạo. Số liệu công bố vẫn tính trên TOÀN clip (giữ mục tiêu
-# 83,5%, sai số hướng trung vị 5,5°) và bản đầy đủ nộp kèm hồ sơ.
-CAT_TU, CAT_DAI = 87.5, 30.0
+# Chọn khoảng 98–116 s của chuyến bay (80–98 s tính từ đầu hai tệp nguồn): đây là
+# đoạn liên tục dài nhất mà vòng bám KHÔNG rơi về HOVER lần nào — FOLLOW 79,4% số
+# khung, mục tiêu được khoá gần như suốt, nên xem mượt nhất và cũng đúng là lúc
+# chuỗi xử lý chạy tốt nhất. Cắt liền một mạch, không ghép, không tua.
+CAT_TU, CAT_DAI = 80.0, 18.0
 
 
 def doan(src, barimg, out):

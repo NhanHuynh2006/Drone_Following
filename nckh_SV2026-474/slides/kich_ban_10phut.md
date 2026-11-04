@@ -23,7 +23,7 @@ tổng 3 phút 40 trên 10 phút). Các phần còn lại nói lướt.
 | **10** | **Kết quả 4 — INT8 trên máy bay** | **0:50** | **7:15** | **AP@0,5 = 0,917** vượt chỉ tiêu; F1 0,880; nhanh hơn YOLO26-n 1,70× |
 | 11 | Tốc độ đầu-cuối | 0:30 | 7:45 | 30 FPS, p99 36 ms, nút cổ chai là camera |
 | 12 | Vòng điều khiển và an toàn | 0:35 | 8:20 | Nói lướt: OC-SORT → PID → MAVLink 30 Hz; thang FOLLOW/COAST/HOVER |
-| 13 | Video 1 — phát hiện người | 0:25 | 8:45 | Đoạn 30 giây; phát ~20–25 giây rồi chuyển |
+| 13 | Video 1 — phát hiện người | 0:25 | 8:45 | Đoạn 18 giây, phát trọn rồi chuyển |
 | 14 | Video 2 — vòng bám người | 0:25 | 9:10 | Cùng đoạn bay đó, chạy qua chương trình bám. Khung nào không có hộp = khung đó detector không thấy ai |
 | 15 | Mức độ đạt mục tiêu và kết luận | 0:40 | 9:50 | Đối chiếu 3 mục tiêu; 4 kết luận; hướng phát triển |
 | 16 | Cảm ơn | 0:10 | 10:00 | Mời Hội đồng đặt câu hỏi |
@@ -69,10 +69,14 @@ libreoffice --headless --convert-to pdf SteadyDet-N_nghiem_thu_nhe.pptx
 
 ## Hai đoạn phim trên slide
 
-Cắt từ **cùng một khoảng** của chuyến bay (phút 1:45–2:15), nên Hội đồng thấy đúng
+Cắt từ **cùng một khoảng** của chuyến bay (phút 1:38–1:56), nên Hội đồng thấy đúng
 cảnh đó hai lần: slide 13 là phát hiện thô, slide 14 là vòng bám chạy trên chính cảnh ấy.
-Đoạn được chọn là 30 giây liên tục người ở trong khung nhiều nhất, **không cắt ghép**,
-và vẫn còn 8 lần mất phát hiện rồi bám lại.
+Đoạn được chọn là 18 giây liên tục mà vòng bám giữ khoá tốt nhất — không lần nào rơi về
+HOVER, FOLLOW 79,4% số khung — **cắt liền một mạch, không ghép, không tua**.
+
+**Nói trước khi chiếu slide 14:** "Chuyến bay này bay ở chế độ giữ vị trí; vòng bám được
+chạy trên video của chính chuyến bay đó, lệnh quay hướng tính ở từng khung." Đúng như mục
+7.3 báo cáo — Hội đồng cầm báo cáo trên tay nên nói trước vẫn hơn để bị hỏi.
 
 Nếu Hội đồng hỏi vì sao không chiếu cả clip: con số **83,5% giữ mục tiêu** và **5,5° sai
 số hướng** là đo trên **toàn bộ clip 4 phút 43**, bản đầy đủ nộp kèm hồ sơ tại

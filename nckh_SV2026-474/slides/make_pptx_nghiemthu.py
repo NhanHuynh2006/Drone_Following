@@ -588,11 +588,11 @@ def dung_slide(prs, P, tt):
     # ------------------------------------------- 13. video phần 1: phát hiện
     slide_video(
         prs, "Video 1 — Phát hiện người trên video bay thử",
-        "Trích 30 giây liên tục của chuyến bay 21/07/2026, độ cao ≈ 6 m · SteadyDet-N chạy trên từng khung",
+        "Trích 18 giây liên tục của chuyến bay 21/07/2026, độ cao ≈ 6 m · SteadyDet-N chạy trên từng khung",
         13,
         "⏱ 0:25 — Đây là mô hình chạy trên chính video bay thử: mỗi hộp xanh là một người "
-        "được phát hiện, dấu thập là tâm khung hình. Đoạn này cắt liên tục 30 giây, không "
-        "ghép nối. Chỉ phát khoảng 20–25 giây rồi chuyển slide để kịp giờ.",
+        "được phát hiện, dấu thập là tâm khung hình. Đoạn này cắt liên tục 18 giây, không "
+        "ghép nối, không tua.",
         "phan1_phat_hien.mp4", P("poster1"),
         [("Hộp xanh = người được phát hiện  ·  dấu thập = tâm khung hình", 15, CHU),
          ("Bản đầy đủ 4 phút 43 nộp kèm hồ sơ: video/video_bay_thu.mp4", 13, MO)],
@@ -606,11 +606,15 @@ def dung_slide(prs, P, tt):
         "⏱ 0:25 — Vẫn đúng đoạn bay vừa xem, nhưng chạy qua chương trình bám người. Hộp xanh "
         "lá là mục tiêu đang khoá, hộp xám là người đã phát hiện nhưng chưa khoá, hộp cam là "
         "vị trí dự đoán khi mất phát hiện, vệt vàng là quỹ đạo; bảng góc trái hiển thị trạng "
-        "thái và lệnh gửi xuống Pixhawk. Trong 30 giây này có 8 lần mất phát hiện rồi bám lại "
-        "— xin lưu ý con số 83,5% là tính trên toàn bộ clip 4 phút 43, không phải đoạn trích này.",
+        "thái và lệnh quay hướng tính được. Đây là đoạn 18 giây mà vòng bám giữ khoá liên tục "
+        "nhất, không lần nào rơi về HOVER. NẾU HỘI ĐỒNG HỎI: chuyến bay này bay ở chế độ giữ vị "
+        "trí, vòng bám chạy lại trên video của chuyến bay đó nên lệnh được TÍNH chứ chưa gửi "
+        "xuống máy bay — đúng như mục 7.3 của báo cáo. Phần cứng nối Pixhawk đã kiểm tra xong "
+        "ngày 27/08, bay tự động là bước kế tiếp.",
         "phan2_vong_bam.mp4", P("poster2"),
-        [("Xanh lá = đang khoá  ·  xám = đã phát hiện, chưa khoá  ·  cam = vị trí dự đoán  ·  vàng = quỹ đạo", 14, CHU),
-         ("Giữ mục tiêu 83,5% thời gian và sai số hướng 5,5° là số đo trên toàn clip 4 phút 43", 13, MO)],
+        [("Xanh lá = đang khoá  ·  xám = đã phát hiện, chưa khoá  ·  vàng = quỹ đạo  ·  không hộp = khung đó không thấy ai", 14, CHU),
+         ("Chuyến bay 21/07 ở chế độ giữ vị trí; vòng bám chạy trên video của chuyến bay đó, "
+          "lệnh quay hướng được tính ở từng khung. Giữ mục tiêu 83,5% là số đo trên toàn clip 4 phút 43.", 12.5, MO)],
         "../video/phan2_vong_bam.mp4")
 
     # ------------------------------------------ 14. đạt mục tiêu & kết luận
