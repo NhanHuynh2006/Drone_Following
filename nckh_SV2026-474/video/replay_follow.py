@@ -132,10 +132,14 @@ def main():
         # diện. Hộp dự đoán chỉ để nói "người đang ở quanh đâu", nên giữ nguyên kích thước của
         # lần quan sát cuối và chỉ cho tâm hộp chạy theo dự đoán. Không ảnh hưởng số liệu: mọi
         # dòng nhật ký đều lấy từ hộp đã khớp với phát hiện thật.
+        # Chỉ vẽ hộp dự đoán trong 0,8 s đầu sau khi mất phát hiện: xa hơn nữa thì dự đoán
+        # Kalman trôi khỏi người thật, để lại một ô cam lạc lõng giữa nền. Trạng thái COAST
+        # vẫn hiện ở bảng góc trái nên người xem không mất thông tin.
+        PRED_MAX_FRAMES = 24
         pred_box = None
         if target is None and state == "COAST" and selector.locked_id is not None and last_size:
             trk = tracker.get_track_by_id(selector.locked_id)
-            if trk is not None:
+            if trk is not None and trk.time_since_update <= PRED_MAX_FRAMES:
                 bx = [float(v) for v in trk.get_box()]
                 pcx, pcy = (bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2
                 bw, bh = last_size

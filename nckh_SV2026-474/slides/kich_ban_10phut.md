@@ -1,6 +1,6 @@
 # Kịch bản thuyết trình 10 phút — bảo vệ nghiệm thu SV2026-474
 
-Dùng cho bộ slide **`SteadyDet-N_nghiem_thu.pptx`** (15 slide, PowerPoint 16:9).
+Dùng cho bộ slide **`SteadyDet-N_nghiem_thu.pptx`** (16 slide, PowerPoint 16:9).
 Mỗi slide đã có sẵn lời dẫn trong ô **ghi chú của người trình bày** (Notes) —
 bật chế độ Presenter View là đọc được trong lúc nói.
 
@@ -23,27 +23,28 @@ tổng 3 phút 40 trên 10 phút). Các phần còn lại nói lướt.
 | **10** | **Kết quả 4 — INT8 trên máy bay** | **0:50** | **7:15** | **AP@0,5 = 0,917** vượt chỉ tiêu; F1 0,880; nhanh hơn YOLO26-n 1,70× |
 | 11 | Tốc độ đầu-cuối | 0:30 | 7:45 | 30 FPS, p99 36 ms, nút cổ chai là camera |
 | 12 | Vòng điều khiển và an toàn | 0:35 | 8:20 | Nói lướt: OC-SORT → PID → MAVLink 30 Hz; thang FOLLOW/COAST/HOVER |
-| 13 | Video bay thử | 0:50 | 9:10 | Phát **45–60 giây** phần vòng bám rồi dừng |
-| 14 | Mức độ đạt mục tiêu và kết luận | 0:40 | 9:50 | Đối chiếu 3 mục tiêu; 4 kết luận; hướng phát triển |
-| 15 | Cảm ơn | 0:10 | 10:00 | Mời Hội đồng đặt câu hỏi |
+| 13 | Video 1 — phát hiện người | 0:25 | 8:45 | Đoạn 30 giây; phát ~20–25 giây rồi chuyển |
+| 14 | Video 2 — vòng bám người | 0:25 | 9:10 | Cùng đoạn bay đó, chạy qua chương trình bám |
+| 15 | Mức độ đạt mục tiêu và kết luận | 0:40 | 9:50 | Đối chiếu 3 mục tiêu; 4 kết luận; hướng phát triển |
+| 16 | Cảm ơn | 0:10 | 10:00 | Mời Hội đồng đặt câu hỏi |
 
 ## Nếu bị trễ giờ
 
 Cắt theo thứ tự này, cắt tới đâu đủ giờ thì dừng:
 
 1. **Slide 11** (tốc độ) — bỏ hẳn, gộp một câu vào slide 10: *"chạy đầy đủ trên máy bay được 30 FPS"*.
-2. **Slide 13** (video) — rút còn 25 giây, chỉ phát đoạn khoá mục tiêu.
+2. **Slide 13** (video phát hiện) — bỏ hẳn, nói một câu rồi sang slide 14, vì slide 14 đã cho thấy cả phát hiện lẫn bám.
 3. **Slide 4** (dữ liệu) — chỉ nói một câu: *"hai miền dữ liệu, 92 khung bay thật chỉ dùng để đánh giá"*.
 
-**Không cắt slide 7–10.** Đó là phần Hội đồng chấm.
+**Không cắt slide 7–10 và slide 14.** Đó là phần Hội đồng chấm.
 
 ## Chuẩn bị trước khi lên
 
 - Mở **Presenter View** để thấy ghi chú và đồng hồ.
-- Thử phát video ở slide 13 **trên đúng máy chiếu** trước khi bắt đầu.
-  Video nằm **bên trong** `SteadyDet-N_nghiem_thu.pptx` (64 MB) — mở đúng file này,
-  không phải bản `_nhe` hay bản PDF. Cách phát: bấm **F5** vào chế độ trình chiếu rồi
-  bấm vào khung video, hoặc ở chế độ soạn thảo bấm vào video rồi nhấn nút Play.
+- Thử phát video ở slide 13 và 14 **trên đúng máy chiếu** trước khi bắt đầu.
+  Hai đoạn phim nằm **bên trong** `SteadyDet-N_nghiem_thu.pptx` (17 MB) — mở đúng file
+  này, không phải bản `_nhe` hay bản PDF. Cách phát: bấm **F5** vào chế độ trình chiếu
+  rồi bấm vào khung video, hoặc ở chế độ soạn thảo bấm vào video rồi nhấn nút Play.
   Ở chế độ soạn thảo video trông y như một tấm ảnh — đó là bình thường.
 - Dự phòng: `SteadyDet-N_nghiem_thu.pdf` mở được mà không cần PowerPoint
   (video thành ảnh tĩnh — khi đó dùng slide 12 để nói thay).
@@ -52,8 +53,8 @@ Cắt theo thứ tự này, cắt tới đâu đủ giờ thì dừng:
 
 | Tệp | Dung lượng | Khi nào dùng |
 |---|---|---|
-| `SteadyDet-N_nghiem_thu.pptx` | ~64 MB | **Bản trình bày chính.** Video nhúng sẵn, copy một file duy nhất qua USB là chạy được. |
-| `SteadyDet-N_nghiem_thu_nhe.pptx` | ~2 MB | Gửi mail cho Hội đồng/GVHD. Slide 13 là ảnh có liên kết tới `../video/video_bay_thu.mp4` nên chỉ bấm được khi giữ nguyên cây thư mục. |
+| `SteadyDet-N_nghiem_thu.pptx` | ~17 MB | **Bản trình bày chính.** Hai đoạn phim 30 giây nhúng sẵn, copy một file duy nhất qua USB là chạy được. |
+| `SteadyDet-N_nghiem_thu_nhe.pptx` | ~3 MB | Gửi mail cho Hội đồng/GVHD. Slide 13 và 14 là ảnh có liên kết tới `../video/phan1_phat_hien.mp4` và `../video/phan2_vong_bam.mp4` nên chỉ bấm được khi giữ nguyên cây thư mục. |
 | `SteadyDet-N_nghiem_thu.pdf` | ~1 MB | Bản dự phòng khi máy chiếu không có PowerPoint. |
 
 Dựng lại cả ba:
@@ -63,7 +64,19 @@ cd nckh_SV2026-474/slides
 PYTHONPATH=<thư mục có python-pptx> ../../hailo_env/bin/python make_pptx_nghiemthu.py
 PYTHONPATH=<thư mục có python-pptx> ../../hailo_env/bin/python make_pptx_nghiemthu.py --nhe
 libreoffice --headless --convert-to pdf SteadyDet-N_nghiem_thu_nhe.pptx
+# hai đoạn phim: cd ../video && python3 make_video.py
 ```
+
+## Hai đoạn phim trên slide
+
+Cắt từ **cùng một khoảng** của chuyến bay (phút 1:45–2:15), nên Hội đồng thấy đúng
+cảnh đó hai lần: slide 13 là phát hiện thô, slide 14 là vòng bám chạy trên chính cảnh ấy.
+Đoạn được chọn là 30 giây liên tục người ở trong khung nhiều nhất, **không cắt ghép**,
+và vẫn còn 8 lần mất phát hiện rồi bám lại.
+
+Nếu Hội đồng hỏi vì sao không chiếu cả clip: con số **83,5% giữ mục tiêu** và **5,5° sai
+số hướng** là đo trên **toàn bộ clip 4 phút 43**, bản đầy đủ nộp kèm hồ sơ tại
+`video/video_bay_thu.mp4`. Đoạn trích chỉ để minh hoạ, không dùng để tính số liệu.
 
 ## Câu hỏi Hội đồng hay hỏi
 

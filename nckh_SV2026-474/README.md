@@ -11,6 +11,7 @@
 | Slide bảo vệ nghiệm thu (10 phút) | `slides/SteadyDet-N_nghiem_thu.pptx` (PowerPoint, video nhúng sẵn) + `slides/kich_ban_10phut.md`; bản nhẹ để gửi mail `slides/SteadyDet-N_nghiem_thu_nhe.pptx`, bản dự phòng `slides/SteadyDet-N_nghiem_thu.pdf` | — |
 | Slide bản dài 12–15 phút (LaTeX) | `slides/slides.pdf` + `slides/kich_ban_thuyet_trinh.md` | — |
 | Video bay thử | `video/video_bay_thu.mp4` (4 phút 43 giây): phần 1 phát hiện người, phần 2 vòng bám người | dựng từ chuyến bay 21/07/2026 |
+| Hai đoạn phim trình chiếu | `video/phan1_phat_hien.mp4` và `video/phan2_vong_bam.mp4` — mỗi đoạn 30 giây, cắt liên tục từ cùng khoảng phút 1:45–2:15 của chuyến bay, nhúng sẵn trong slide 13 và 14 | — |
 
 ## Biên dịch lại
 

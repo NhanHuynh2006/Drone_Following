@@ -222,6 +222,13 @@ def bang(slide, x, y, w, h, du_lieu, rong_cot=None, co_chu=12.5, cao_dau=Inches(
 # ===================================================== chuẩn bị ảnh =========
 def chuan_bi_anh(tmp):
     """Render hình .pdf và sơ đồ TikZ .tex sang .png trong thư mục tạm."""
+    for ten, clip, giay in (("poster1", "phan1_phat_hien.mp4", 3.0),
+                            ("poster2", "phan2_vong_bam.mp4", 1.5)):
+        duong = os.path.join(VIDEO, clip)
+        if os.path.exists(duong):
+            subprocess.run(["ffmpeg", "-y", "-ss", str(giay), "-i", duong, "-frames:v", "1",
+                            os.path.join(tmp, ten + ".png")],
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for ten in ("duong_cong_rung", "bay_that", "int8", "do_tre"):
         subprocess.run(["pdftoppm", "-r", "220", "-png", "-singlefile",
                         os.path.join(HINH, ten + ".pdf"), os.path.join(tmp, ten)],
@@ -271,6 +278,35 @@ def doc_thongtin():
 
 
 # ========================================================== các slide =======
+def slide_video(prs, tieu_de, phu, so, ghi_chu, ten_phim, poster, chu_duoi, lien_ket):
+    """Một slide = một đoạn video. Bản chính nhúng thẳng phim, bản --nhe dùng ảnh có liên kết."""
+    s = trang_moi(prs, tieu_de, phu=phu, so=so, ghi_chu=ghi_chu)
+    kx, ky, kw, kh = Inches(2.45), TRAN + Inches(0.15), Inches(8.45), Inches(4.3)
+    phim = os.path.join(VIDEO, ten_phim)
+    if os.path.exists(phim) and not NHE:
+        s.shapes.add_movie(phim, kx, ky, kw, kh, poster_frame_image=poster,
+                           mime_type="video/mp4")
+        # Trong PowerPoint phải ở chế độ trình chiếu (F5) hoặc bấm nút Play thì mới chạy;
+        # ở chế độ soạn thảo video trông y như một tấm ảnh.
+        nhan = hop(s, kx + kw - Inches(2.35), ky + Inches(0.12), Inches(2.2), Inches(0.42),
+                   fill=CAM, line=None)
+        tfn = nhan.text_frame
+        tfn.vertical_anchor = MSO_ANCHOR.MIDDLE
+        pn = tfn.paragraphs[0]
+        pn.alignment = PP_ALIGN.CENTER
+        rn = pn.add_run()
+        rn.text = "▶  Bấm để phát"
+        rn.font.size, rn.font.bold, rn.font.color.rgb, rn.font.name = Pt(13), True, TRANG, FONT
+    else:
+        pic = anh(s, poster, kx, ky, kw, kh)
+        pic.click_action.hyperlink.address = lien_ket
+    tf = txt(s, LE, DAY - Inches(0.95), W - 2 * LE, Inches(1.0), size=15,
+             align=PP_ALIGN.CENTER, space=1.2)
+    for i, (text, co, mau) in enumerate(chu_duoi):
+        dong(tf, text, size=co, color=mau, truoc=0 if i == 0 else 6, align=PP_ALIGN.CENTER)
+    return s
+
+
 def dung_slide(prs, P, tt):
     # ---------------------------------------------------------------- 1. bìa
     s = prs.slides.add_slide(prs.slide_layouts[6])
@@ -549,44 +585,36 @@ def dung_slide(prs, P, tt):
     dong(tf, "Giữ mục tiêu **83,5%** thời gian, sai số hướng trung vị **5,5°**.",
          size=15.5, bullet="▸", truoc=16)
 
-    # -------------------------------------------------- 13. video bay thử
-    s = trang_moi(prs, "Video bay thử", phu="Bấm vào ảnh để phát — ưu tiên đoạn vòng bám người",
-                  so=13, ghi_chu=(
-        "⏱ 0:50 — Em xin phát một đoạn video bay thử. Hộp xanh lá là mục tiêu đang được khoá, "
-        "vệt vàng là quỹ đạo, bảng góc trái hiển thị trạng thái và lệnh gửi xuống Pixhawk. "
-        "LƯU Ý KHI TRÌNH BÀY: video dài 4 phút 43, chỉ phát khoảng 45–60 giây phần vòng bám "
-        "rồi dừng để kịp giờ. Nếu máy chiếu không phát được, chuyển sang slide 12 đã có ảnh chụp "
-        "các khung hình của chính đoạn video này."))
-    khung_x, khung_y, khung_w, khung_h = Inches(2.45), TRAN + Inches(0.15), Inches(8.45), Inches(4.3)
-    poster = os.path.join(HINH, "vongbam_3.jpg")
-    phim = os.path.join(VIDEO, "video_bay_thu.mp4")
-    if os.path.exists(phim) and not NHE:
-        s.shapes.add_movie(phim, khung_x, khung_y, khung_w, khung_h,
-                           poster_frame_image=poster, mime_type="video/mp4")
-        # Nhắc người trình bày: trong PowerPoint phải ở chế độ trình chiếu (F5)
-        # hoặc bấm nút Play dưới khung thì video mới chạy.
-        nhan = hop(s, khung_x + khung_w - Inches(2.35), khung_y + Inches(0.12),
-                   Inches(2.2), Inches(0.42), fill=CAM, line=None)
-        tfn = nhan.text_frame
-        tfn.vertical_anchor = MSO_ANCHOR.MIDDLE
-        pn = tfn.paragraphs[0]
-        pn.alignment = PP_ALIGN.CENTER
-        rn = pn.add_run()
-        rn.text = "▶  Bấm để phát"
-        rn.font.size, rn.font.bold, rn.font.color.rgb, rn.font.name = Pt(13), True, TRANG, FONT
-    else:
-        pic = anh(s, poster, khung_x, khung_y, khung_w, khung_h)
-        pic.click_action.hyperlink.address = "../video/video_bay_thu.mp4"
-    tf = txt(s, LE, DAY - Inches(0.95), W - 2 * LE, Inches(1.0), size=15,
-             align=PP_ALIGN.CENTER, space=1.2)
-    dong(tf, "Hộp xanh lá = mục tiêu đang khoá  ·  vệt vàng = quỹ đạo  ·  "
-             "bảng góc trái = trạng thái và lệnh gửi Pixhawk",
-         size=15, truoc=0, align=PP_ALIGN.CENTER)
-    dong(tf, "Phát ~45–60 giây phần vòng bám rồi dừng để kịp giờ.",
-         size=14, color=MO, truoc=6, align=PP_ALIGN.CENTER)
+    # ------------------------------------------- 13. video phần 1: phát hiện
+    slide_video(
+        prs, "Video 1 — Phát hiện người trên video bay thử",
+        "Trích 30 giây liên tục của chuyến bay 21/07/2026, độ cao ≈ 6 m · SteadyDet-N chạy trên từng khung",
+        13,
+        "⏱ 0:25 — Đây là mô hình chạy trên chính video bay thử: mỗi hộp xanh là một người "
+        "được phát hiện, dấu thập là tâm khung hình. Đoạn này cắt liên tục 30 giây, không "
+        "ghép nối. Chỉ phát khoảng 20–25 giây rồi chuyển slide để kịp giờ.",
+        "phan1_phat_hien.mp4", P("poster1"),
+        [("Hộp xanh = người được phát hiện  ·  dấu thập = tâm khung hình", 15, CHU),
+         ("Bản đầy đủ 4 phút 43 nộp kèm hồ sơ: video/video_bay_thu.mp4", 13, MO)],
+        "../video/phan1_phat_hien.mp4")
+
+    # --------------------------------------- 14. video phần 2: vòng bám người
+    slide_video(
+        prs, "Video 2 — Vòng bám người trên chính đoạn bay đó",
+        "Phát hiện → OC-SORT → khoá mục tiêu → lệnh quay hướng · trạng thái FOLLOW / COAST / HOVER",
+        14,
+        "⏱ 0:25 — Vẫn đúng đoạn bay vừa xem, nhưng chạy qua chương trình bám người. Hộp xanh "
+        "lá là mục tiêu đang khoá, hộp xám là người đã phát hiện nhưng chưa khoá, hộp cam là "
+        "vị trí dự đoán khi mất phát hiện, vệt vàng là quỹ đạo; bảng góc trái hiển thị trạng "
+        "thái và lệnh gửi xuống Pixhawk. Trong 30 giây này có 8 lần mất phát hiện rồi bám lại "
+        "— xin lưu ý con số 83,5% là tính trên toàn bộ clip 4 phút 43, không phải đoạn trích này.",
+        "phan2_vong_bam.mp4", P("poster2"),
+        [("Xanh lá = đang khoá  ·  xám = đã phát hiện, chưa khoá  ·  cam = vị trí dự đoán  ·  vàng = quỹ đạo", 14, CHU),
+         ("Giữ mục tiêu 83,5% thời gian và sai số hướng 5,5° là số đo trên toàn clip 4 phút 43", 13, MO)],
+        "../video/phan2_vong_bam.mp4")
 
     # ------------------------------------------ 14. đạt mục tiêu & kết luận
-    s = trang_moi(prs, "Mức độ đạt mục tiêu và kết luận", so=14, ghi_chu=(
+    s = trang_moi(prs, "Mức độ đạt mục tiêu và kết luận", so=15, ghi_chu=(
         "⏱ 0:40 — Đối chiếu với thuyết minh: mục tiêu độ chính xác đặt 70% thì đạt 91,7%, "
         "vượt chỉ tiêu. Mục tiêu thuật toán bám và mục tiêu tích hợp đều đạt, đã bay thử thực tế. "
         "Bốn kết luận: rung là lỗ hổng thật và đo được; phương pháp đề xuất không tốn chi phí "

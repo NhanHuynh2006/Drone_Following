@@ -1,4 +1,9 @@
-"""Dựng video bay thử của hồ sơ:
+"""Dựng video của hồ sơ và hai đoạn ngắn để trình chiếu:
+
+  phan1_phat_hien.mp4 / phan2_vong_bam.mp4 — mỗi đoạn 40 giây, dùng cho hai slide
+  riêng khi bảo vệ (xem CAT_TU, CAT_DAI bên dưới).
+
+  video_bay_thu.mp4 — bản đầy đủ nộp kèm hồ sơ:
   thẻ mở đầu -> đoạn video bay thử (demo_flight) -> đoạn chạy vòng bám người trên chính chuyến bay đó
   (_replay.mp4 do replay_follow.py sinh ra) -> thẻ kết quả.
 Chạy: /usr/bin/python3 replay_follow.py (với GRACE=1.5 REACQ=1.0 CONF=0.30 IMG=512) rồi /usr/bin/python3 make_video.py
@@ -78,7 +83,6 @@ card(os.path.join(HERE, "_mid.png"), [
     ("VÒNG BÁM NGƯỜI TRÊN VIDEO BAY THỬ", font(F_B, 44), 90, "white"),
     ("Phát hiện người (SteadyDet-N) → theo vết OC-SORT → khoá mục tiêu", font(F_R, 30), 50, "white"),
     ("→ sai số hướng → lệnh điều khiển → trạng thái FOLLOW / COAST / HOVER", font(F_R, 30), 90, "white"),
-    ("Chương trình follow_drone xử lý từng khung của chuyến bay 21/07/2026 (≈ 6 m)", font(F_R, 26), 40, (255, 200, 120)),
 ])
 card(os.path.join(HERE, "_outro.png"), [
     ("KẾT QUẢ CHÍNH", font(F_B, 38), 70, (255, 200, 120)),
@@ -113,6 +117,28 @@ def clip(src, barimg, out, speed=1.0):
     run(["ffmpeg", "-y", "-i", src, "-i", barimg, *sil, "-filter_complex", vf,
          "-map", "[o]", "-map", "2:a", *enc, "-c:a", "aac", "-shortest", out])
 
+
+# ---- hai đoạn ngắn, mỗi đoạn một slide khi bảo vệ -------------------------
+# Cùng một khoảng thời gian của chuyến bay cho cả hai đoạn, nên Hội đồng thấy
+# đúng cảnh đó: đoạn 1 là phát hiện thô, đoạn 2 là vòng bám trên chính cảnh ấy.
+# Chọn khoảng 105,5–135,5 s của chuyến bay (87,5–117,5 s tính từ đầu hai tệp
+# nguồn): đây là 30 giây liên tục người ở trong khung nhiều nhất — FOLLOW 65,9%,
+# HOVER chỉ 1,1% — nhưng vẫn có 8 lần mất phát hiện rồi bám lại, nên không phải
+# đoạn "sạch" giả tạo. Số liệu công bố vẫn tính trên TOÀN clip (giữ mục tiêu
+# 83,5%, sai số hướng trung vị 5,5°) và bản đầy đủ nộp kèm hồ sơ.
+CAT_TU, CAT_DAI = 87.5, 30.0
+
+
+def doan(src, barimg, out):
+    vf = (f"[0:v]scale={W}:-2:flags=lanczos,pad={W}:{H}:(ow-iw)/2:0:black[v];"
+          f"[v][1:v]overlay=0:{H}-66,fade=t=in:st=0:d=0.4,"
+          f"fade=t=out:st={CAT_DAI - 0.5}:d=0.5[o]")
+    run(["ffmpeg", "-y", "-ss", str(CAT_TU), "-t", str(CAT_DAI), "-i", src, "-i", barimg, *sil,
+         "-filter_complex", vf, "-map", "[o]", "-map", "2:a", *enc, "-c:a", "aac", "-shortest", out])
+
+
+doan(DEMO, os.path.join(HERE, "_bar1.png"), os.path.join(HERE, "phan1_phat_hien.mp4"))
+doan(REPLAY, os.path.join(HERE, "_bar2.png"), os.path.join(HERE, "phan2_vong_bam.mp4"))
 
 parts = [os.path.join(HERE, p) for p in ("_p1.mp4", "_p2.mp4", "_p3.mp4", "_p4.mp4", "_p5.mp4")]
 still(os.path.join(HERE, "_intro.png"), 6, parts[0])
