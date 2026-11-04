@@ -1,0 +1,640 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+make_pptx_nghiemthu.py — dựng bộ slide PowerPoint bảo vệ nghiệm thu (10 phút).
+
+Vì sao có file này: Hội đồng nghiệm thu dùng PowerPoint, còn slides.tex chỉ ra PDF.
+Bộ này rút từ 22 slide (12–15 phút) xuống 15 slide vừa đúng 10 phút, dồn thời
+lượng vào phần kết quả mô hình và kết quả nhận diện (slide 7–10, ~3 phút 35).
+
+Chạy:
+    PYTHONPATH=<thư mục có python-pptx> hailo_env/bin/python make_pptx_nghiemthu.py
+
+Ảnh: các hình .pdf trong ../hinh và sơ đồ TikZ sodo_*.tex được render sang PNG
+trước vào thư mục tạm (xem hàm chuan_bi_anh), nên không cần sửa gì trong ../hinh.
+"""
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from pptx import Presentation
+from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.util import Emu, Inches, Pt
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+GOC = os.path.dirname(HERE)                     # nckh_SV2026-474/
+HINH = os.path.join(GOC, "hinh")
+VIDEO = os.path.join(GOC, "video")
+OUT = os.path.join(HERE, "SteadyDet-N_nghiem_thu.pptx")
+OUT_NHE = os.path.join(HERE, "SteadyDet-N_nghiem_thu_nhe.pptx")
+# --nhe: không nhúng video (file ~3 MB, tiện gửi mail) — slide 13 thành ảnh có
+# liên kết tới ../video/video_bay_thu.mp4, phải giữ nguyên cây thư mục mới bấm được.
+NHE = "--nhe" in sys.argv
+
+# ---- bảng màu, lấy đúng từ slides.tex để đồng bộ với báo cáo ----------------
+DAM = RGBColor(0x0B, 0x3C, 0x78)      # xanh navy — thanh tiêu đề
+XANH = RGBColor(0x2A, 0x78, 0xD6)     # xanh nhấn
+CAM = RGBColor(0xEB, 0x68, 0x34)      # cam — số liệu quan trọng
+NHAT = RGBColor(0xEE, 0xF4, 0xFC)     # nền khối nhạt
+CHU = RGBColor(0x1A, 0x1A, 0x1A)
+MO = RGBColor(0x5A, 0x64, 0x72)
+TRANG = RGBColor(0xFF, 0xFF, 0xFF)
+VIEN = RGBColor(0xC8, 0xD4, 0xE4)
+
+FONT = "Arial"
+W, H = Inches(13.333), Inches(7.5)
+LE = Inches(0.55)                      # lề trái/phải
+TRAN = Inches(1.30)                    # mép trên vùng nội dung
+DAY = Inches(6.95)                     # mép dưới vùng nội dung
+
+
+# ============================================================ tiện ích vẽ ===
+def txt(slide, x, y, w, h, size=16, bold=False, color=CHU, align=PP_ALIGN.LEFT,
+        anchor=MSO_ANCHOR.TOP, space=1.0):
+    """Hộp chữ trống, trả về text_frame để đổ nội dung."""
+    tb = slide.shapes.add_textbox(x, y, w, h)
+    tf = tb.text_frame
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+    tf.vertical_anchor = anchor
+    p = tf.paragraphs[0]
+    p.alignment = align
+    p.line_spacing = space
+    r = p.add_run()
+    r.font.size, r.font.bold, r.font.color.rgb, r.font.name = Pt(size), bold, color, FONT
+    return tf
+
+
+def dong(tf, text, size=16, bold=False, color=CHU, bullet=None, space=1.0,
+        truoc=6, align=PP_ALIGN.LEFT):
+    """Thêm một dòng. `bullet` là ký tự đầu dòng (None = không có)."""
+    p = tf.paragraphs[0] if (len(tf.paragraphs) == 1 and not tf.paragraphs[0].runs) \
+        else tf.add_paragraph()
+    p.alignment = align
+    p.line_spacing = space
+    p.space_before = Pt(truoc)
+    if bullet:
+        r = p.add_run()
+        r.text = bullet + "  "
+        r.font.size, r.font.bold, r.font.name = Pt(size), True, FONT
+        r.font.color.rgb = XANH
+    # **đậm** và **|cam|** cho phép nhấn giữa dòng
+    for phan in re.split(r"(\*\*.+?\*\*)", text):
+        if not phan:
+            continue
+        nhan = phan.startswith("**")
+        noi_dung = phan.strip("*") if nhan else phan
+        mau = CAM if nhan else color
+        r = p.add_run()
+        r.text = noi_dung
+        r.font.size = Pt(size)
+        r.font.bold = bold or nhan
+        r.font.color.rgb = mau
+        r.font.name = FONT
+    return p
+
+
+def hop(slide, x, y, w, h, fill=NHAT, line=None, radius=True):
+    sp = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE if radius else MSO_SHAPE.RECTANGLE, x, y, w, h)
+    sp.fill.solid()
+    sp.fill.fore_color.rgb = fill
+    if line is None:
+        sp.line.fill.background()
+    else:
+        sp.line.color.rgb = line
+        sp.line.width = Pt(0.75)
+    sp.shadow.inherit = False
+    if radius:
+        sp.adjustments[0] = 0.06
+    sp.text_frame.word_wrap = True
+    return sp
+
+
+def anh(slide, path, x, y, w, h, giua=True):
+    """Chèn ảnh vừa khít khung (x,y,w,h), giữ nguyên tỷ lệ, canh giữa khung."""
+    from PIL import Image
+    iw, ih = Image.open(path).size
+    ti_le = min(w / iw, h / ih)
+    nw, nh = int(iw * ti_le), int(ih * ti_le)
+    px = x + (w - nw) // 2 if giua else x
+    py = y + (h - nh) // 2 if giua else y
+    return slide.shapes.add_picture(path, px, py, nw, nh)
+
+
+def chu_thich(slide, x, y, w, text, size=11):
+    tf = txt(slide, x, y, w, Inches(0.3), size=size, color=MO, align=PP_ALIGN.CENTER)
+    tf.paragraphs[0].runs[0].text = text
+
+
+def chu_thich_duoi(slide, pic, text, size=11, cach=Inches(0.06)):
+    """Chú thích đặt ngay dưới mép dưới của ảnh, không đè vào chữ trong ảnh."""
+    y = pic.top + pic.height + cach
+    if y + Inches(0.3) > DAY + Inches(0.4):
+        y = DAY + Inches(0.1)
+    return chu_thich(slide, pic.left - Inches(0.4), y, pic.width + Inches(0.8), text, size)
+
+
+def trang_moi(prs, tieu_de, phu=None, so=None, ghi_chu=None):
+    """Slide trắng + thanh tiêu đề navy + số trang."""
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    thanh = hop(s, 0, 0, W, Inches(1.02), fill=DAM, radius=False)
+    tf = thanh.text_frame
+    tf.margin_left, tf.margin_top = Inches(0.55), Inches(0.14)
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.LEFT
+    r = p.add_run()
+    r.text = tieu_de
+    r.font.size, r.font.bold, r.font.color.rgb, r.font.name = Pt(27), True, TRANG, FONT
+    if phu:
+        p2 = tf.add_paragraph()
+        p2.alignment = PP_ALIGN.LEFT
+        r2 = p2.add_run()
+        r2.text = phu
+        r2.font.size, r2.font.color.rgb, r2.font.name = Pt(13), RGBColor(0xBF, 0xD6, 0xF2), FONT
+    if so is not None:
+        t = txt(s, W - Inches(1.1), H - Inches(0.42), Inches(0.6), Inches(0.3),
+                size=11, color=MO, align=PP_ALIGN.RIGHT)
+        t.paragraphs[0].runs[0].text = str(so)
+    if ghi_chu:
+        s.notes_slide.notes_text_frame.text = ghi_chu
+    return s
+
+
+def dai_so_lieu(slide, y, muc, cao=Inches(1.02)):
+    """Dải KPI ngang: [(số, nhãn), ...] — dùng cho các slide kết quả."""
+    n = len(muc)
+    khe = Inches(0.16)
+    rong = (W - 2 * LE - khe * (n - 1)) // n
+    for i, (so, nhan) in enumerate(muc):
+        x = LE + i * (rong + khe)
+        hop(slide, x, y, rong, cao, fill=NHAT, line=VIEN)
+        tf = txt(slide, x, y + Inches(0.12), rong, Inches(0.45), size=25, bold=True,
+                 color=CAM, align=PP_ALIGN.CENTER)
+        tf.paragraphs[0].runs[0].text = so
+        t2 = txt(slide, x + Inches(0.08), y + Inches(0.60), rong - Inches(0.16),
+                 Inches(0.36), size=11.5, color=MO, align=PP_ALIGN.CENTER, space=0.95)
+        t2.paragraphs[0].runs[0].text = nhan
+
+
+def bang(slide, x, y, w, h, du_lieu, rong_cot=None, co_chu=12.5, cao_dau=Inches(0.42)):
+    """Bảng gọn: hàng đầu là tiêu đề navy, các hàng sau kẻ nhạt."""
+    hang, cot = len(du_lieu), len(du_lieu[0])
+    g = slide.shapes.add_table(hang, cot, x, y, w, h).table
+    if rong_cot:
+        tong = sum(rong_cot)
+        for i, phan in enumerate(rong_cot):
+            g.columns[i].width = Emu(int(w * phan / tong))
+    g.rows[0].height = cao_dau
+    for i in range(1, hang):
+        g.rows[i].height = Emu(int((h - cao_dau) / (hang - 1)))
+    for i, hg in enumerate(du_lieu):
+        for j, o in enumerate(hg):
+            cell = g.cell(i, j)
+            cell.text = ""
+            cell.margin_left = cell.margin_right = Inches(0.08)
+            cell.margin_top = cell.margin_bottom = Inches(0.02)
+            cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = DAM if i == 0 else (
+                NHAT if o.startswith("@") else TRANG)
+            p = cell.text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.LEFT if j == 0 else PP_ALIGN.CENTER
+            for phan in re.split(r"(\*\*.+?\*\*)", o.lstrip("@")):
+                if not phan:
+                    continue
+                nhan = phan.startswith("**")
+                r = p.add_run()
+                r.text = phan.strip("*") if nhan else phan
+                r.font.size = Pt(co_chu)
+                r.font.name = FONT
+                r.font.bold = (i == 0) or nhan
+                r.font.color.rgb = TRANG if i == 0 else (CAM if nhan else CHU)
+    return g
+
+
+# ===================================================== chuẩn bị ảnh =========
+def chuan_bi_anh(tmp):
+    """Render hình .pdf và sơ đồ TikZ .tex sang .png trong thư mục tạm."""
+    for ten in ("duong_cong_rung", "bay_that", "int8", "do_tre"):
+        subprocess.run(["pdftoppm", "-r", "220", "-png", "-singlefile",
+                        os.path.join(HINH, ten + ".pdf"), os.path.join(tmp, ten)],
+                       check=True)
+    bia = (r"\documentclass[border=4pt]{standalone}"
+           r"\usepackage[T5]{fontenc}\usepackage[utf8]{inputenc}"
+           r"\usepackage[vietnamese]{babel}"
+           r"\usepackage{mathptmx}\usepackage{helvet}"
+           r"\renewcommand{\familydefault}{\sfdefault}"
+           r"\usepackage{amsmath,graphicx}\usepackage{tikz}"
+           r"\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,backgrounds}"
+           r"\definecolor{dam}{HTML}{0B3C78}\definecolor{xanh}{HTML}{2A78D6}"
+           r"\definecolor{cam}{HTML}{EB6834}\definecolor{nhat}{HTML}{EEF4FC}"
+           r"\begin{document}\input{%s}\end{document}")
+    for ten in ("sodo_hethong", "sodo_kientruc", "sodo_huanluyen_rung"):
+        tex = os.path.join(tmp, "w_" + ten + ".tex")
+        with open(tex, "w", encoding="utf-8") as f:
+            f.write(bia % os.path.join(HINH, ten + ".tex"))
+        subprocess.run(["pdflatex", "-interaction=nonstopmode", tex],
+                       cwd=tmp, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["pdftoppm", "-r", "220", "-png", "-singlefile",
+                        os.path.join(tmp, "w_" + ten + ".pdf"), os.path.join(tmp, ten)],
+                       check=True)
+    return lambda ten: os.path.join(tmp, ten + ".png")
+
+
+def doc_thongtin():
+    s = open(os.path.join(GOC, "thongtin.tex"), encoding="utf-8").read()
+    def lay(k):
+        m = re.search(r"\\newcommand\{\\" + k + r"\}\{(.*?)\}\s*$", s, re.M)
+        return m.group(1) if m else ""
+    return lay
+
+
+# ========================================================== các slide =======
+def dung_slide(prs, P, tt):
+    # ---------------------------------------------------------------- 1. bìa
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    hop(s, 0, 0, W, Inches(2.30), fill=DAM, radius=False)
+    logo = s.shapes.add_picture(os.path.join(HINH, "logo_hcmute.png"),
+                                LE, Inches(0.40), height=Inches(0.66))
+    t = txt(s, logo.left + logo.width + Inches(0.45), Inches(0.46),
+            W - logo.width - Inches(1.5), Inches(0.6), size=13.5,
+            color=RGBColor(0xBF, 0xD6, 0xF2), anchor=MSO_ANCHOR.MIDDLE)
+    t.paragraphs[0].runs[0].text = "KHOA " + tt("khoa").upper() + "  •  BỘ MÔN " + tt("bomon").upper()
+    t2 = txt(s, LE, Inches(1.35), W - 2 * LE, Inches(0.6), size=15, color=TRANG)
+    t2.paragraphs[0].runs[0].text = "BÁO CÁO NGHIỆM THU ĐỀ TÀI NCKH SINH VIÊN  —  MÃ SỐ " + tt("madetai")
+
+    t3 = txt(s, LE, Inches(2.75), W - 2 * LE, Inches(1.5), size=34, bold=True,
+             color=DAM, align=PP_ALIGN.CENTER, space=1.12)
+    t3.paragraphs[0].runs[0].text = tt("TENDETAI")
+    hop(s, Inches(4.6), Inches(4.35), Inches(4.1), Inches(0.06), fill=CAM, radius=False)
+
+    t4 = txt(s, Inches(3.0), Inches(4.75), Inches(7.3), Inches(1.6), size=16,
+             align=PP_ALIGN.CENTER, space=1.35)
+    dong(t4, "Chủ nhiệm đề tài:  " + tt("chunhiem"), size=16, bold=True, truoc=0,
+         align=PP_ALIGN.CENTER)
+    dong(t4, "Thành viên:  " + tt("thanhvien"), size=15, color=MO, align=PP_ALIGN.CENTER)
+    dong(t4, "Giảng viên hướng dẫn:  " + tt("gvhd"), size=15, color=MO,
+         align=PP_ALIGN.CENTER)
+    t5 = txt(s, LE, H - Inches(0.75), W - 2 * LE, Inches(0.35), size=13, color=MO,
+             align=PP_ALIGN.CENTER)
+    t5.paragraphs[0].runs[0].text = "TP. Hồ Chí Minh, " + tt("thangnam")
+    s.notes_slide.notes_text_frame.text = (
+        "⏱ 0:20 — Kính chào Hội đồng. Em là Huỳnh Lê Thành Nhân, chủ nhiệm đề tài "
+        "mã số SV2026-474. Hôm nay em xin báo cáo kết quả đề tài UAV tự động bám người "
+        "bằng trí tuệ nhân tạo, hướng dẫn bởi PGS.TS. Lê Mỹ Hà.")
+
+    # ------------------------------------------------- 2. vấn đề & khoảng trống
+    s = trang_moi(prs, "Vấn đề và khoảng trống nghiên cứu", so=2, ghi_chu=(
+        "⏱ 0:45 — UAV dùng nhiều trong giám sát, cứu hộ, quay phim; người lái vừa phải "
+        "lái vừa phải giữ người trong khung hình. Vấn đề cốt lõi: cánh quạt làm camera "
+        "rung liên tục, ảnh bị nhoè và nhiễu. Nhóm đo thử 5 bộ phát hiện nhỏ gọn phổ biến: "
+        "tất cả đều mất 74 đến 83 phần trăm độ chính xác khi rung — trong khi các bộ đánh "
+        "giá chuẩn chỉ đo trên ảnh sạch nên không ai thấy điều này."))
+    pic = anh(s, os.path.join(HINH, "rung_minh_hoa.png"), LE, TRAN + Inches(0.35),
+              Inches(6.3), Inches(4.1))
+    chu_thich_duoi(s, pic, "Ảnh sạch (trái) và ảnh khi khung bay rung ở ba mức (phải)")
+    tf = txt(s, Inches(7.1), TRAN + Inches(0.25), Inches(5.7), Inches(4.4), size=16.5, space=1.15)
+    dong(tf, "UAV ngày càng dùng nhiều trong giám sát, cứu hộ, quay phim — "
+             "nhưng người lái vừa lái vừa phải giữ đối tượng trong khung hình.",
+         size=16.5, bullet="▸", truoc=0)
+    dong(tf, "Cánh quạt làm camera **rung liên tục**: ảnh nhoè, nhiễu, dao động sáng.",
+         size=16.5, bullet="▸", truoc=14)
+    dong(tf, "Nhóm đo 5 bộ phát hiện nhỏ gọn: tất cả mất **74–83% độ chính xác** khi rung.",
+         size=16.5, bullet="▸", truoc=14)
+    dong(tf, "Các bộ đánh giá chuẩn **chỉ đo trên ảnh sạch** → không ai thấy lỗ hổng này.",
+         size=16.5, bullet="▸", truoc=14)
+    hop(s, Inches(7.1), TRAN + Inches(3.95), Inches(5.7), Inches(0.95), fill=NHAT, line=VIEN)
+    t = txt(s, Inches(7.35), TRAN + Inches(4.12), Inches(5.2), Inches(0.7), size=15.5,
+            bold=True, color=DAM, space=1.1)
+    t.paragraphs[0].runs[0].text = "→ Cần một bộ phát hiện chịu được rung, đủ nhẹ để chạy ngay trên máy bay."
+
+    # --------------------------------------------- 3. mục tiêu & hệ thống
+    s = trang_moi(prs, "Mục tiêu và tổng quan hệ thống", so=3, ghi_chu=(
+        "⏱ 0:40 — Ba mục tiêu theo thuyết minh, chỉ tiêu độ chính xác từ 70% trở lên. "
+        "Sơ đồ bên dưới đi theo mũi tên: camera, phát hiện người trên NPU, theo vết OC-SORT, "
+        "khoá mục tiêu, ước lượng khoảng cách, ba bộ PID, lớp an toàn, rồi gửi lệnh MAVLink "
+        "xuống Pixhawk. Tay điều khiển của người lái luôn được ưu tiên."))
+    dai_so_lieu(s, TRAN - Inches(0.08), [
+        ("≥ 70%", "Chỉ tiêu AP@0,5 nhận dạng người, thời gian thực"),
+        ("Bám tự động", "Giữ khoảng cách và hướng bay phù hợp"),
+        ("Trên máy bay", "Camera – xử lý ảnh – điều khiển, không cần Internet"),
+    ])
+    pic = anh(s, P("sodo_hethong"), LE, TRAN + Inches(1.10), W - 2 * LE, Inches(4.75))
+    chu_thich_duoi(s, pic,
+                   "Raspberry Pi 5 + NPU Hailo-8L + camera USB, nối Pixhawk 6C (ArduPilot) qua MAVLink 30 Hz")
+
+    # ------------------------------------------------ 4. dữ liệu & giao thức
+    s = trang_moi(prs, "Dữ liệu và giao thức đánh giá", so=4, ghi_chu=(
+        "⏱ 0:35 — Hai miền dữ liệu: VisDrone bay cao người rất nhỏ, và dữ liệu bay thật ở "
+        "6 mét người lớn hơn khoảng 64 lần diện tích. 92 khung bay thật chỉ dùng để đánh giá, "
+        "không dùng huấn luyện. Nhóm dựng bộ VisDrone-Shake ba mức rung; nhoè không làm dịch "
+        "vật nên nhãn giữ nguyên. Điểm quan trọng về phương pháp: cố định seed, lặp ba lần và "
+        "dùng đúng một chương trình đo — không cố định seed thì kết quả nhảy 17,0 / 17,1 / 17,6%."))
+    pic = anh(s, os.path.join(HINH, "mau_du_lieu.png"), LE, TRAN + Inches(0.25),
+              Inches(6.6), Inches(4.0))
+    chu_thich_duoi(s, pic, "Hai miền dữ liệu: VisDrone (bay cao) và dữ liệu bay thật ở ~6 m")
+    tf = txt(s, Inches(7.35), TRAN + Inches(0.2), Inches(5.45), Inches(4.5), size=16, space=1.15)
+    dong(tf, "**VisDrone-person** — huấn luyện và so sánh chuẩn; người rất nhỏ.",
+         size=16, bullet="▸", truoc=0)
+    dong(tf, "**COCO-person** — bổ sung người cự ly gần, đúng miền triển khai.",
+         size=16, bullet="▸", truoc=12)
+    dong(tf, "**92 khung bay thật** gán nhãn tay — chỉ dùng để đánh giá.",
+         size=16, bullet="▸", truoc=12)
+    dong(tf, "**VisDrone-Shake**: 3 mức rung mô phỏng theo mô hình vật lý; nhoè không "
+             "làm dịch vật nên nhãn giữ nguyên.", size=16, bullet="▸", truoc=12)
+    hop(s, Inches(7.35), TRAN + Inches(3.5), Inches(5.45), Inches(1.35), fill=NHAT, line=VIEN)
+    t = txt(s, Inches(7.6), TRAN + Inches(3.68), Inches(4.95), Inches(1.1), size=14.5,
+            color=DAM, space=1.15)
+    dong(t, "Kỷ luật đo: cố định seed, lặp 3 lần, báo cáo độ lệch chuẩn, dùng chung "
+            "một chương trình đo.", size=14.5, bold=True, truoc=0)
+    dong(t, "Không cố định seed → cùng một mô hình ra 17,0 / 17,1 / 17,6%.",
+         size=13.5, color=MO, truoc=4)
+
+    # ------------------------------------------------------- 5. SteadyDet-N
+    s = trang_moi(prs, "Mô hình đề xuất: SteadyDet-N", so=5, ghi_chu=(
+        "⏱ 0:40 — SteadyDet-N chỉ 1,17 triệu tham số và 4,6 GFLOPs. Điểm thiết kế chính: "
+        "giữ lại nhánh độ phân giải cao P2 cho người nhỏ, nhưng làm nhánh này mỏng đi vì chi "
+        "phí tính toán tỷ lệ với diện tích bản đồ đặc trưng, rồi dồn tính toán về các mức sâu. "
+        "Nhờ vậy rẻ hơn bản SteadyDet-W trước đó 2,8 lần mà vẫn giữ khả năng thấy người nhỏ."))
+    dai_so_lieu(s, TRAN - Inches(0.08), [
+        ("1,17 M", "tham số — nhỏ nhất trong nhóm so sánh"),
+        ("4,6 GFLOPs", "rẻ hơn SteadyDet-W 2,8 lần"),
+        ("Nhánh P2", "giữ cho người nhỏ, nhưng làm mỏng"),
+        ("LiteHead", "đầu dự đoán tách chiều sâu, dùng chung"),
+    ])
+    pic = anh(s, P("sodo_kientruc"), Inches(3.3), TRAN + Inches(1.05), Inches(6.7), Inches(4.55))
+    chu_thich_duoi(s, pic,
+                   "Chi phí phân bổ không đối xứng: nhánh P2 (nét đứt) mỏng, tính toán dồn về các mức sâu")
+
+    # ------------------------------------------- 6. huấn luyện nhận biết rung
+    s = trang_moi(prs, "Phương pháp: huấn luyện nhận biết rung", so=6, ghi_chu=(
+        "⏱ 0:35 — Ý tưởng rất đơn giản: trong mỗi lô huấn luyện, thay 50% ảnh bằng ảnh đã "
+        "áp mô hình vật lý của rung, nhãn giữ nguyên, hàm mất mát tính bình thường. Mô hình "
+        "khi chạy không thay đổi gì nên không tốn thêm một phép tính nào lúc suy luận. "
+        "Nhóm cũng thử biến thể ràng buộc nhất quán, phức tạp hơn và tốn 1,8 lần thời gian "
+        "huấn luyện nhưng kết quả kém hơn."))
+    anh(s, P("sodo_huanluyen_rung"), LE, TRAN + Inches(0.3), Inches(7.4), Inches(4.1))
+    tf = txt(s, Inches(8.3), TRAN + Inches(0.45), Inches(4.5), Inches(4.3), size=16.5, space=1.2)
+    dong(tf, "Thay **50% mỗi lô** bằng ảnh rung mô phỏng.", size=16.5, bullet="▸", truoc=0)
+    dong(tf, "**Nhãn giữ nguyên** — nhoè không làm dịch vật.", size=16.5, bullet="▸", truoc=14)
+    dong(tf, "Hàm mất mát **không đổi**, kiến trúc **không đổi**.", size=16.5, bullet="▸", truoc=14)
+    dong(tf, "**Không tốn chi phí khi suy luận** — chỉ thay dữ liệu huấn luyện.",
+         size=16.5, bullet="▸", truoc=14)
+    dong(tf, "Biến thể ràng buộc nhất quán: tốn **1,8×** thời gian, kết quả kém hơn.",
+         size=16.5, bullet="▸", truoc=14)
+
+    # ======================================================= PHẦN KẾT QUẢ ===
+    # ------------------------------- 7. kết quả chính trên VisDrone-person
+    s = trang_moi(prs, "Kết quả 1 — Hiệu quả của huấn luyện nhận biết rung",
+                  phu="VisDrone-person · retain = tỷ lệ giữ được độ chính xác khi rung · 3 seed, báo cáo ± độ lệch chuẩn",
+                  so=7, ghi_chu=(
+        "⏱ 1:05 — Đây là bảng kết quả quan trọng nhất, xin Hội đồng đọc từ trên xuống. "
+        "Mô hình gốc chỉ giữ được 16,8% độ chính xác khi rung — gần như mù khi bay tiến. "
+        "Đối chứng 1: huấn luyện thêm 120 epoch trên ảnh sạch vẫn 16,9%, chứng tỏ cái lợi "
+        "không đến từ việc train lâu hơn. Đối chứng 2: ràng buộc nhất quán được 30,0%, tốn "
+        "hơn mà kém hơn. Phương pháp đề xuất đạt 36,2%, tức AP ở mức rung bay tiến tăng 4,2 lần, "
+        "đổi lại AP trên ảnh sạch chỉ giảm 9,7%. Hai dòng cuối là kiểm chứng: tái lập được "
+        "trên SteadyDet-W, còn trên YOLO11-n thì không có tác dụng."))
+    bang(s, LE, TRAN - Inches(0.05), W - 2 * LE, Inches(3.5), [
+        ["SteadyDet-N", "AP ảnh sạch", "AP mức rung 2", "retain (%)", "Kết luận"],
+        ["Gốc", "0,1892", "0,0123", "16,8 ± 0,7", "“mù” khi bay tiến"],
+        ["+ 120 epoch ảnh sạch", "0,1823", "0,0125", "16,9 ± 0,7", "huấn luyện thêm vô ích"],
+        ["+ ràng buộc nhất quán", "0,1746", "0,0392", "30,0 ± 0,6", "kém hơn, tốn 1,8×"],
+        ["@+ huấn luyện nhận biết rung", "@0,1708", "@**0,0518**", "@**36,2 ± 0,7**", "@**tốt nhất**"],
+        ["SteadyDet-W: gốc → rung", "0,2349 → 0,2219", "0,0258 → 0,0839", "22,2 → 39,4", "tái lập được"],
+        ["YOLO11-n: gốc → rung", "0,2588 → 0,2579", "0,0248 → 0,0227", "21,9 → 21,5", "không tác dụng"],
+    ], rong_cot=[3.0, 1.7, 1.7, 1.6, 2.4], co_chu=12.5)
+    dai_so_lieu(s, TRAN + Inches(3.75), [
+        ("16,8% → 36,2%", "tỷ lệ giữ độ chính xác khi rung"),
+        ("× 4,2", "AP ở mức rung của bay tiến"),
+        ("−9,7%", "AP trên ảnh sạch — cái giá phải trả"),
+        ("0 ms", "chi phí thêm khi chạy trên máy bay"),
+    ], cao=Inches(1.12))
+
+    # --------------------------------------- 8. so sánh với 5 mô hình nhẹ
+    s = trang_moi(prs, "Kết quả 2 — Thứ hạng đảo ngược khi có rung",
+                  phu="So sánh với 5 mô hình nhẹ phổ biến, cùng một chương trình đo, cùng dữ liệu",
+                  so=8, ghi_chu=(
+        "⏱ 1:00 — Trên ảnh sạch, nhóm thua và em xin nói thẳng điều đó: YOLO11-n đạt 0,2768 "
+        "còn mô hình của nhóm 0,1708, vì các mô hình YOLO khởi tạo từ COCO còn mô hình nhóm "
+        "huấn luyện từ đầu. Nhưng trục đánh giá đúng với bài toán bay là độ chính xác khi rung, "
+        "cột mCP. Ở đó SteadyDet-N vượt cả bốn mô hình YOLO bản nano trong khi chi phí tính toán "
+        "thấp nhất — 4,6 GFLOPs. Nhìn đồ thị bên trái, từ mức rung 2 trở đi mô hình của nhóm "
+        "vượt cả RT-DETR-l, là mô hình lớn gấp 28 lần."))
+    pic = anh(s, P("duong_cong_rung"), LE, TRAN + Inches(0.15), Inches(6.6), Inches(4.4))
+    chu_thich_duoi(s, pic,
+                   "AP theo mức rung — SteadyDet-N vượt lên từ mức 2 (mức rung của bay tiến)")
+    bang(s, Inches(7.25), TRAN + Inches(0.2), Inches(5.55), Inches(3.3), [
+        ["Mô hình", "GFLOPs", "AP sạch", "mCP"],
+        ["RT-DETR-l", "108,0", "0,2502", "0,0641"],
+        ["YOLO11-n", "6,4", "0,2768", "0,0557"],
+        ["YOLOv10-n", "8,4", "0,2730", "0,0538"],
+        ["YOLOv8-n", "8,2", "0,2684", "0,0522"],
+        ["YOLO26-n", "5,8", "0,2675", "0,0507"],
+        ["@SteadyDet-N + rung", "@**4,6**", "@0,1708", "@**0,0617**"],
+    ], rong_cot=[2.6, 1.1, 1.2, 1.2], co_chu=12.5)
+    tf = txt(s, Inches(7.25), TRAN + Inches(3.7), Inches(5.55), Inches(1.5), size=15, space=1.15)
+    dong(tf, "Ảnh sạch: mô hình của nhóm **thua** — nhóm không né tránh.",
+         size=15, bullet="▸", truoc=0)
+    dong(tf, "Khi rung: **vượt cả 4 YOLO nano** với chi phí thấp nhất; từ mức 2 vượt "
+             "RT-DETR-l (lớn gấp **28×**).", size=15, bullet="▸", truoc=10)
+
+    # --------------------------------------- 9. kiểm chứng trên bay thật
+    s = trang_moi(prs, "Kết quả 3 — Kiểm chứng trên dữ liệu bay thật",
+                  phu="92 khung ảnh bay thật ở độ cao ~6 m, gán nhãn tay, chỉ dùng để đánh giá",
+                  so=9, ghi_chu=(
+        "⏱ 0:45 — Hai kết luận từ dữ liệu bay thật. Thứ nhất, thêm COCO-person làm AP@0,5 "
+        "tăng 5,3 lần so với chỉ dùng VisDrone — bài học là chọn dữ liệu theo miền triển khai "
+        "chứ không theo bộ benchmark. Thứ hai, huấn luyện nhận biết rung làm hộp bao khít hơn "
+        "rõ rệt, AP@0,75 tăng 78 đến 81%, và khoảng tin cậy bootstrap 95% không chứa 0 nên đây "
+        "không phải ngẫu nhiên. Em cũng xin nêu hạn chế: tập này mới có một người, một cảnh, một độ cao."))
+    anh(s, P("bay_that"), LE, TRAN + Inches(0.15), Inches(7.3), Inches(4.3))
+    tf = txt(s, Inches(8.15), TRAN + Inches(0.35), Inches(4.65), Inches(4.3), size=16, space=1.2)
+    dong(tf, "Thêm **COCO-person**: AP@0,5 **gấp 5,3 lần** so với chỉ VisDrone.",
+         size=16, bullet="▸", truoc=0)
+    dong(tf, "→ Chọn dữ liệu theo **miền triển khai**, không theo bộ benchmark.",
+         size=16, truoc=4, color=MO)
+    dong(tf, "Huấn luyện nhận biết rung: AP@0,75 **+78% / +81%** — hộp bao khít hơn hẳn.",
+         size=16, bullet="▸", truoc=14)
+    dong(tf, "Khoảng tin cậy bootstrap 95% **không chứa 0**.", size=16, truoc=4, color=MO)
+    dong(tf, "Hạn chế đã ghi rõ: 1 người, 1 cảnh, 1 độ cao.", size=16, bullet="▸", truoc=14)
+
+    # ------------------------------------ 10. INT8 trên NPU + nhận diện
+    s = trang_moi(prs, "Kết quả 4 — Mô hình chạy thật trên máy bay (INT8)",
+                  phu="Raspberry Pi 5 + NPU Hailo-8L · đo trên chính phần cứng gắn trên UAV",
+                  so=10, ghi_chu=(
+        "⏱ 0:50 — Đây là con số trả lời trực tiếp chỉ tiêu của thuyết minh. Mô hình INT8 "
+        "đang chạy trên máy bay đạt AP@0,5 bằng 0,917 trên 92 khung bay thật, vượt xa chỉ tiêu "
+        "70%. F1 ở ngưỡng vận hành 0,25 là 0,880 với recall 0,837 và precision 0,928. "
+        "Lượng tử hoá INT8 gần như không mất gì ở cự ly 3 đến 6 mét là cự ly bám thực tế; "
+        "chỉ mất 6,5% với người rất nhỏ. Về tốc độ, NPU chạy 112,55 FPS ở 320 và 63,66 FPS ở 640, "
+        "nhanh hơn YOLO26-n 1,70 lần nhờ chỉ cần 4 context thay vì 6."))
+    dai_so_lieu(s, TRAN - Inches(0.08), [
+        ("0,917", "AP@0,5 trên bay thật (INT8) — chỉ tiêu ≥ 0,70"),
+        ("0,880", "F1 ở ngưỡng vận hành 0,25"),
+        ("63,66 FPS", "suy luận NPU @640 (112,55 @320)"),
+        ("× 1,70", "nhanh hơn YOLO26-n trên cùng NPU"),
+    ])
+    anh(s, P("int8"), LE, TRAN + Inches(1.15), Inches(7.3), Inches(3.8))
+    tf = txt(s, Inches(8.15), TRAN + Inches(1.35), Inches(4.65), Inches(3.6), size=15.5, space=1.2)
+    dong(tf, "**Vượt chỉ tiêu 70%** của thuyết minh, đo trên đúng mô hình đang bay.",
+         size=15.5, bullet="▸", truoc=0)
+    dong(tf, "Tổn thất INT8 phụ thuộc kích thước vật: **−6,5%** với người rất nhỏ, "
+             "**≈ 0** ở cự ly 3–6 m.", size=15.5, bullet="▸", truoc=12)
+    dong(tf, "recall 0,837 · precision 0,928 — bỏ sót ít, báo nhầm càng ít.",
+         size=15.5, bullet="▸", truoc=12)
+    dong(tf, "Nhanh hơn nhờ kiến trúc hợp NPU: **4 context** thay vì 6.",
+         size=15.5, bullet="▸", truoc=12)
+
+    # --------------------------------------------- 11. tốc độ & độ trễ
+    s = trang_moi(prs, "Tốc độ đầu-cuối: hệ thống bị giới hạn bởi camera", so=11,
+                  ghi_chu=(
+        "⏱ 0:30 — Chạy đầy đủ trên máy bay được 30 FPS, độ trễ trung vị 32 ms và p99 36 ms. "
+        "Điều đáng nói là phần tính toán chỉ chiếm 59% ngân sách thời gian, nút cổ chai là camera "
+        "chứ không phải mô hình. Nhóm đã tìm và sửa hai lỗi cấu hình camera, tốc độ tăng từ "
+        "11,1 lên 30,0 FPS."))
+    pic = anh(s, P("do_tre"), LE, TRAN + Inches(0.2), Inches(8.0), Inches(4.9))
+    chu_thich_duoi(s, pic, "Phân rã độ trễ p50 trên máy bay (@640, camera USB thật, 3.594 khung)")
+    tf = txt(s, Inches(8.85), TRAN + Inches(0.3), Inches(3.95), Inches(4.6), size=16.5,
+             space=1.25, anchor=MSO_ANCHOR.MIDDLE)
+    dong(tf, "**30,0 FPS** đầu-cuối trên máy bay.", size=16.5, bullet="▸", truoc=0)
+    dong(tf, "Độ trễ trung vị **32 ms**, p99 **36 ms**.", size=16.5, bullet="▸", truoc=18)
+    dong(tf, "Tính toán chỉ chiếm **59% ngân sách** → giới hạn nằm ở camera.",
+         size=16.5, bullet="▸", truoc=18)
+    dong(tf, "Sửa 2 lỗi cấu hình camera: **11,1 → 30,0 FPS**.", size=16.5, bullet="▸", truoc=18)
+
+    # ------------------------------------------- 12. điều khiển & an toàn
+    s = trang_moi(prs, "Vòng điều khiển bám người và lớp an toàn", so=12, ghi_chu=(
+        "⏱ 0:35 — Phần điều khiển em xin nói ngắn. Kết quả phát hiện ở từng khung được nối "
+        "thành quỹ đạo bằng OC-SORT, khoá đúng một người và tìm lại được người cũ sau khi mất. "
+        "Khoảng cách ước lượng bằng mô hình camera lỗ kim kết hợp bộ lọc Kalman, rồi ba bộ PID "
+        "sinh lệnh vận tốc gửi xuống Pixhawk ở 30 Hz. Lớp an toàn có thang FOLLOW – COAST – HOVER, "
+        "và chỉ gửi lệnh khi máy bay ở chế độ GUIDED, người lái lấy lại quyền bất cứ lúc nào."))
+    pic = anh(s, os.path.join(HINH, "vongbam_khung.png"), LE, TRAN + Inches(0.2),
+              Inches(8.0), Inches(4.8))
+    chu_thich_duoi(s, pic, "Vòng bám chạy trên 3.961 khung của chuyến bay thử")
+    tf = txt(s, Inches(8.85), TRAN + Inches(0.2), Inches(3.95), Inches(4.9), size=15.5,
+             space=1.25, anchor=MSO_ANCHOR.MIDDLE)
+    dong(tf, "Theo vết **OC-SORT** → khoá mục tiêu → tìm lại người cũ sau khi mất.",
+         size=15.5, bullet="▸", truoc=0)
+    dong(tf, "Khoảng cách: **camera lỗ kim + Kalman**, giới hạn 3–15 m.",
+         size=15.5, bullet="▸", truoc=16)
+    dong(tf, "**3 bộ PID** → lệnh vận tốc **MAVLink 30 Hz**, khớp nhịp detector.",
+         size=15.5, bullet="▸", truoc=16)
+    dong(tf, "Thang an toàn **FOLLOW → COAST → HOVER**; chỉ gửi lệnh khi ở GUIDED.",
+         size=15.5, bullet="▸", truoc=16)
+    dong(tf, "Giữ mục tiêu **83,5%** thời gian, sai số hướng trung vị **5,5°**.",
+         size=15.5, bullet="▸", truoc=16)
+
+    # -------------------------------------------------- 13. video bay thử
+    s = trang_moi(prs, "Video bay thử", phu="Bấm vào ảnh để phát — ưu tiên đoạn vòng bám người",
+                  so=13, ghi_chu=(
+        "⏱ 0:50 — Em xin phát một đoạn video bay thử. Hộp xanh lá là mục tiêu đang được khoá, "
+        "vệt vàng là quỹ đạo, bảng góc trái hiển thị trạng thái và lệnh gửi xuống Pixhawk. "
+        "LƯU Ý KHI TRÌNH BÀY: video dài 4 phút 43, chỉ phát khoảng 45–60 giây phần vòng bám "
+        "rồi dừng để kịp giờ. Nếu máy chiếu không phát được, chuyển sang slide 12 đã có ảnh chụp "
+        "các khung hình của chính đoạn video này."))
+    khung_x, khung_y, khung_w, khung_h = Inches(2.45), TRAN + Inches(0.15), Inches(8.45), Inches(4.3)
+    poster = os.path.join(HINH, "vongbam_3.jpg")
+    phim = os.path.join(VIDEO, "video_bay_thu.mp4")
+    if os.path.exists(phim) and not NHE:
+        s.shapes.add_movie(phim, khung_x, khung_y, khung_w, khung_h,
+                           poster_frame_image=poster, mime_type="video/mp4")
+    else:
+        pic = anh(s, poster, khung_x, khung_y, khung_w, khung_h)
+        pic.click_action.hyperlink.address = "../video/video_bay_thu.mp4"
+    tf = txt(s, LE, DAY - Inches(0.95), W - 2 * LE, Inches(1.0), size=15,
+             align=PP_ALIGN.CENTER, space=1.2)
+    dong(tf, "Hộp xanh lá = mục tiêu đang khoá  ·  vệt vàng = quỹ đạo  ·  "
+             "bảng góc trái = trạng thái và lệnh gửi Pixhawk",
+         size=15, truoc=0, align=PP_ALIGN.CENTER)
+    dong(tf, "Phát ~45–60 giây phần vòng bám rồi dừng để kịp giờ.",
+         size=14, color=MO, truoc=6, align=PP_ALIGN.CENTER)
+
+    # ------------------------------------------ 14. đạt mục tiêu & kết luận
+    s = trang_moi(prs, "Mức độ đạt mục tiêu và kết luận", so=14, ghi_chu=(
+        "⏱ 0:40 — Đối chiếu với thuyết minh: mục tiêu độ chính xác đặt 70% thì đạt 91,7%, "
+        "vượt chỉ tiêu. Mục tiêu thuật toán bám và mục tiêu tích hợp đều đạt, đã bay thử thực tế. "
+        "Bốn kết luận: rung là lỗ hổng thật và đo được; phương pháp đề xuất không tốn chi phí "
+        "khi chạy mà nâng tỷ lệ giữ độ chính xác lên gấp đôi; mô hình chạy thật trên NPU vượt "
+        "chỉ tiêu; và toàn bộ quy trình tái lập được. Hướng phát triển: mở rộng tập bay thật "
+        "nhiều độ cao, nhiều người, và hiệu chuẩn mức rung bằng dữ liệu IMU thật."))
+    bang(s, LE, TRAN - Inches(0.05), W - 2 * LE, Inches(2.5), [
+        ["Mục tiêu theo thuyết minh", "Chỉ tiêu", "Kết quả đạt được", "Đánh giá"],
+        ["Mô hình nhận dạng người thời gian thực", "AP ≥ 70%", "**AP@0,5 = 0,917** (INT8, bay thật)", "**Vượt chỉ tiêu**"],
+        ["Thuật toán bám giữ khoảng cách, hướng bay", "Hoạt động ổn định",
+         "Giữ mục tiêu 83,5% · sai số hướng 5,5°", "Đạt"],
+        ["Tích hợp camera – xử lý ảnh – điều khiển bay", "Chạy trên máy bay",
+         "30,0 FPS đầu-cuối, đã bay thử thực tế", "Đạt"],
+    ], rong_cot=[3.6, 1.7, 3.3, 1.6], co_chu=13)
+    tf = txt(s, LE, TRAN + Inches(2.75), Inches(7.4), Inches(2.6), size=15.5, space=1.2)
+    dong(tf, "Rung là lỗ hổng **thật và đo được**: mọi bộ phát hiện nhỏ gọn mất 74–83% AP.",
+         size=15.5, bullet="1.", truoc=0)
+    dong(tf, "Huấn luyện nhận biết rung: **16,8% → 36,2%**, không tốn chi phí khi chạy.",
+         size=15.5, bullet="2.", truoc=10)
+    dong(tf, "Chạy thật trên Pi 5 + Hailo-8L: **0,917 AP** và **30 FPS**.",
+         size=15.5, bullet="3.", truoc=10)
+    dong(tf, "Toàn bộ quy trình **tái lập được**: cố định seed, một chương trình đo.",
+         size=15.5, bullet="4.", truoc=10)
+    hop(s, Inches(8.3), TRAN + Inches(2.75), Inches(4.5), Inches(2.3), fill=NHAT, line=VIEN)
+    tf = txt(s, Inches(8.55), TRAN + Inches(2.95), Inches(4.0), Inches(2.0), size=15, space=1.2)
+    dong(tf, "Hướng phát triển", size=16, bold=True, color=DAM, truoc=0)
+    dong(tf, "Mở rộng tập bay thật: nhiều độ cao, nhiều người, nhiều cảnh.",
+         size=14.5, bullet="▸", truoc=8)
+    dong(tf, "Hiệu chuẩn mức rung bằng dữ liệu IMU thật từ nhật ký bay.",
+         size=14.5, bullet="▸", truoc=8)
+    dong(tf, "Bám nhiều mục tiêu và tránh vật cản.", size=14.5, bullet="▸", truoc=8)
+
+    # ------------------------------------------------------- 15. cảm ơn
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    hop(s, 0, 0, W, H, fill=DAM, radius=False)
+    t = txt(s, LE, Inches(2.55), W - 2 * LE, Inches(1.0), size=40, bold=True,
+            color=TRANG, align=PP_ALIGN.CENTER)
+    t.paragraphs[0].runs[0].text = "CẢM ƠN HỘI ĐỒNG ĐÃ LẮNG NGHE"
+    hop(s, Inches(5.6), Inches(3.75), Inches(2.1), Inches(0.06), fill=CAM, radius=False)
+    t2 = txt(s, LE, Inches(4.1), W - 2 * LE, Inches(1.2), size=18,
+             color=RGBColor(0xBF, 0xD6, 0xF2), align=PP_ALIGN.CENTER, space=1.4)
+    dong(t2, "Em xin sẵn sàng trả lời câu hỏi của Hội đồng.", size=18,
+         color=RGBColor(0xBF, 0xD6, 0xF2), truoc=0, align=PP_ALIGN.CENTER)
+    dong(t2, tt("madetai") + "  ·  " + tt("chunhiem") + "  ·  GVHD: " + tt("gvhd"),
+         size=15, color=RGBColor(0x9A, 0xBB, 0xE0), truoc=10, align=PP_ALIGN.CENTER)
+    s.notes_slide.notes_text_frame.text = (
+        "⏱ 0:10 — Em xin hết phần trình bày, cảm ơn Hội đồng.\n\n"
+        "CÂU HỎI THƯỜNG GẶP (xem thêm kich_ban_thuyet_trinh.md):\n"
+        "• Vì sao AP sạch thấp hơn YOLO? → YOLO khởi tạo từ COCO, mô hình nhóm train từ đầu; "
+        "trục cạnh tranh của đề tài là độ chính xác khi rung (mCP), ở đó nhóm dẫn đầu nhóm nano.\n"
+        "• So sánh có công bằng không? → Đã áp đúng phương pháp lên YOLO11-n, nó không tăng "
+        "(20,1% → 20,1%), nên mỗi mô hình được so ở trạng thái tốt nhất của nó.\n"
+        "• Rung mô phỏng có giống rung thật? → Chưa hiệu chuẩn bằng IMU, nhưng kiểm chứng trên "
+        "92 khung bay thật cho cùng chiều hướng (hộp khít hơn ~80%).\n"
+        "• Chỉ tiêu 70% đo thế nào? → AP@0,5 chuẩn COCO của đúng mô hình INT8 đang bay, "
+        "trên 92 khung gán nhãn tay: 0,917.\n"
+        "• Mất người thì sao? → Dưới 3 s bám theo dự đoán với nửa vận tốc, sau đó HOVER chờ; "
+        "không tự RTL; người lái lấy lại quyền bằng công tắc.\n"
+        "• Vì sao Hailo-8L thay vì Jetson? → Rẻ, ít điện, gắn thẳng lên Pi 5; đo thật 63,66 FPS @640.")
+
+
+def main():
+    tmp = tempfile.mkdtemp(prefix="slide_nghiemthu_")
+    try:
+        P = chuan_bi_anh(tmp)
+        prs = Presentation()
+        prs.slide_width, prs.slide_height = W, H
+        dung_slide(prs, P, doc_thongtin())
+        duong = OUT_NHE if NHE else OUT
+        prs.save(duong)
+        print("Đã lưu:", duong)
+        print("Số slide:", len(prs.slides.__iter__.__self__._sldIdLst))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    main()
