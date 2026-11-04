@@ -24,7 +24,7 @@ tổng 3 phút 40 trên 10 phút). Các phần còn lại nói lướt.
 | 11 | Tốc độ đầu-cuối | 0:30 | 7:45 | 30 FPS, p99 36 ms, nút cổ chai là camera |
 | 12 | Vòng điều khiển và an toàn | 0:35 | 8:20 | Nói lướt: OC-SORT → PID → MAVLink 30 Hz; thang FOLLOW/COAST/HOVER |
 | 13 | Video 1 — phát hiện người | 0:25 | 8:45 | Đoạn 18 giây, phát trọn rồi chuyển |
-| 14 | Video 2 — vòng bám người | 0:25 | 9:10 | Cùng đoạn bay đó, chạy qua chương trình bám. Khung nào không có hộp = khung đó detector không thấy ai |
+| 14 | Video 2 — vòng bám người | 0:25 | 9:10 | Cùng đoạn bay đó, chạy qua chương trình bám. Nói rõ: bay giữ vị trí, vòng bám chạy lại trên video |
 | 15 | Mức độ đạt mục tiêu và kết luận | 0:40 | 9:50 | Đối chiếu 3 mục tiêu; 4 kết luận; hướng phát triển |
 | 16 | Cảm ơn | 0:10 | 10:00 | Mời Hội đồng đặt câu hỏi |
 
@@ -53,7 +53,7 @@ Cắt theo thứ tự này, cắt tới đâu đủ giờ thì dừng:
 
 | Tệp | Dung lượng | Khi nào dùng |
 |---|---|---|
-| `SteadyDet-N_nghiem_thu.pptx` | ~17 MB | **Bản trình bày chính.** Hai đoạn phim 30 giây nhúng sẵn, copy một file duy nhất qua USB là chạy được. |
+| `SteadyDet-N_nghiem_thu.pptx` | ~12 MB | **Bản trình bày chính.** Hai đoạn phim 18 giây nhúng sẵn, copy một file duy nhất qua USB là chạy được. |
 | `SteadyDet-N_nghiem_thu_nhe.pptx` | ~3 MB | Gửi mail cho Hội đồng/GVHD. Slide 13 và 14 là ảnh có liên kết tới `../video/phan1_phat_hien.mp4` và `../video/phan2_vong_bam.mp4` nên chỉ bấm được khi giữ nguyên cây thư mục. |
 | `SteadyDet-N_nghiem_thu.pdf` | ~1 MB | Bản dự phòng khi máy chiếu không có PowerPoint. |
 
