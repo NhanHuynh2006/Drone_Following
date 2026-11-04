@@ -77,7 +77,6 @@ def main():
     f_big, f_mid, f_small = (ImageFont.truetype(F_B, 22), ImageFont.truetype(F_R, 19),
                              ImageFont.truetype(F_R, 16))
     trail, lost_since, n = [], None, 0
-    last_size = None          # (w,h) hộp quan sát gần nhất của mục tiêu đang khoá
     stats = {"frames": 0, "follow": 0, "coast": 0, "hover": 0}
     logf = open(LOG, "w", newline="")
     log = csv.writer(logf)
@@ -116,7 +115,6 @@ def main():
             state = "FOLLOW"
             x1, y1, x2, y2 = target["box"]
             cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
-            last_size = (x2 - x1, y2 - y1)
             err_px = cx - CENTER[0]
             yaw_err = math.degrees(err_px / FX)
             yaw_rate = math.degrees(yaw_pid.compute(cx - CENTER[0] + W / 2, t))
@@ -132,19 +130,12 @@ def main():
         # diện. Hộp dự đoán chỉ để nói "người đang ở quanh đâu", nên giữ nguyên kích thước của
         # lần quan sát cuối và chỉ cho tâm hộp chạy theo dự đoán. Không ảnh hưởng số liệu: mọi
         # dòng nhật ký đều lấy từ hộp đã khớp với phát hiện thật.
-        # Chỉ vẽ hộp dự đoán trong 0,8 s đầu sau khi mất phát hiện: xa hơn nữa thì dự đoán
-        # Kalman trôi khỏi người thật, để lại một ô cam lạc lõng giữa nền. Trạng thái COAST
-        # vẫn hiện ở bảng góc trái nên người xem không mất thông tin.
-        PRED_MAX_FRAMES = 24
-        pred_box = None
-        if target is None and state == "COAST" and selector.locked_id is not None and last_size:
-            trk = tracker.get_track_by_id(selector.locked_id)
-            if trk is not None and trk.time_since_update <= PRED_MAX_FRAMES:
-                bx = [float(v) for v in trk.get_box()]
-                pcx, pcy = (bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2
-                bw, bh = last_size
-                if -bw <= pcx <= W + bw and -bh <= pcy <= H + bh:
-                    pred_box = [pcx - bw / 2, pcy - bh / 2, pcx + bw / 2, pcy + bh / 2]
+        # KHÔNG vẽ hộp dự đoán khi mất phát hiện. Hộp đó do bộ lọc Kalman ngoại suy chứ
+        # không phải thứ bộ phát hiện nhìn thấy: kích thước lấy từ lần quan sát cuối (có khi
+        # là một hộp hỏng ôm cả bóng người), còn tâm thì trôi theo vận tốc cũ, nên trên màn
+        # hình nó phình to, co lại, hoặc nằm chỏng chơ cạnh người thật — người xem tưởng mô
+        # hình nhận diện lỗi. Mất phát hiện thì để khung trống đúng như thực tế; trạng thái
+        # COAST và dòng "ID ... (dự đoán)" ở bảng góc trái đã nói đủ rằng hệ thống vẫn giữ khoá.
         # Vệt quỹ đạo: mất phát hiện thì rút ngắn dần cho tắt hẳn sau ~0,7 s, thay vì đứng
         # nguyên một vệt vàng cũ trên màn hình suốt lúc không có ai.
         if state == "HOVER":
@@ -165,7 +156,9 @@ def main():
 
         # ---------------- vẽ ----------------
         for tr in tracks:
-            if target is None or tr["id"] != target["id"]:
+            # chỉ vẽ vết đang có phát hiện thật ở khung này; vết chỉ do Kalman suy ra sẽ
+            # chớp tắt một hai khung, nhìn như hộp trắng nhảy lung tung
+            if (target is None or tr["id"] != target["id"]) and tr["time_since_update"] == 0:
                 bx = [int(v) for v in tr["box"]]
                 cv2.rectangle(img, (bx[0], bx[1]), (bx[2], bx[3]), (200, 200, 200), 2)
         for i in range(1, len(trail)):
@@ -176,9 +169,6 @@ def main():
             bx = [int(v) for v in target["box"]]
             cv2.rectangle(img, (bx[0], bx[1]), (bx[2], bx[3]), (80, 220, 60), 3)
             cv2.arrowedLine(img, c0, (int(cx), int(cy)), (0, 200, 255), 2, tipLength=0.04)
-        elif pred_box is not None:
-            bx = [int(v) for v in pred_box]
-            cv2.rectangle(img, (bx[0], bx[1]), (bx[2], bx[3]), (0, 170, 255), 2)
 
         pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         d = ImageDraw.Draw(pil, "RGBA")

@@ -24,7 +24,7 @@ tổng 3 phút 40 trên 10 phút). Các phần còn lại nói lướt.
 | 11 | Tốc độ đầu-cuối | 0:30 | 7:45 | 30 FPS, p99 36 ms, nút cổ chai là camera |
 | 12 | Vòng điều khiển và an toàn | 0:35 | 8:20 | Nói lướt: OC-SORT → PID → MAVLink 30 Hz; thang FOLLOW/COAST/HOVER |
 | 13 | Video 1 — phát hiện người | 0:25 | 8:45 | Đoạn 30 giây; phát ~20–25 giây rồi chuyển |
-| 14 | Video 2 — vòng bám người | 0:25 | 9:10 | Cùng đoạn bay đó, chạy qua chương trình bám |
+| 14 | Video 2 — vòng bám người | 0:25 | 9:10 | Cùng đoạn bay đó, chạy qua chương trình bám. Khung nào không có hộp = khung đó detector không thấy ai |
 | 15 | Mức độ đạt mục tiêu và kết luận | 0:40 | 9:50 | Đối chiếu 3 mục tiêu; 4 kết luận; hướng phát triển |
 | 16 | Cảm ơn | 0:10 | 10:00 | Mời Hội đồng đặt câu hỏi |
 
