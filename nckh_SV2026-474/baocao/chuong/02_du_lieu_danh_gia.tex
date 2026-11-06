@@ -97,7 +97,7 @@ Mức 3 & 15 & 0,06 & $\pm$30\% & Kích thích mạnh (cánh quạt lệch)\\
 
 \subsection{Giao thức phải được cố định seed ngẫu nhiên}
 
-Hướng nhoè, nhiễu và độ sáng đều được rút ngẫu nhiên, nên một lần chạy đánh giá chỉ là một lần rút thăm. Trong quá trình làm đề tài, nhóm đã đo cùng một checkpoint ba lần mà không cố định hạt giống và nhận được tỷ lệ retain 17,0\%, 17,1\% và 17,6\%, tức dao động hơn nửa điểm phần trăm, đủ để tạo ra một ``cải tiến'' giả. Giao thức chính thức vì thế gieo lại hạt giống trước \textit{mỗi} lượt đánh giá ở mỗi mức, chạy với ba hạt giống 0, 1, 2 và báo cáo trung bình $\pm$ độ lệch chuẩn mẫu. Đánh giá trên ảnh sạch là tất định nên chỉ chạy một lần. Chỉ số tổng hợp là mCP và retain theo phương trình~(\ref{eq:mcp}) với $M=3$.
+Hướng nhoè, nhiễu và độ sáng đều được rút ngẫu nhiên, nên một lần chạy đánh giá chỉ là một lần rút thăm. Trong quá trình thực hiện đề tài, cùng một checkpoint được đo ba lần mà không cố định hạt giống và nhận được tỷ lệ retain 17,0\%, 17,1\% và 17,6\%, tức dao động hơn nửa điểm phần trăm, đủ để tạo ra một ``cải tiến'' giả. Giao thức chính thức vì thế gieo lại hạt giống trước \textit{mỗi} lượt đánh giá ở mỗi mức, chạy với ba hạt giống 0, 1, 2 và báo cáo trung bình $\pm$ độ lệch chuẩn mẫu. Đánh giá trên ảnh sạch là tất định nên chỉ chạy một lần. Chỉ số tổng hợp là mCP và retain theo phương trình~(\ref{eq:mcp}) với $M=3$.
 
 \section{Một chương trình đo duy nhất cho mọi mô hình}
 \label{sec:mottrinhdo}

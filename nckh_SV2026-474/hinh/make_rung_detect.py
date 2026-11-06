@@ -87,7 +87,7 @@ for w_path, ten in MO_HINH:
             x1, y1, x2, y2 = [int(v) for v in d["box"]]
             cv2.rectangle(img, (x1, y1), (x2, y2), (80, 220, 60), 2)
         o.append((Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)), tp))
-        print(f"{ten:42} mức {m}: bắt đúng {tp}/{len(gt)}")
+        print(f"{ten:42} mức {m}: phát hiện đúng {tp}/{len(gt)}")
     hang.append((ten, o))
 
 W = 760
@@ -107,7 +107,7 @@ for r, (ten_mh, o) in enumerate(hang):
         sheet.paste(im.resize((W, H), Image.LANCZOS), (x, y))
         mau_nen = (11, 60, 120) if r else (90, 100, 115)
         d.rectangle((x, y + H, x + W, y + H + CAO_NHAN), fill=mau_nen)
-        chu = f"bắt đúng {tp}/{len(gt)} người"
+        chu = f"phát hiện đúng {tp}/{len(gt)} người"
         d.text((x + 14, y + H + 9), chu, font=f_r, fill="white")
     d.text((KHE + 6, y + 6), ten_mh, font=f_b, fill="white",
            stroke_width=3, stroke_fill=(0, 0, 0))

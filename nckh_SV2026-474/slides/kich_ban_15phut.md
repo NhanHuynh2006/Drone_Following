@@ -20,9 +20,9 @@ quả nhận diện: slide 9–17 chiếm hơn 6 phút.
 | 7 | Quá trình huấn luyện | 0:35 | 4:20 | Train từ đầu 300 epoch + 120 epoch tinh chỉnh rung |
 | 8 | Phương pháp huấn luyện nhận biết rung | 0:35 | 4:55 | Thay 50% mỗi lô, nhãn không đổi, **0 ms chi phí khi chạy** |
 | 9 | **Kết quả 1 — hiệu quả phương pháp** | 1:05 | 6:00 | Đọc bảng từ trên xuống; **16,8% → 36,2%**, AP mức 2 ×4,2; hai đối chứng |
-| 10 | **Nhìn bằng mắt: 4 mức rung** | 0:40 | 6:40 | Cùng ảnh 55 người: gốc 40/34/20/0 — sau huấn luyện 40/34/**30**/**7** |
+| 10 | **Minh hoạ trực quan: 4 mức rung** | 0:40 | 6:40 | Cùng ảnh 55 người, số phát hiện đúng: gốc 40/34/20/0 — sau huấn luyện 40/34/**30**/**7** |
 | 11 | **Xếp hạng retain 11 cấu hình** | 0:40 | 7:20 | Hai thanh dài nhất là mô hình của nhóm; đối chứng chỉ 19–22% |
-| 12 | **Kết quả 2 — so với 5 mô hình nhẹ** | 1:00 | 8:20 | Ảnh sạch thua (nói thẳng); khi rung vượt 4 YOLO nano, từ mức 2 vượt RT-DETR-l |
+| 12 | **Kết quả 2 — so với 5 mô hình nhẹ** | 1:00 | 8:20 | Ảnh sạch AP thấp hơn; khi rung mCP cao hơn cả bốn YOLO nano, từ mức 2 vượt RT-DETR-l |
 | 13 | **Phát hiện trong cảnh đông người** | 0:35 | 8:55 | Ba ảnh VisDrone 119 / 68 / 55 người; AP@0,5 = 0,514 trên 548 ảnh |
 | 14 | **Kết quả 3 — bay thật 92 khung** | 0:45 | 9:40 | COCO-person ×5,3 lần; AP@0,75 +78–81%; nêu rõ hạn chế |
 | 15 | Đưa mô hình lên NPU Hailo-8L | 0:40 | 10:20 | 4 bước ONNX → HEF; 4 context so với 6 → nhanh 1,70× |

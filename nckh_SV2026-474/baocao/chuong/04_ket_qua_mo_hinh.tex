@@ -119,7 +119,7 @@ SteadyDet-N (gốc) & \textbf{1,17} & \textbf{4,6} & 0,5127 & 0,1892 & 0,0318 & 
 
 \subsection{Trên ảnh sạch, SteadyDet-N không dẫn đầu}
 
-Cả bốn mô hình YOLO bản nano đều có AP sạch cao hơn SteadyDet-N, và đề tài không né tránh điều đó. Việc các mô hình đối chứng được khởi tạo từ trọng số huấn luyện sẵn trên COCO là một yếu tố, nhưng khoảng cách lớn hơn mức mà yếu tố này có thể giải thích. Hiệu quả tính toán cũng không bù được: 4,6 GFLOPs so với 5,8 GFLOPs của mô hình đối chứng rẻ nhất (YOLO26-n) chỉ tiết kiệm 21\%. Nếu chỉ xét benchmark trên ảnh sạch, SteadyDet-N thua.
+Cả bốn mô hình YOLO bản nano đều có AP sạch cao hơn SteadyDet-N, và kết quả này được ghi nhận đầy đủ. Việc các mô hình đối chứng được khởi tạo từ trọng số huấn luyện sẵn trên COCO là một yếu tố, nhưng khoảng cách lớn hơn mức mà yếu tố này có thể giải thích. Hiệu quả tính toán cũng không bù được: 4,6 GFLOPs so với 5,8 GFLOPs của mô hình đối chứng rẻ nhất (YOLO26-n) chỉ tiết kiệm 21\%. Nếu chỉ xét benchmark trên ảnh sạch, SteadyDet-N thua.
 
 \subsection{Khi rung, thứ hạng đảo ngược}
 
@@ -168,7 +168,7 @@ Chỉ VisDrone & ràng buộc nhất quán & 0,0909 & 0,0283 & 0,0093 & 0,3772\\
 
 \subsection{Cả hai cách xử lý rung đều có tác dụng trên rung thật}
 
-Trong nhóm mô hình phù hợp với miền này (có COCO-person), cả hai cách xử lý đều cải thiện theo cùng một kiểu. AP@0,75 tăng từ 0,1448 lên 0,2583 với huấn luyện nhận biết rung và 0,2620 với ràng buộc nhất quán, tức tăng tương đối 78\% và 81\% ở độ khít hộp, trong khi recall gần như không đổi (0,5076 thành 0,5315 và 0,5087). Mô hình không tìm thấy thêm người; nó đặt hộp khít hơn quanh những người đã tìm thấy, đúng dấu hiệu mong đợi nếu mô hình học được cách nhìn xuyên qua nhoè.
+Trong nhóm mô hình phù hợp với miền này (có COCO-person), cả hai cách xử lý đều cải thiện theo cùng một xu hướng. AP@0,75 tăng từ 0,1448 lên 0,2583 với huấn luyện nhận biết rung và 0,2620 với ràng buộc nhất quán, tức tăng tương đối 78\% và 81\% ở độ khít hộp, trong khi recall gần như không đổi (0,5076 thành 0,5315 và 0,5087). Mô hình không tìm thấy thêm người; nó đặt hộp khít hơn quanh những người đã tìm thấy, đúng dấu hiệu mong đợi nếu mô hình học được cách nhìn xuyên qua nhoè.
 
 Để kiểm tra ý nghĩa thống kê trên 92 khung, đề tài lấy mẫu lại khung hình 1.000 lần theo cặp. Khoảng tin cậy 95\% của hiệu so với mô hình không xử lý:
 \begin{itemize}

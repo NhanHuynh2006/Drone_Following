@@ -506,28 +506,28 @@ def dung_slide(prs, P, tt):
         "trên SteadyDet-W, còn trên YOLO11-n thì không có tác dụng."))
     bang(s, LE, TRAN - Inches(0.05), W - 2 * LE, Inches(3.5), [
         ["SteadyDet-N", "AP ảnh sạch", "AP mức rung 2", "retain (%)", "Kết luận"],
-        ["Gốc", "0,1892", "0,0123", "16,8 ± 0,7", "“mù” khi bay tiến"],
-        ["+ 120 epoch ảnh sạch", "0,1823", "0,0125", "16,9 ± 0,7", "huấn luyện thêm vô ích"],
-        ["+ ràng buộc nhất quán", "0,1746", "0,0392", "30,0 ± 0,6", "kém hơn, tốn 1,8×"],
-        ["@+ huấn luyện nhận biết rung", "@0,1708", "@**0,0518**", "@**36,2 ± 0,7**", "@**tốt nhất**"],
+        ["Gốc", "0,1892", "0,0123", "16,8 ± 0,7", "gần như không phát hiện được"],
+        ["+ 120 epoch ảnh sạch", "0,1823", "0,0125", "16,9 ± 0,7", "huấn luyện thêm không cải thiện"],
+        ["+ ràng buộc nhất quán", "0,1746", "0,0392", "30,0 ± 0,6", "thấp hơn, chi phí gấp 1,8 lần"],
+        ["@+ huấn luyện nhận biết rung", "@0,1708", "@**0,0518**", "@**36,2 ± 0,7**", "@**cao nhất**"],
         ["SteadyDet-W: gốc → rung", "0,2349 → 0,2219", "0,0258 → 0,0839", "22,2 → 39,4", "tái lập được"],
-        ["YOLO11-n: gốc → rung", "0,2588 → 0,2579", "0,0248 → 0,0227", "21,9 → 21,5", "không tác dụng"],
+        ["YOLO11-n: gốc → rung", "0,2588 → 0,2579", "0,0248 → 0,0227", "21,9 → 21,5", "không cải thiện"],
     ], rong_cot=[3.0, 1.7, 1.7, 1.6, 2.4], co_chu=12.5)
     dai_so_lieu(s, TRAN + Inches(3.75), [
         ("16,8% → 36,2%", "tỷ lệ giữ độ chính xác khi rung"),
         ("× 4,2", "AP ở mức rung của bay tiến"),
-        ("−9,7%", "AP trên ảnh sạch — cái giá phải trả"),
-        ("0 ms", "chi phí thêm khi chạy trên máy bay"),
+        ("−9,7%", "mức suy giảm AP trên ảnh sạch"),
+        ("0 ms", "chi phí suy luận tăng thêm"),
     ], cao=Inches(1.12))
 
     # ------------- nhìn thấy bằng mắt: phát hiện ở bốn mức rung (MỚI)
-    s = trang_moi(prs, "Nhìn thấy bằng mắt: phát hiện ở bốn mức rung",
-                  phu="Cùng một ảnh VisDrone 55 người, cùng ngưỡng 0,30 · trên: mô hình gốc · dưới: sau huấn luyện nhận biết rung",
+    s = trang_moi(prs, "Minh hoạ trực quan: phát hiện ở bốn mức rung",
+                  phu="Cùng một ảnh VisDrone có 55 người, cùng ngưỡng tin cậy 0,30 · hàng trên: mô hình gốc · hàng dưới: sau huấn luyện nhận biết rung",
                   so=10, ghi_chu=(
-        "⏱ 0:40 — Bảng vừa rồi là con số, còn đây là nhìn bằng mắt. Cùng một ảnh có 55 người, "
+        "⏱ 0:40 — Bảng vừa rồi là số liệu, còn đây là minh hoạ trực quan. Cùng một ảnh có 55 người, "
         "cùng ngưỡng tin cậy, đưa qua đúng toán tử rung của giao thức. Hàng trên là mô hình gốc: "
         "ảnh sạch bắt 40 người, mức 1 còn 34, mức 2 — tức mức rung của bay tiến — chỉ còn 20, và "
-        "mức 3 thì mất trắng, không bắt được ai. Hàng dưới là mô hình sau huấn luyện nhận biết "
+        "mức 3 thì không phát hiện được đối tượng nào. Hàng dưới là mô hình sau huấn luyện nhận biết "
         "rung: ảnh sạch và mức 1 giống hệt hàng trên, nhưng mức 2 giữ được 30 người thay vì 20, "
         "và mức 3 vẫn còn 7 người. Đây chính là cái mà con số retain 16,8% lên 36,2% nói."))
     pic = anh(s, os.path.join(HINH, "rung_detect.png"), LE, TRAN + Inches(0.15),
@@ -544,9 +544,9 @@ def dung_slide(prs, P, tt):
                   phu="retain = tỷ lệ giữ được độ chính xác khi rung · trung bình ± độ lệch chuẩn trên 3 seed",
                   so=11, ghi_chu=(
         "⏱ 0:40 — Toàn cảnh một hình: mười một cấu hình được đo bằng đúng một chương trình đo. "
-        "Hai thanh dài nhất là hai mô hình của nhóm sau khi huấn luyện nhận biết rung. Nhóm "
+        "Hai thanh dài nhất là hai mô hình của đề tài sau khi huấn luyện nhận biết rung. Nhóm "
         "giữa là năm mô hình đối chứng, retain chỉ quanh 19 đến 22 phần trăm. Hai thanh ngắn "
-        "nhất ở dưới là mô hình gốc của nhóm và bản huấn luyện thêm 120 epoch không rung — "
+        "nhất ở dưới là mô hình gốc của đề tài và bản huấn luyện thêm 120 epoch không rung, "
         "chứng tỏ cái lợi đến từ phương pháp chứ không từ việc huấn luyện lâu hơn."))
     pic = anh(s, P("retain"), LE, TRAN + Inches(0.2), W - 2 * LE, Inches(4.5))
     chu_thich_duoi(s, pic, "Hai thanh đầu là SteadyDet-W và SteadyDet-N sau huấn luyện nhận biết rung")
@@ -555,12 +555,12 @@ def dung_slide(prs, P, tt):
     s = trang_moi(prs, "Kết quả 2 — Thứ hạng đảo ngược khi có rung",
                   phu="So sánh với 5 mô hình nhẹ phổ biến, cùng một chương trình đo, cùng dữ liệu",
                   so=12, ghi_chu=(
-        "⏱ 1:00 — Trên ảnh sạch, nhóm thua và em xin nói thẳng điều đó: YOLO11-n đạt 0,2768 "
-        "còn mô hình của nhóm 0,1708, vì các mô hình YOLO khởi tạo từ COCO còn mô hình nhóm "
-        "huấn luyện từ đầu. Nhưng trục đánh giá đúng với bài toán bay là độ chính xác khi rung, "
+        "⏱ 1:00 — Trên ảnh sạch, SteadyDet-N có AP thấp hơn các mô hình đối chứng: YOLO11-n đạt "
+        "0,2768 còn SteadyDet-N 0,1708, nguyên nhân là các mô hình YOLO được khởi tạo từ trọng "
+        "số huấn luyện sẵn trên COCO, còn mô hình của đề tài huấn luyện từ đầu. Nhưng trục đánh giá đúng với bài toán bay là độ chính xác khi rung, "
         "cột mCP. Ở đó SteadyDet-N vượt cả bốn mô hình YOLO bản nano trong khi chi phí tính toán "
-        "thấp nhất — 4,6 GFLOPs. Nhìn đồ thị bên trái, từ mức rung 2 trở đi mô hình của nhóm "
-        "vượt cả RT-DETR-l, là mô hình lớn gấp 28 lần."))
+        "thấp nhất là 4,6 GFLOPs. Trên đồ thị bên trái, từ mức rung 2 trở đi SteadyDet-N vượt cả "
+        "RT-DETR-l, mô hình có số tham số gấp 28 lần."))
     pic = anh(s, P("duong_cong_rung"), LE, TRAN + Inches(0.15), Inches(6.6), Inches(4.4))
     chu_thich_duoi(s, pic,
                    "AP theo mức rung — SteadyDet-N vượt lên từ mức 2 (mức rung của bay tiến)")
@@ -574,10 +574,11 @@ def dung_slide(prs, P, tt):
         ["@SteadyDet-N + rung", "@**4,6**", "@0,1708", "@**0,0617**"],
     ], rong_cot=[2.6, 1.1, 1.2, 1.2], co_chu=12.5)
     tf = txt(s, Inches(7.25), TRAN + Inches(3.7), Inches(5.55), Inches(1.5), size=15, space=1.15)
-    dong(tf, "Ảnh sạch: mô hình của nhóm **thua** — nhóm không né tránh.",
+    dong(tf, "Trên ảnh sạch, SteadyDet-N có AP **thấp hơn** cả năm mô hình đối chứng.",
          size=15, bullet="▸", truoc=0)
-    dong(tf, "Khi rung: **vượt cả 4 YOLO nano** với chi phí thấp nhất; từ mức 2 vượt "
-             "RT-DETR-l (lớn gấp **28×**).", size=15, bullet="▸", truoc=10)
+    dong(tf, "Khi có rung, mCP **cao hơn cả bốn mô hình YOLO bản nano** với chi phí tính "
+             "toán thấp nhất; từ mức 2 vượt RT-DETR-l, mô hình có số tham số gấp **28 lần**.",
+         size=15, bullet="▸", truoc=10)
 
     # ------------------- phát hiện trong cảnh đông người (MỚI)
     s = trang_moi(prs, "Phát hiện người trong cảnh đông",
@@ -592,15 +593,15 @@ def dung_slide(prs, P, tt):
     anh(s, os.path.join(HINH, "dong_nguoi.png"), LE, TRAN + Inches(0.3),
         W - 2 * LE, Inches(2.95))
     tf = txt(s, LE, TRAN + Inches(3.45), Inches(6.1), Inches(2.1), size=16, space=1.2)
-    dong(tf, "Ba ảnh có **119, 68 và 55 người**, phần lớn chỉ cao vài chục điểm ảnh.",
+    dong(tf, "Ba ảnh lần lượt có **119, 68 và 55 người**, phần lớn chỉ cao vài chục điểm ảnh.",
          size=16, bullet="▸", truoc=0)
-    dong(tf, "Hộp xanh là phát hiện ở ngưỡng 0,30 — **cùng mô hình đang chạy trên máy bay**.",
+    dong(tf, "Hộp xanh là kết quả phát hiện ở ngưỡng 0,30, bằng **chính mô hình đang chạy trên máy bay**.",
          size=16, bullet="▸", truoc=14)
     tf2 = txt(s, Inches(7.0), TRAN + Inches(3.45), Inches(5.8), Inches(2.1), size=16, space=1.2)
     dong(tf2, "Đo trên cả **548 ảnh VisDrone-val**: AP@0,5 = **0,514**.",
          size=16, bullet="▸", truoc=0)
-    dong(tf2, "Đề tài chỉ bám **một người**: cảnh đông thì bộ chọn mục tiêu lấy người gần "
-              "nhất rồi khoá theo mã định danh.", size=16, bullet="▸", truoc=14)
+    dong(tf2, "Phạm vi đề tài là bám **một người**: trong cảnh đông, bộ chọn mục tiêu lấy "
+              "người gần nhất rồi khoá theo mã định danh.", size=16, bullet="▸", truoc=14)
 
     # --------------------------------------- 9. kiểm chứng trên bay thật
     s = trang_moi(prs, "Kết quả 3 — Kiểm chứng trên dữ liệu bay thật",
@@ -630,7 +631,7 @@ def dung_slide(prs, P, tt):
         "ONNX với các phép tính mà Hailo hỗ trợ, đưa qua trình biên dịch, lượng tử hoá về số "
         "nguyên 8 bit bằng 64 ảnh hiệu chuẩn lấy từ chính miền triển khai, rồi sinh tệp HEF. "
         "Điểm đáng nói nằm ở đồ thị bên trái: tốc độ trên NPU phụ thuộc số lần mô hình phải "
-        "nạp lại lên chip, gọi là context. Mô hình của nhóm chỉ cần 4 context trong khi "
+        "nạp lại lên chip, gọi là context. Mô hình của đề tài chỉ cần 4 context trong khi "
         "YOLO26-n cần 6, nên nhanh hơn 1,70 lần dù cùng chạy trên một con chip."))
     pic = anh(s, P("hailo"), LE, TRAN + Inches(0.25), Inches(7.3), Inches(4.3))
     chu_thich_duoi(s, pic, "Trái: ít context hơn nên nhanh hơn · Phải: tăng kích thước lô để đo giới hạn phần cứng")

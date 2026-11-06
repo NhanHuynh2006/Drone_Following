@@ -65,10 +65,10 @@ Khi có nhiều người trong khung hình, hệ thống phải chọn một ng�
 Một khó khăn thực tế là OC-SORT cấp mã định danh \textit{mới} cho người rời khung rồi quay lại, vì nó không có cơ chế nhận dạng lại theo ngoại hình. Nếu không xử lý, sau khi mất mục tiêu, hệ thống có thể khoá nhầm vào một người lạ đứng gần hơn. Đề tài giải quyết bằng một cơ chế liên tục không gian đơn giản:
 \begin{enumerate}
 \item Khi mục tiêu biến mất, khoá được giữ thêm $3$\,s (\texttt{lost\_grace\_s}), bằng đúng pha máy bay còn bám theo dự đoán.
-\item Sau khi nhả khoá, trong $5$\,s tiếp theo (\texttt{reacquire\_s}) hệ thống \textit{chỉ} chấp nhận một vết có tâm cách vị trí cuối của mục tiêu cũ không quá 25\% đường chéo khung hình và diện tích chênh không quá 2 lần. Người cũ quay lại chỗ cũ, dù mang mã mới, được bám lại ngay; người lạ không bị ``vồ'' nhầm.
+\item Sau khi nhả khoá, trong $5$\,s tiếp theo (\texttt{reacquire\_s}) hệ thống \textit{chỉ} chấp nhận một vết có tâm cách vị trí cuối của mục tiêu cũ không quá 25\% đường chéo khung hình và diện tích chênh không quá 2 lần. Nhờ vậy, người cũ quay lại vị trí cũ dù mang mã định danh mới vẫn được khoá lại, trong khi một người khác xuất hiện gần đó không bị khoá nhầm.
 \item Hết cửa sổ tìm lại, hệ thống mới chọn mục tiêu mới theo chiến lược (có thể tắt để chờ người vận hành bằng \texttt{auto\_relock: false}).
 \end{enumerate}
-Hai ngưỡng ở bước 2 đặt chặt có chủ ý: thà không nhận ra còn hơn bám nhầm người. Cơ chế đúng khi người quay lại gần chỗ cũ và có thể sai khi hai người đổi chỗ cho nhau, nên bảng giám sát có nút \textbf{Đổi mục tiêu} để người vận hành bỏ khoá và chọn lại ngay. Các tình huống này được khoá bằng 14 phép kiểm thử tự động (Chương~\ref{chap:tichhop}).
+Hai ngưỡng ở bước 2 được đặt chặt có chủ ý, theo nguyên tắc ưu tiên bỏ sót hơn là khoá nhầm đối tượng. Cơ chế đúng khi người quay lại gần chỗ cũ và có thể sai khi hai người đổi chỗ cho nhau, nên bảng giám sát có nút \textbf{Đổi mục tiêu} để người vận hành bỏ khoá và chọn lại ngay. Các tình huống này được khoá bằng 14 phép kiểm thử tự động (Chương~\ref{chap:tichhop}).
 
 \section{Ước lượng khoảng cách}
 
@@ -131,7 +131,7 @@ An toàn được thiết kế nhiều lớp, mỗi lớp độc lập với cá
 
 \textbf{Người lái luôn giữ quyền.} Phần mềm chỉ gọi lệnh đổi chế độ bay ở đúng một chỗ: chuỗi cất cánh tự động khi người vận hành chủ động chạy chương trình ở chế độ bay thật. Mọi lệnh vận tốc chỉ được gửi khi máy bay đang ở GUIDED; gạt công tắc sang LOITER hay STABILIZE là phần mềm im lặng ngay lập tức. Nhấn Ctrl+C gửi vận tốc 0 rồi buông quyền, không tự quay về. Nguyên tắc này được khoá bằng bộ kiểm thử \texttt{test\_safety\_no\_mode\_change.py}, trong đó có phép kiểm tra quét mã nguồn \texttt{safety.py} để đảm bảo không còn lời gọi đổi chế độ nào.
 
-\textbf{Tham số trên bộ điều khiển bay.} Khi kết nối lần đầu với Pixhawk~6C, nhóm tải đủ 1.038 tham số và phát hiện năm cấu hình không an toàn phải sửa trước khi bay tự động, trong đó có việc bỏ qua toàn bộ kiểm tra trước khi arm và hai ngưỡng pin bị đặt ngược nhau; bảng tham số khuyến nghị ở Phụ lục~A. Lưu ý ArduPilot 4.7 đã đổi tên và đơn vị nhiều tham số nên chép giá trị từ tài liệu viết cho bản cũ có thể sai tới 100 lần.
+\textbf{Tham số trên bộ điều khiển bay.} Khi kết nối lần đầu với Pixhawk~6C, toàn bộ 1.038 tham số được tải về và rà soát, phát hiện năm cấu hình không an toàn phải sửa trước khi bay tự động, trong đó có việc bỏ qua toàn bộ kiểm tra trước khi arm và hai ngưỡng pin bị đặt ngược nhau; bảng tham số khuyến nghị ở Phụ lục~A. Lưu ý ArduPilot 4.7 đã đổi tên và đơn vị nhiều tham số nên chép giá trị từ tài liệu viết cho bản cũ có thể sai tới 100 lần.
 
 \section{Giao tiếp MAVLink và lựa chọn nhịp gửi lệnh}
 
