@@ -520,10 +520,29 @@ def dung_slide(prs, P, tt):
         ("0 ms", "chi phí thêm khi chạy trên máy bay"),
     ], cao=Inches(1.12))
 
+    # ------------- nhìn thấy bằng mắt: phát hiện ở bốn mức rung (MỚI)
+    s = trang_moi(prs, "Nhìn thấy bằng mắt: phát hiện ở bốn mức rung",
+                  phu="Cùng một ảnh VisDrone 55 người, cùng ngưỡng 0,30 · trên: mô hình gốc · dưới: sau huấn luyện nhận biết rung",
+                  so=10, ghi_chu=(
+        "⏱ 0:40 — Bảng vừa rồi là con số, còn đây là nhìn bằng mắt. Cùng một ảnh có 55 người, "
+        "cùng ngưỡng tin cậy, đưa qua đúng toán tử rung của giao thức. Hàng trên là mô hình gốc: "
+        "ảnh sạch bắt 40 người, mức 1 còn 34, mức 2 — tức mức rung của bay tiến — chỉ còn 20, và "
+        "mức 3 thì mất trắng, không bắt được ai. Hàng dưới là mô hình sau huấn luyện nhận biết "
+        "rung: ảnh sạch và mức 1 giống hệt hàng trên, nhưng mức 2 giữ được 30 người thay vì 20, "
+        "và mức 3 vẫn còn 7 người. Đây chính là cái mà con số retain 16,8% lên 36,2% nói."))
+    pic = anh(s, os.path.join(HINH, "rung_detect.png"), LE, TRAN + Inches(0.15),
+              W - 2 * LE, Inches(4.0))
+    dai_so_lieu(s, TRAN + Inches(4.35), [
+        ("40 → 40", "ảnh sạch: hai mô hình như nhau"),
+        ("34 → 34", "rung mức 1: chưa khác biệt"),
+        ("20 → 30", "rung mức 2 — mức của bay tiến"),
+        ("0 → 7", "rung mức 3: gốc mất trắng"),
+    ], cao=Inches(1.0))
+
     # ------------------------- 10. xếp hạng độ bền của 11 cấu hình (MỚI)
     s = trang_moi(prs, "Xếp hạng độ bền khi rung của 11 cấu hình",
                   phu="retain = tỷ lệ giữ được độ chính xác khi rung · trung bình ± độ lệch chuẩn trên 3 seed",
-                  so=10, ghi_chu=(
+                  so=11, ghi_chu=(
         "⏱ 0:40 — Toàn cảnh một hình: mười một cấu hình được đo bằng đúng một chương trình đo. "
         "Hai thanh dài nhất là hai mô hình của nhóm sau khi huấn luyện nhận biết rung. Nhóm "
         "giữa là năm mô hình đối chứng, retain chỉ quanh 19 đến 22 phần trăm. Hai thanh ngắn "
@@ -535,7 +554,7 @@ def dung_slide(prs, P, tt):
     # --------------------------------------- 8. so sánh với 5 mô hình nhẹ
     s = trang_moi(prs, "Kết quả 2 — Thứ hạng đảo ngược khi có rung",
                   phu="So sánh với 5 mô hình nhẹ phổ biến, cùng một chương trình đo, cùng dữ liệu",
-                  so=11, ghi_chu=(
+                  so=12, ghi_chu=(
         "⏱ 1:00 — Trên ảnh sạch, nhóm thua và em xin nói thẳng điều đó: YOLO11-n đạt 0,2768 "
         "còn mô hình của nhóm 0,1708, vì các mô hình YOLO khởi tạo từ COCO còn mô hình nhóm "
         "huấn luyện từ đầu. Nhưng trục đánh giá đúng với bài toán bay là độ chính xác khi rung, "
@@ -563,7 +582,7 @@ def dung_slide(prs, P, tt):
     # ------------------- phát hiện trong cảnh đông người (MỚI)
     s = trang_moi(prs, "Phát hiện người trong cảnh đông",
                   phu="Ảnh VisDrone-val chụp từ UAV · SteadyDet-N nhánh triển khai, ảnh vào 640, ngưỡng tin cậy 0,30",
-                  so=12, ghi_chu=(
+                  so=13, ghi_chu=(
         "⏱ 0:35 — Ngoài cảnh bay thử chỉ có một người, mô hình còn được đo trên 548 ảnh "
         "VisDrone-val là cảnh đô thị đông người chụp từ UAV. Ba ảnh này có 119, 68 và 55 người, "
         "phần lớn chỉ cao vài chục điểm ảnh, và mô hình bắt được phần lớn trong số đó. Xin lưu ý "
@@ -586,7 +605,7 @@ def dung_slide(prs, P, tt):
     # --------------------------------------- 9. kiểm chứng trên bay thật
     s = trang_moi(prs, "Kết quả 3 — Kiểm chứng trên dữ liệu bay thật",
                   phu="92 khung ảnh bay thật ở độ cao ~6 m, gán nhãn tay, chỉ dùng để đánh giá",
-                  so=13, ghi_chu=(
+                  so=14, ghi_chu=(
         "⏱ 0:45 — Hai kết luận từ dữ liệu bay thật. Thứ nhất, thêm COCO-person làm AP@0,5 "
         "tăng 5,3 lần so với chỉ dùng VisDrone — bài học là chọn dữ liệu theo miền triển khai "
         "chứ không theo bộ benchmark. Thứ hai, huấn luyện nhận biết rung làm hộp bao khít hơn "
@@ -606,7 +625,7 @@ def dung_slide(prs, P, tt):
     # ------------------------------ 13. đưa mô hình lên NPU Hailo-8L (MỚI)
     s = trang_moi(prs, "Đưa mô hình lên NPU Hailo-8L",
                   phu="PyTorch → ONNX → trình biên dịch luồng dữ liệu → lượng tử hoá INT8 → tệp HEF chạy trên máy bay",
-                  so=14, ghi_chu=(
+                  so=15, ghi_chu=(
         "⏱ 0:40 — Mô hình huấn luyện xong chưa chạy được trên NPU. Quy trình bốn bước: xuất "
         "ONNX với các phép tính mà Hailo hỗ trợ, đưa qua trình biên dịch, lượng tử hoá về số "
         "nguyên 8 bit bằng 64 ảnh hiệu chuẩn lấy từ chính miền triển khai, rồi sinh tệp HEF. "
@@ -631,7 +650,7 @@ def dung_slide(prs, P, tt):
     # ------------------------------------ 10. INT8 trên NPU + nhận diện
     s = trang_moi(prs, "Kết quả 4 — Mô hình chạy thật trên máy bay (INT8)",
                   phu="Raspberry Pi 5 + NPU Hailo-8L · đo trên chính phần cứng gắn trên UAV",
-                  so=15, ghi_chu=(
+                  so=16, ghi_chu=(
         "⏱ 0:50 — Đây là con số trả lời trực tiếp chỉ tiêu của thuyết minh. Mô hình INT8 "
         "đang chạy trên máy bay đạt AP@0,5 bằng 0,917 trên 92 khung bay thật, vượt xa chỉ tiêu "
         "70%. F1 ở ngưỡng vận hành 0,25 là 0,880 với recall 0,837 và precision 0,928. "
@@ -658,7 +677,7 @@ def dung_slide(prs, P, tt):
     # ------------------------------- 15. chọn ngưỡng tin cậy vận hành (MỚI)
     s = trang_moi(prs, "Chọn ngưỡng tin cậy để vận hành",
                   phu="Đo trên 92 khung bay thật, bằng chính mô hình INT8 đang chạy trên máy bay",
-                  so=16, ghi_chu=(
+                  so=17, ghi_chu=(
         "⏱ 0:30 — Ngưỡng tin cậy quyết định hệ thống nhạy hay chắc. Nhóm quét bốn ngưỡng trên "
         "dữ liệu bay thật: 0,25 cho F1 cao nhất là 0,880; lên 0,30 còn 0,823; lên 0,40 tụt "
         "xuống 0,551 vì bỏ sót quá nhiều. Vì vậy cấu hình bay chốt ở 0,25. Đây là ví dụ cho "
@@ -677,7 +696,7 @@ def dung_slide(prs, P, tt):
          size=16, bullet="▸", truoc=16)
 
     # --------------------------------------------- 11. tốc độ & độ trễ
-    s = trang_moi(prs, "Tốc độ đầu-cuối: hệ thống bị giới hạn bởi camera", so=17,
+    s = trang_moi(prs, "Tốc độ đầu-cuối: hệ thống bị giới hạn bởi camera", so=18,
                   ghi_chu=(
         "⏱ 0:30 — Chạy đầy đủ trên máy bay được 30 FPS, độ trễ trung vị 32 ms và p99 36 ms. "
         "Điều đáng nói là phần tính toán chỉ chiếm 59% ngân sách thời gian, nút cổ chai là camera "
@@ -694,7 +713,7 @@ def dung_slide(prs, P, tt):
     dong(tf, "Sửa 2 lỗi cấu hình camera: **11,1 → 30,0 FPS**.", size=16.5, bullet="▸", truoc=18)
 
     # ------------------------------------------- 12. điều khiển & an toàn
-    s = trang_moi(prs, "Vòng điều khiển bám người và lớp an toàn", so=18, ghi_chu=(
+    s = trang_moi(prs, "Vòng điều khiển bám người và lớp an toàn", so=19, ghi_chu=(
         "⏱ 0:35 — Phần điều khiển em xin nói ngắn. Kết quả phát hiện ở từng khung được nối "
         "thành quỹ đạo bằng OC-SORT, khoá đúng một người và tìm lại được người cũ sau khi mất. "
         "Khoảng cách ước lượng bằng mô hình camera lỗ kim kết hợp bộ lọc Kalman, rồi ba bộ PID "
@@ -719,7 +738,7 @@ def dung_slide(prs, P, tt):
     # --------------------------- 18. nhịp lệnh 30 Hz và lớp an toàn (MỚI)
     s = trang_moi(prs, "Nhịp lệnh 30 Hz và lớp an toàn",
                   phu="Chọn nhịp bằng số đo, không theo thói quen · người lái luôn giữ quyền chế độ bay",
-                  so=19, ghi_chu=(
+                  so=20, ghi_chu=(
         "⏱ 0:45 — Nhiều hệ thống gửi lệnh ở 10 Hz theo thói quen. Nhóm đo thật: ở 10 Hz, riêng "
         "việc chờ tới lượt gửi đã cộng trung bình 50 ms vào độ trễ, trong khi đường truyền chịu "
         "được 50 Hz với 0% mất gói. Nhóm chọn 30 Hz vì khớp đúng nhịp của detector — nhanh hơn "
@@ -747,21 +766,21 @@ def dung_slide(prs, P, tt):
     slide_video(
         prs, "Video 1 — Phát hiện người trên video bay thử",
         "Trích 18 giây liên tục của chuyến bay 21/07/2026, độ cao ≈ 6 m · SteadyDet-N chạy trên từng khung",
-        20,
-        "⏱ 0:25 — Đây là mô hình chạy trên chính video bay thử: mỗi hộp xanh là một người "
+        so=21,
+        ghi_chu="⏱ 0:25 — Đây là mô hình chạy trên chính video bay thử: mỗi hộp xanh là một người "
         "được phát hiện, dấu thập là tâm khung hình. Đoạn này cắt liên tục 18 giây, không "
         "ghép nối, không tua.",
-        "phan1_phat_hien.mp4", P("poster1"),
-        [("Hộp xanh = người được phát hiện  ·  dấu thập = tâm khung hình", 15, CHU),
+        ten_phim="phan1_phat_hien.mp4", poster=P("poster1"),
+        chu_duoi=[("Hộp xanh = người được phát hiện  ·  dấu thập = tâm khung hình", 15, CHU),
          ("Bản đầy đủ 4 phút 43 nộp kèm hồ sơ: video/video_bay_thu.mp4", 13, MO)],
-        "../video/phan1_phat_hien.mp4")
+        lien_ket="../video/phan1_phat_hien.mp4")
 
     # --------------------------------------- 14. video phần 2: vòng bám người
     slide_video(
         prs, "Video 2 — Vòng bám người trên chính đoạn bay đó",
         "Phát hiện → OC-SORT → khoá mục tiêu → lệnh quay hướng · trạng thái FOLLOW / COAST / HOVER",
-        21,
-        "⏱ 0:25 — Vẫn đúng đoạn bay vừa xem, nhưng chạy qua chương trình bám người. Hộp xanh "
+        so=22,
+        ghi_chu="⏱ 0:25 — Vẫn đúng đoạn bay vừa xem, nhưng chạy qua chương trình bám người. Hộp xanh "
         "lá là mục tiêu đang khoá, hộp xám là người đã phát hiện nhưng chưa khoá, hộp cam là "
         "vị trí dự đoán khi mất phát hiện, vệt vàng là quỹ đạo; bảng góc trái hiển thị trạng "
         "thái và lệnh quay hướng tính được. Đây là đoạn 18 giây mà vòng bám giữ khoá liên tục "
@@ -769,16 +788,16 @@ def dung_slide(prs, P, tt):
         "trí, vòng bám chạy lại trên video của chuyến bay đó nên lệnh được TÍNH chứ chưa gửi "
         "xuống máy bay — đúng như mục 7.3 của báo cáo. Phần cứng nối Pixhawk đã kiểm tra xong "
         "ngày 27/08, bay tự động là bước kế tiếp.",
-        "phan2_vong_bam.mp4", P("poster2"),
-        [("Xanh lá = đang khoá  ·  xám = đã phát hiện, chưa khoá  ·  vàng = quỹ đạo  ·  không hộp = khung đó không thấy ai", 14, CHU),
+        ten_phim="phan2_vong_bam.mp4", poster=P("poster2"),
+        chu_duoi=[("Xanh lá = đang khoá  ·  xám = đã phát hiện, chưa khoá  ·  vàng = quỹ đạo  ·  không hộp = khung đó không thấy ai", 14, CHU),
          ("Chuyến bay 21/07 ở chế độ giữ vị trí; vòng bám chạy trên video của chuyến bay đó, "
           "lệnh quay hướng được tính ở từng khung. Giữ mục tiêu 83,5% là số đo trên toàn clip 4 phút 43.", 12.5, MO)],
-        "../video/phan2_vong_bam.mp4")
+        lien_ket="../video/phan2_vong_bam.mp4")
 
     # ----------------------------------- 21. bảy tầng kiểm thử (MỚI)
     s = trang_moi(prs, "Bảy tầng kiểm thử trước khi bay",
                   phu="Mỗi tầng chỉ kiểm thử khi tầng dưới đã đạt, để có lỗi là biết ngay lỗi thuộc tầng nào",
-                  so=22, ghi_chu=(
+                  so=23, ghi_chu=(
         "⏱ 0:35 — Hệ thống không được mang ra bãi bay ngay. Bảy tầng, tầng dưới đạt mới lên "
         "tầng trên: logic chọn mục tiêu và lớp an toàn kiểm thử tự động 25 trên 25 phép; mô "
         "hình trên NPU; camera cộng suy luận chạy liên tục hai phút; kiểm tra môi trường trước "
@@ -796,7 +815,7 @@ def dung_slide(prs, P, tt):
     ], rong_cot=[0.9, 3.4, 5.4, 2.8], co_chu=12)
 
     # ------------------------------------------ 14. đạt mục tiêu & kết luận
-    s = trang_moi(prs, "Mức độ đạt mục tiêu và kết luận", so=23, ghi_chu=(
+    s = trang_moi(prs, "Mức độ đạt mục tiêu và kết luận", so=24, ghi_chu=(
         "⏱ 0:40 — Đối chiếu với thuyết minh: mục tiêu độ chính xác đặt 70% thì đạt 91,7%, "
         "vượt chỉ tiêu. Mục tiêu thuật toán bám và mục tiêu tích hợp đều đạt, đã bay thử thực tế. "
         "Bốn kết luận: rung là lỗ hổng thật và đo được; phương pháp đề xuất không tốn chi phí "
