@@ -533,10 +533,10 @@ def dung_slide(prs, P, tt):
     pic = anh(s, os.path.join(HINH, "rung_detect.png"), LE, TRAN + Inches(0.15),
               W - 2 * LE, Inches(4.0))
     dai_so_lieu(s, TRAN + Inches(4.35), [
-        ("40 → 40", "ảnh sạch: hai mô hình như nhau"),
-        ("34 → 34", "rung mức 1: chưa khác biệt"),
-        ("20 → 30", "rung mức 2 — mức của bay tiến"),
-        ("0 → 7", "rung mức 3: gốc mất trắng"),
+        ("40 → 40", "Ảnh sạch"),
+        ("34 → 34", "Rung mức 1"),
+        ("20 → 30", "Rung mức 2"),
+        ("0 → 7", "Rung mức 3"),
     ], cao=Inches(1.0))
 
     # ------------------------- 10. xếp hạng độ bền của 11 cấu hình (MỚI)

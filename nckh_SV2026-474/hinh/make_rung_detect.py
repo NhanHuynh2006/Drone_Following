@@ -91,7 +91,7 @@ for w_path, ten in MO_HINH:
     hang.append((ten, o))
 
 W = 760
-TEN_COT = ["Ảnh sạch", "Rung mức 1", "Rung mức 2 (bay tiến)", "Rung mức 3"]
+TEN_COT = ["Ảnh sạch", "Rung mức 1", "Rung mức 2", "Rung mức 3"]
 mau = hang[0][1][0][0]
 H = int(mau.height * W / mau.width)
 CAO_TEN, CAO_NHAN, KHE = 40, 42, 8
