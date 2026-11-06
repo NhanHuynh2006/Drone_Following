@@ -37,14 +37,18 @@ OUT_NHE = os.path.join(HERE, "SteadyDet-N_nghiem_thu_nhe.pptx")
 NHE = "--nhe" in sys.argv
 
 # ---- bảng màu, lấy đúng từ slides.tex để đồng bộ với báo cáo ----------------
-DAM = RGBColor(0x0B, 0x3C, 0x78)      # xanh navy — thanh tiêu đề
-XANH = RGBColor(0x2A, 0x78, 0xD6)     # xanh nhấn
-CAM = RGBColor(0xEB, 0x68, 0x34)      # cam — số liệu quan trọng
-NHAT = RGBColor(0xEE, 0xF4, 0xFC)     # nền khối nhạt
+# Bảng màu lấy thẳng từ logo ISLab: chữ "IS" #30649E và chữ "Lab" #6B95C5.
+# DAM dùng cho thanh tiêu đề nên lấy bản đậm hơn một bậc của chính màu logo
+# (cùng sắc độ, chỉ tối hơn) để chữ trắng trên nền đủ tương phản khi chiếu.
+DAM = RGBColor(0x24, 0x4E, 0x7C)      # nền thanh tiêu đề, bản đậm của màu logo
+LOGO_DAM = RGBColor(0x30, 0x64, 0x9E)  # đúng màu "IS" của logo
+XANH = RGBColor(0x6B, 0x95, 0xC5)     # đúng màu "Lab" của logo — dấu đầu dòng, nhấn nhẹ
+CAM = RGBColor(0xC8, 0x6A, 0x2C)      # màu nhấn cho số liệu, chỉnh dịu để hợp hai sắc xanh
+NHAT = RGBColor(0xEF, 0xF3, 0xF9)     # nền khối nhạt, pha từ màu logo
 CHU = RGBColor(0x1A, 0x1A, 0x1A)
 MO = RGBColor(0x5A, 0x64, 0x72)
 TRANG = RGBColor(0xFF, 0xFF, 0xFF)
-VIEN = RGBColor(0xC8, 0xD4, 0xE4)
+VIEN = RGBColor(0xC6, 0xD6, 0xE9)
 
 FONT = "Arial"
 W, H = Inches(13.333), Inches(7.5)
@@ -162,6 +166,9 @@ def trang_moi(prs, tieu_de, phu=None, so=None, ghi_chu=None):
         t = txt(s, W - Inches(1.1), H - Inches(0.42), Inches(0.6), Inches(0.3),
                 size=11, color=MO, align=PP_ALIGN.RIGHT)
         t.paragraphs[0].runs[0].text = str(so)
+        # logo phòng thí nghiệm, đặt chìm ở góc dưới trái cho khỏi che nội dung
+        s.shapes.add_picture(os.path.join(HINH, "logo_islab.png"),
+                             LE, H - Inches(0.62), height=Inches(0.36))
     if ghi_chu:
         s.notes_slide.notes_text_frame.text = ghi_chu
     return s
@@ -316,16 +323,24 @@ def dung_slide(prs, P, tt):
     logo = s.shapes.add_picture(os.path.join(HINH, "logo_hcmute.png"),
                                 LE, Inches(0.40), height=Inches(0.66))
     t = txt(s, logo.left + logo.width + Inches(0.45), Inches(0.46),
-            W - logo.width - Inches(1.5), Inches(0.6), size=13.5,
+            W - logo.width - Inches(4.6), Inches(0.6), size=13.5,
             color=RGBColor(0xBF, 0xD6, 0xF2), anchor=MSO_ANCHOR.MIDDLE)
-    t.paragraphs[0].runs[0].text = "KHOA " + tt("khoa").upper() + "  •  BỘ MÔN " + tt("bomon").upper()
+    t.paragraphs[0].runs[0].text = "KHOA " + tt("khoa").upper()
+    # logo phòng thí nghiệm, lót nền trắng vì chữ logo cùng sắc xanh với thanh đầu trang
+    islab_w = Inches(1.70)
+    islab_h = Emu(int(islab_w / 2.294))          # ảnh logo 805x351
+    chip_w, chip_h = islab_w + Inches(0.34), islab_h + Inches(0.26)
+    chip_x, chip_y = W - LE - chip_w, Inches(0.30)
+    hop(s, chip_x, chip_y, chip_w, chip_h, fill=TRANG, radius=True)
+    s.shapes.add_picture(os.path.join(HINH, "logo_islab.png"),
+                         chip_x + Inches(0.17), chip_y + Inches(0.13), width=islab_w)
     t2 = txt(s, LE, Inches(1.35), W - 2 * LE, Inches(0.6), size=15, color=TRANG)
     t2.paragraphs[0].runs[0].text = "BÁO CÁO NGHIỆM THU ĐỀ TÀI NCKH SINH VIÊN  —  MÃ SỐ " + tt("madetai")
 
     t3 = txt(s, LE, Inches(2.75), W - 2 * LE, Inches(1.5), size=34, bold=True,
-             color=DAM, align=PP_ALIGN.CENTER, space=1.12)
+             color=LOGO_DAM, align=PP_ALIGN.CENTER, space=1.12)
     t3.paragraphs[0].runs[0].text = tt("TENDETAI")
-    hop(s, Inches(4.6), Inches(4.35), Inches(4.1), Inches(0.06), fill=CAM, radius=False)
+    hop(s, Inches(4.6), Inches(4.35), Inches(4.1), Inches(0.06), fill=XANH, radius=False)
 
     t4 = txt(s, Inches(3.0), Inches(4.75), Inches(7.3), Inches(1.6), size=16,
              align=PP_ALIGN.CENTER, space=1.35)
@@ -855,7 +870,14 @@ def dung_slide(prs, P, tt):
     t = txt(s, LE, Inches(2.55), W - 2 * LE, Inches(1.0), size=40, bold=True,
             color=TRANG, align=PP_ALIGN.CENTER)
     t.paragraphs[0].runs[0].text = "CẢM ƠN HỘI ĐỒNG ĐÃ LẮNG NGHE"
-    hop(s, Inches(5.6), Inches(3.75), Inches(2.1), Inches(0.06), fill=CAM, radius=False)
+    hop(s, Inches(5.6), Inches(3.75), Inches(2.1), Inches(0.06), fill=XANH, radius=False)
+    islab_w = Inches(2.4)
+    islab_h = Emu(int(islab_w / 2.294))
+    chip_w, chip_h = islab_w + Inches(0.6), islab_h + Inches(0.44)
+    chip_x, chip_y = (W - chip_w) // 2, Inches(5.45)
+    hop(s, chip_x, chip_y, chip_w, chip_h, fill=TRANG, radius=True)
+    s.shapes.add_picture(os.path.join(HINH, "logo_islab.png"),
+                         chip_x + Inches(0.30), chip_y + Inches(0.22), width=islab_w)
     t2 = txt(s, LE, Inches(4.1), W - 2 * LE, Inches(1.2), size=18,
              color=RGBColor(0xBF, 0xD6, 0xF2), align=PP_ALIGN.CENTER, space=1.4)
     dong(t2, "Em xin sẵn sàng trả lời câu hỏi của Hội đồng.", size=18,

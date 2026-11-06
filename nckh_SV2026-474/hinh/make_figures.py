@@ -39,7 +39,8 @@ plt.rcParams.update({
     "pdf.fonttype": 42,
     "legend.frameon": False,
 })
-BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"
+# Màu lấy từ logo ISLab (#30649E và #6B95C5) để hình vẽ khớp với bộ slide và bìa
+BLUE, ORANGE, AQUA, YELLOW = "#30649e", "#c86a2c", "#1b8f86", "#d9a327"
 GRAY, DGRAY = "#b5b4ae", "#6b6a66"
 INK = "#0b0b0b"
 
@@ -101,7 +102,7 @@ def fig_retain():
     rows = [
         ("v15-augonly", "SteadyDet-W + huấn luyện rung", BLUE),
         ("v17-vib-augonly", "SteadyDet-N + huấn luyện rung", BLUE),
-        ("v17-vibcons", "SteadyDet-N + ràng buộc nhất quán", "#8fb8ea"),
+        ("v17-vibcons", "SteadyDet-N + ràng buộc nhất quán", "#6b95c5"),
         ("rtdetr-l", "RT-DETR-l", GRAY),
         ("v15-baseline", "SteadyDet-W (gốc)", GRAY),
         ("yolo11n", "YOLO11-n", GRAY),
