@@ -148,8 +148,19 @@ def trang_moi(prs, tieu_de, phu=None, so=None, ghi_chu=None):
     """Slide trắng + thanh tiêu đề navy + số trang."""
     s = prs.slides.add_slide(prs.slide_layouts[6])
     thanh = hop(s, 0, 0, W, Inches(1.02), fill=DAM, radius=False)
+    # Logo phòng thí nghiệm nằm cố định ở cuối thanh tiêu đề của MỌI slide, lót nền
+    # trắng vì chữ logo cùng sắc xanh với thanh. Vẽ ngay sau thanh nên không ảnh nào
+    # của phần nội dung đè lên được.
+    lg_w = Inches(1.28)
+    lg_h = Emu(int(lg_w / 2.294))                 # ảnh logo 805x351
+    chip_w, chip_h = lg_w + Inches(0.26), lg_h + Inches(0.20)
+    chip_x, chip_y = W - Inches(0.34) - chip_w, (Inches(1.02) - chip_h) // 2
+    hop(s, chip_x, chip_y, chip_w, chip_h, fill=TRANG, radius=True)
+    s.shapes.add_picture(os.path.join(HINH, "logo_islab.png"),
+                         chip_x + Inches(0.13), chip_y + Inches(0.10), width=lg_w)
     tf = thanh.text_frame
     tf.margin_left, tf.margin_top = Inches(0.55), Inches(0.14)
+    tf.margin_right = W - chip_x + Inches(0.15)   # chữ tiêu đề dừng trước logo
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.LEFT
@@ -166,9 +177,6 @@ def trang_moi(prs, tieu_de, phu=None, so=None, ghi_chu=None):
         t = txt(s, W - Inches(1.1), H - Inches(0.42), Inches(0.6), Inches(0.3),
                 size=11, color=MO, align=PP_ALIGN.RIGHT)
         t.paragraphs[0].runs[0].text = str(so)
-        # logo phòng thí nghiệm, đặt chìm ở góc dưới trái cho khỏi che nội dung
-        s.shapes.add_picture(os.path.join(HINH, "logo_islab.png"),
-                             LE, H - Inches(0.62), height=Inches(0.36))
     if ghi_chu:
         s.notes_slide.notes_text_frame.text = ghi_chu
     return s
