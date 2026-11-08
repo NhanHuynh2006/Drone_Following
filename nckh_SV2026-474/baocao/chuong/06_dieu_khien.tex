@@ -76,9 +76,9 @@ Khoảng cách tới người được ước lượng từ chiều cao hộp ba
 
 Kết quả đo được loại bỏ khi hộp thấp hơn 20 điểm ảnh hoặc khoảng cách nằm ngoài khoảng 0,5--30\,m. Vì sai số tăng theo bình phương khoảng cách, phương sai đo được mô hình hoá là $\sigma^2 = \max\big(0{,}1,\ (2d^2/f_y)^2\big)$, ứng với sai số chiều cao hộp khoảng 2 điểm ảnh. Giá trị đo được làm mượt bằng bộ lọc Kalman một chiều với trạng thái $[d,\ \dot d]^\top$, mô hình vận tốc không đổi; phương sai đo thay đổi theo từng lần đo nên các phép đo ở xa (kém tin cậy) tự động được tin ít hơn.
 
-\section{Servo thị giác và bộ điều khiển PID}
+\section{Visual servoing và bộ điều khiển PID}
 
-Đề tài dùng cách tiếp cận servo thị giác lai~\cite{chaumette2006visual}: kênh quay hướng dùng sai số trực tiếp trên ảnh, kênh tiến lùi dùng khoảng cách ước lượng, kênh độ cao dùng độ cao đo từ bộ điều khiển bay. Ba bộ điều khiển PID độc lập theo phương trình~(\ref{eq:pid}) sinh ra vận tốc trong hệ toạ độ thân máy bay; vận tốc ngang bằng 0 vì chuyển động sang ngang được thực hiện bằng cách quay hướng.
+Đề tài dùng cách tiếp cận visual servoing lai~\cite{chaumette2006visual}: kênh quay hướng dùng sai số trực tiếp trên ảnh, kênh tiến lùi dùng khoảng cách ước lượng, kênh độ cao dùng độ cao đo từ bộ điều khiển bay. Ba bộ điều khiển PID độc lập theo phương trình~(\ref{eq:pid}) sinh ra vận tốc trong hệ toạ độ thân máy bay; vận tốc ngang bằng 0 vì chuyển động sang ngang được thực hiện bằng cách quay hướng.
 
 \begin{itemize}
 \item \textbf{Kênh tiến lùi:} sai số là khoảng cách đã làm mượt trừ khoảng cách đặt 5\,m; không có khoảng cách tin cậy thì vận tốc tiến bằng 0.
@@ -169,4 +169,4 @@ Bảng giám sát là trang web do chính \texttt{main.py} phục vụ ở cổn
 
 \section{Kết luận chương}
 
-Chương trình điều khiển bám người đã hoàn chỉnh: theo vết OC-SORT, khoá mục tiêu có cơ chế tìm lại người cũ, ước lượng khoảng cách lỗ kim có bộ lọc Kalman, ba bộ PID trong cấu trúc servo thị giác lai, lớp an toàn nhiều tầng với nguyên tắc người lái luôn giữ quyền chế độ bay, giao tiếp MAVLink 30\,Hz đã đo độ trễ, bảng giám sát web và nhật ký bay có dữ liệu rung thật. Mọi tham số quan trọng đều chọn theo số đo và ghi lại lý do ngay trong tệp cấu hình.
+Chương trình điều khiển bám người đã hoàn chỉnh: theo vết OC-SORT, khoá mục tiêu có cơ chế tìm lại người cũ, ước lượng khoảng cách lỗ kim có bộ lọc Kalman, ba bộ PID trong cấu trúc visual servoing lai, lớp an toàn nhiều tầng với nguyên tắc người lái luôn giữ quyền chế độ bay, giao tiếp MAVLink 30\,Hz đã đo độ trễ, bảng giám sát web và nhật ký bay có dữ liệu rung thật. Mọi tham số quan trọng đều chọn theo số đo và ghi lại lý do ngay trong tệp cấu hình.

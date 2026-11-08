@@ -65,7 +65,7 @@ Z \approx \frac{f_y H_r}{h}.
 \end{equation}
 Đạo hàm theo $h$ cho $|\partial Z/\partial h| = Z^2/(f_y H_r)$: sai số tăng theo bình phương khoảng cách, vì ở xa mỗi điểm ảnh sai lệch tương ứng nhiều mét hơn. Tương tự, độ lệch góc phương vị của người so với trục quang học tính từ độ lệch ngang của tâm hộp, $\psi \approx (u - c_x)/f_x$.
 
-Điều khiển servo thị giác dùng thông tin ảnh để sinh lệnh chuyển động~\cite{chaumette2006visual}, theo hai trường phái: dựa trên ảnh (điều khiển trực tiếp sai số trong mặt phẳng ảnh) và dựa trên vị trí (ước lượng vị trí ba chiều rồi điều khiển trong không gian). Hệ thống của đề tài là dạng lai: dùng sai số ngang trong ảnh để quay hướng và khoảng cách ước lượng để tiến lùi. Bộ điều khiển PID~\cite{astrom2008feedback} tính tín hiệu điều khiển từ sai số $e(t)$:
+Điều khiển theo kiểu \textit{visual servoing} dùng thông tin ảnh để sinh lệnh chuyển động~\cite{chaumette2006visual}, theo hai trường phái: dựa trên ảnh (điều khiển trực tiếp sai số trong mặt phẳng ảnh) và dựa trên vị trí (ước lượng vị trí ba chiều rồi điều khiển trong không gian). Hệ thống của đề tài là dạng lai: dùng sai số ngang trong ảnh để quay hướng và khoảng cách ước lượng để tiến lùi. Bộ điều khiển PID~\cite{astrom2008feedback} tính tín hiệu điều khiển từ sai số $e(t)$:
 \begin{equation}
 u(t) = K_p\, e(t) + K_i \int_0^t e(\tau)\, d\tau + K_d \frac{de(t)}{dt}.
 \label{eq:pid}

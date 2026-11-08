@@ -96,7 +96,7 @@
 \contentsline {section}{\numberline {6.3}Theo vết đa đối tượng}{48}{section.6.3}%
 \contentsline {section}{\numberline {6.4}Chọn và khoá mục tiêu}{48}{section.6.4}%
 \contentsline {section}{\numberline {6.5}Ước lượng khoảng cách}{49}{section.6.5}%
-\contentsline {section}{\numberline {6.6}Servo thị giác và bộ điều khiển PID}{49}{section.6.6}%
+\contentsline {section}{\numberline {6.6}Visual servoing và bộ điều khiển PID}{49}{section.6.6}%
 \contentsline {section}{\numberline {6.7}Lớp an toàn}{50}{section.6.7}%
 \contentsline {section}{\numberline {6.8}Giao tiếp MAVLink và lựa chọn nhịp gửi lệnh}{52}{section.6.8}%
 \contentsline {subsection}{\numberline {6.8.1}Kiểm tra liên lạc}{52}{subsection.6.8.1}%
