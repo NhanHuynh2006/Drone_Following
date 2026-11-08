@@ -340,8 +340,15 @@ giảm nhẹ."
   → tính hàm mất mát phát hiện L_det(f_θ(x̂), y), **nhãn giữ nguyên**.
 - 4 gạch đầu dòng: Thay 50% mỗi lô bằng ảnh rung mô phỏng · Nhãn giữ nguyên ·
   Hàm mất mát không đổi, kiến trúc không đổi · **Không tốn chi phí khi suy
-  luận** — chỉ thay dữ liệu huấn luyện · Biến thể ràng buộc nhất quán (đối
-  chứng): tốn 1,8× thời gian huấn luyện, kết quả kém hơn.
+  luận** — chỉ thay dữ liệu huấn luyện · Mô hình và hàm mất mát giữ nguyên,
+  chỉ dữ liệu đưa vào là khác.
+
+> **Đã bỏ khỏi slide:** biến thể đối chứng "ràng buộc nhất quán" (huấn luyện
+> cả ảnh sạch lẫn ảnh rung qua cùng mạng, ép hai dự đoán giống nhau, dùng
+> stop-gradient) — không đủ thời gian giải thích trong 15 phút nên đã cắt
+> khỏi bullet, ghi chú và bảng kết quả. Vẫn còn đầy đủ trong báo cáo (Chương
+> 3, phương trình `eq:vibcons`) và trong `kich_ban_thuyet_trinh.md` nếu Hội
+> đồng hỏi sâu — xem phần giải thích cơ chế ở cuối mục này.
 
 ### Giải thích từng ký hiệu trong sơ đồ (đọc từ trái sang phải)
 
@@ -421,13 +428,13 @@ bền hơn qua dữ liệu" không tốn gì thêm lúc chạy.
 
 **Đây là bảng kết quả quan trọng nhất của toàn bài — đọc kỹ từng dòng.**
 
-**Trên slide (bảng đầy đủ):**
+**Trên slide (bảng đầy đủ — đã bỏ dòng "ràng buộc nhất quán" khỏi bản trình
+chiếu để đủ giờ, xem ghi chú cuối mục này):**
 
 | SteadyDet-N | AP ảnh sạch | AP mức rung 2 | retain (%) | Kết luận |
 |---|---|---|---|---|
 | Gốc | 0,1892 | 0,0123 | 16,8 ± 0,7 | gần như không phát hiện được |
 | + 120 epoch ảnh sạch | 0,1823 | 0,0125 | 16,9 ± 0,7 | huấn luyện thêm không cải thiện |
-| + ràng buộc nhất quán | 0,1746 | 0,0392 | 30,0 ± 0,6 | thấp hơn, chi phí gấp 1,8 lần |
 | **+ huấn luyện nhận biết rung** | 0,1708 | **0,0518** | **36,2 ± 0,7** | **cao nhất** |
 | SteadyDet-W: gốc → rung | 0,2349→0,2219 | 0,0258→0,0839 | 22,2→39,4 | tái lập được |
 | YOLO11-n: gốc → rung | 0,2588→0,2579 | 0,0248→0,0227 | 21,9→21,5 | không cải thiện |
@@ -441,19 +448,15 @@ trọng khi trình bày, đây là cách "chứng minh bằng loại trừ"):**
 
 1. **Dòng "Gốc" (16,8%):** Mô hình baseline, không xử lý gì — gần như mù khi
    gặp rung mức 2 (chỉ giữ được 16,8% độ chính xác so với lúc đứng yên).
-2. **Dòng "+ 120 epoch ảnh sạch" (16,9%):** Đây là **đối chứng thứ nhất**, trả
+2. **Dòng "+ 120 epoch ảnh sạch" (16,9%):** Đây là **đối chứng**, trả
    lời câu hỏi "có phải chỉ cần huấn luyện lâu hơn là tự nhiên bền hơn?" —
    Câu trả lời là **không**: huấn luyện thêm 120 epoch nữa nhưng vẫn trên ảnh
    sạch thì retain gần như không đổi (16,8% → 16,9%, trong sai số thống kê).
    Điều này loại trừ giả thuyết "cứ train lâu là tốt".
-3. **Dòng "+ ràng buộc nhất quán" (30,0%):** Đây là **đối chứng thứ hai** —
-   biến thể phức tạp hơn đã nói ở slide 8. Nó có cải thiện (30,0% > 16,8%)
-   nhưng **kém hơn** phương án chính và **tốn gấp 1,8 lần** thời gian huấn
-   luyện. Chứng minh: không phải cứ phức tạp hơn là tốt hơn.
-4. **Dòng "+ huấn luyện nhận biết rung" (36,2%) — kết quả chính:** Cao nhất
+3. **Dòng "+ huấn luyện nhận biết rung" (36,2%) — kết quả chính:** Cao nhất
    trong tất cả, với chi phí huấn luyện rẻ nhất trong các phương án xử lý rung,
    và **0 ms chi phí thêm lúc suy luận**.
-5. **Hai dòng cuối (SteadyDet-W, YOLO11-n) — đây là bước kiểm chứng tính tổng
+4. **Hai dòng cuối (SteadyDet-W, YOLO11-n) — đây là bước kiểm chứng tính tổng
    quát, cực kỳ quan trọng để trả lời "có phải chỉ ăn may trên một kiến trúc?"**
    - Trên **SteadyDet-W** (kiến trúc khác, nhưng cùng họ do nhóm thiết kế):
      retain tăng từ 22,2% lên 39,4% — **phương pháp tái lập được** trên kiến

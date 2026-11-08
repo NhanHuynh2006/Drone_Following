@@ -500,20 +500,19 @@ def dung_slide(prs, P, tt):
     s = trang_moi(prs, "Phương pháp: huấn luyện nhận biết rung", so=8, ghi_chu=(
         "⏱ 0:35 — Ý tưởng rất đơn giản: trong mỗi lô huấn luyện, thay 50% ảnh bằng ảnh đã "
         "áp mô hình vật lý của rung, nhãn giữ nguyên, hàm mất mát tính bình thường. Mô hình "
-        "khi chạy không thay đổi gì nên không tốn thêm một phép tính nào lúc suy luận. "
-        "Nhóm cũng thử biến thể ràng buộc nhất quán, phức tạp hơn và tốn 1,8 lần thời gian "
-        "huấn luyện nhưng kết quả kém hơn."))
+        "khi chạy không thay đổi gì nên không tốn thêm một phép tính nào lúc suy luận."))
     pic = anh(s, P("sodo_huanluyen_rung"), LE, TRAN + Inches(0.25), W - 2 * LE, Inches(2.5))
     chu_thich_duoi(s, pic, "Một nửa số ảnh mỗi lô đi qua toán tử rung; phần còn lại giữ nguyên")
     tf = txt(s, LE, TRAN + Inches(3.35), Inches(6.0), Inches(2.4), size=16.5, space=1.2)
     dong(tf, "Thay **50% mỗi lô** bằng ảnh rung mô phỏng.", size=16.5, bullet="▸", truoc=0)
     dong(tf, "**Nhãn giữ nguyên** — nhoè không làm dịch vật.", size=16.5, bullet="▸", truoc=16)
     dong(tf, "Hàm mất mát **không đổi**, kiến trúc **không đổi**.", size=16.5, bullet="▸", truoc=16)
-    tf2 = txt(s, Inches(7.0), TRAN + Inches(3.35), Inches(5.8), Inches(2.4), size=16.5, space=1.2)
+    tf2 = txt(s, Inches(7.0), TRAN + Inches(3.35), Inches(5.8), Inches(2.4), size=16.5,
+             space=1.2, anchor=MSO_ANCHOR.MIDDLE)
     dong(tf2, "**Không tốn chi phí khi suy luận** — chỉ thay dữ liệu huấn luyện.",
          size=16.5, bullet="▸", truoc=0)
-    dong(tf2, "Biến thể ràng buộc nhất quán (đối chứng): tốn **1,8×** thời gian huấn "
-              "luyện, kết quả **kém hơn**.", size=16.5, bullet="▸", truoc=16)
+    dong(tf2, "Mô hình và hàm mất mát giữ nguyên — chỉ dữ liệu đưa vào là khác.",
+         size=16.5, bullet="▸", truoc=16)
 
     # ======================================================= PHẦN KẾT QUẢ ===
     # ------------------------------- 7. kết quả chính trên VisDrone-person
@@ -522,20 +521,18 @@ def dung_slide(prs, P, tt):
                   so=9, ghi_chu=(
         "⏱ 1:05 — Đây là bảng kết quả quan trọng nhất, xin Hội đồng đọc từ trên xuống. "
         "Mô hình gốc chỉ giữ được 16,8% độ chính xác khi rung — gần như mù khi bay tiến. "
-        "Đối chứng 1: huấn luyện thêm 120 epoch trên ảnh sạch vẫn 16,9%, chứng tỏ cái lợi "
-        "không đến từ việc train lâu hơn. Đối chứng 2: ràng buộc nhất quán được 30,0%, tốn "
-        "hơn mà kém hơn. Phương pháp đề xuất đạt 36,2%, tức AP ở mức rung bay tiến tăng 4,2 lần, "
-        "đổi lại AP trên ảnh sạch chỉ giảm 9,7%. Hai dòng cuối là kiểm chứng: tái lập được "
-        "trên SteadyDet-W, còn trên YOLO11-n thì không có tác dụng."))
+        "Đối chứng: huấn luyện thêm 120 epoch trên ảnh sạch vẫn 16,9%, chứng tỏ cái lợi "
+        "không đến từ việc train lâu hơn. Phương pháp đề xuất đạt 36,2%, tức AP ở mức rung "
+        "bay tiến tăng 4,2 lần, đổi lại AP trên ảnh sạch chỉ giảm 9,7%. Hai dòng cuối là "
+        "kiểm chứng: tái lập được trên SteadyDet-W, còn trên YOLO11-n thì không có tác dụng."))
     bang(s, LE, TRAN - Inches(0.05), W - 2 * LE, Inches(3.5), [
         ["SteadyDet-N", "AP ảnh sạch", "AP mức rung 2", "retain (%)", "Kết luận"],
         ["Gốc", "0,1892", "0,0123", "16,8 ± 0,7", "gần như không phát hiện được"],
         ["+ 120 epoch ảnh sạch", "0,1823", "0,0125", "16,9 ± 0,7", "huấn luyện thêm không cải thiện"],
-        ["+ ràng buộc nhất quán", "0,1746", "0,0392", "30,0 ± 0,6", "thấp hơn, chi phí gấp 1,8 lần"],
         ["@+ huấn luyện nhận biết rung", "@0,1708", "@**0,0518**", "@**36,2 ± 0,7**", "@**cao nhất**"],
         ["SteadyDet-W: gốc → rung", "0,2349 → 0,2219", "0,0258 → 0,0839", "22,2 → 39,4", "tái lập được"],
         ["YOLO11-n: gốc → rung", "0,2588 → 0,2579", "0,0248 → 0,0227", "21,9 → 21,5", "không cải thiện"],
-    ], rong_cot=[3.0, 1.7, 1.7, 1.6, 2.4], co_chu=12.5)
+    ], rong_cot=[3.0, 1.7, 1.7, 1.6, 2.4], co_chu=13)
     dai_so_lieu(s, TRAN + Inches(3.75), [
         ("16,8% → 36,2%", "tỷ lệ giữ độ chính xác khi rung"),
         ("× 4,2", "AP ở mức rung của bay tiến"),
