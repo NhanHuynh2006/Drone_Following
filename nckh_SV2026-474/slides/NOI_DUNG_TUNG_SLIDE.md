@@ -557,6 +557,47 @@ năm phát triển nhưng retain gần như ngang nhau quanh 19–26%, chứng t
 trước rung không tự nhiên cải thiện theo kiến trúc mới hay mô hình lớn hơn —
 phải chủ động xử lý bằng phương pháp, như hai thanh dẫn đầu của đề tài."
 
+### Vì sao so sánh bằng retain chứ không so AP (mCP) tuyệt đối — câu hỏi rất
+### hay, nhiều người trực giác nghĩ AP tuyệt đối mới "chuẩn" hơn
+
+**Ví dụ đời thường trước:** hai vận động viên marathon. A chạy 100km đường
+bằng hết 10 giờ (nhanh); B chạy hết 12 giờ (chậm hơn A). Cho cả hai chạy
+tiếp trên địa hình gồ ghề: A hết 40 giờ (chậm đi **4 lần**), B hết 15 giờ
+(chậm đi chỉ **1,25 lần**). Nếu so **thời gian tuyệt đối** trên địa hình khó:
+A 40h, B 15h → tưởng B thắng — nhưng B chỉ "thắng" vì A sụp đổ hoàn toàn, chứ
+không phải B bền hơn. Nếu so **tỷ lệ giữ được tốc độ** (retain): A giữ 10/40
+= 25%, B giữ 12/15 = 80% → B mới thật sự bền hơn.
+
+**Áp đúng số liệu thật — chứng minh so AP tuyệt đối sẽ ra kết luận sai:**
+
+| Mô hình | AP sạch | mCP (AP tuyệt đối khi rung) | retain |
+|---|---|---|---|
+| RT-DETR-l | 0,2502 | **0,0641** | 25,6% |
+| SteadyDet-N + rung | 0,1708 | 0,0617 | **36,2%** |
+
+Nếu chỉ nhìn cột mCP: RT-DETR-l (0,0641) **cao hơn** SteadyDet-N (0,0617) —
+tưởng RT-DETR-l chịu rung tốt hơn. **Sai**, vì RT-DETR-l chỉ cao hơn tuyệt
+đối nhờ nó xuất phát từ vạch cao hơn hẳn (AP sạch 0,2502) và to gấp 28 lần
+(nhiều "sức chịu đựng" hơn) — giống vận động viên A chạy nhanh trên đường
+bằng nhưng sụp đổ trên địa hình khó. Nhìn retain thì ngược lại: RT-DETR-l chỉ
+giữ được 25,6% độ chính xác **của chính nó**, còn SteadyDet-N giữ được
+36,2% — tỷ lệ "sụp đổ" của RT-DETR-l khi rung nặng hơn hẳn.
+
+**Bản chất của retain, nói thật gọn:** retain không đo "mô hình chính xác bao
+nhiêu" (đó là việc của AP/mCP) — retain đo **"mô hình trung thành với chính
+nó tới mức nào khi điều kiện xấu đi"**. Hai việc này độc lập: một mô hình có
+thể AP sạch rất cao nhưng retain rất thấp (giòn, dễ vỡ khi rung — đúng là
+trường hợp cả 5 mô hình đối chứng ở bảng trên, retain chỉ quanh 19–26% dù AP
+sạch của chúng cao hơn SteadyDet-N).
+
+**Vì sao slide này buộc phải dùng retain?** Vì mục đích của slide là xếp
+hạng **độ bền** — nếu dùng AP tuyệt đối thì mô hình nào vốn mạnh sẵn (nhiều
+tham số, nhiều "vốn" để mất) sẽ luôn trông có vẻ "bền" hơn chỉ vì nó có nhiều
+vốn hơn, chứ không phải vì đặc trưng nó học được thực sự ít nhạy cảm với
+rung hơn. retain chia AP khi rung cho AP sạch của **chính mô hình đó**, tách
+riêng được yếu tố "bền" ra khỏi yếu tố "vốn mạnh sẵn" — đây là lý do bắt
+buộc phải dùng retain để so sánh độ bền một cách công bằng.
+
 ---
 
 ## Slide 12 — Kết quả 2: Thứ hạng đảo ngược khi có rung
