@@ -42,17 +42,17 @@
 \contentsline {section}{\numberline {3.1}Yêu cầu thiết kế}{20}{section.3.1}%
 \contentsline {section}{\numberline {3.2}Quá trình phát triển kiến trúc}{20}{section.3.2}%
 \contentsline {section}{\numberline {3.3}Kiến trúc SteadyDet-N}{21}{section.3.3}%
-\contentsline {subsection}{\numberline {3.3.1}Backbone}{22}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.1}Backbone}{23}{subsection.3.3.1}%
 \contentsline {subsection}{\numberline {3.3.2}FPN neck mỏng}{23}{subsection.3.3.2}%
 \contentsline {subsection}{\numberline {3.3.3}Head LiteHead}{23}{subsection.3.3.3}%
 \contentsline {subsection}{\numberline {3.3.4}So sánh hai phiên bản}{24}{subsection.3.3.4}%
-\contentsline {section}{\numberline {3.4}Hàm mất mát}{24}{section.3.4}%
+\contentsline {section}{\numberline {3.4}Hàm mất mát}{25}{section.3.4}%
 \contentsline {section}{\numberline {3.5}Quy trình huấn luyện}{25}{section.3.5}%
 \contentsline {section}{\numberline {3.6}Huấn luyện nhận biết rung}{26}{section.3.6}%
 \contentsline {subsection}{\numberline {3.6.1}Ý tưởng}{26}{subsection.3.6.1}%
 \contentsline {subsection}{\numberline {3.6.2}Phương pháp}{26}{subsection.3.6.2}%
 \contentsline {subsection}{\numberline {3.6.3}Biến thể ràng buộc nhất quán}{27}{subsection.3.6.3}%
-\contentsline {subsection}{\numberline {3.6.4}Thiết lập tinh chỉnh}{27}{subsection.3.6.4}%
+\contentsline {subsection}{\numberline {3.6.4}Thiết lập tinh chỉnh}{28}{subsection.3.6.4}%
 \contentsline {subsection}{\numberline {3.6.5}Biến thể không dùng NMS}{28}{subsection.3.6.5}%
 \contentsline {section}{\numberline {3.7}Kết luận chương}{28}{section.3.7}%
 \contentsline {chapter}{\numberline {4}Kết quả thực nghiệm của mô hình}{29}{chapter.4}%

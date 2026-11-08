@@ -6,7 +6,7 @@
   nk/.style={blk, fill=xanh!10, minimum width=2.2cm},
   hd/.style={blk, fill=cam!12, minimum width=2.4cm},
   p2/.style={dashed, thick},
-  lab/.style={font=\scriptsize, text=black!65}
+  lab/.style={font=\footnotesize, text=black!65}
 ]
 % backbone
 \node[blk, minimum width=3.3cm, fill=black!2] (in) at (0,0) {Ảnh vào\\$640\times640\times3$};
@@ -42,7 +42,7 @@
 \node[font=\footnotesize\bfseries] at (0,1.0) {Backbone};
 \node[font=\footnotesize\bfseries] at (n2 |- 0,1.0) {FPN neck (từ trên xuống)};
 \node[font=\footnotesize\bfseries] at (h2 |- 0,1.0) {Head};
-\node[draw=black!40, rounded corners=2pt, fill=black!3, align=left, font=\scriptsize, text width=3.9cm, below=6mm of h5] (lh)
+\node[draw=black!40, rounded corners=2pt, fill=black!3, align=left, font=\footnotesize, text width=3.9cm, below=6mm of h5] (lh)
  {\textbf{LiteHead:} DW $3\times3$ + PW $1\times1$ dùng chung $\rightarrow$ 1 kênh điểm người + 4 kênh hộp (hồi quy trực tiếp, không DFL).\\[2pt]
   Nét đứt: nhánh $P_2$ bước 4 được làm mỏng (1 khối, nửa số kênh neck, head depthwise separable).};
 \end{tikzpicture}

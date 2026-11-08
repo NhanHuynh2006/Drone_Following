@@ -246,7 +246,7 @@ def chuan_bi_anh(tmp):
                            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for ten in ("duong_cong_rung", "bay_that", "int8", "do_tre", "retain",
                 "hailo", "nguong_conf", "nhip_lenh", "huan_luyen", "camera_fps"):
-        subprocess.run(["pdftoppm", "-r", "220", "-png", "-singlefile",
+        subprocess.run(["pdftoppm", "-r", "320", "-png", "-singlefile",
                         os.path.join(HINH, ten + ".pdf"), os.path.join(tmp, ten)],
                        check=True)
     bia = (r"\documentclass[border=4pt]{standalone}"
@@ -280,7 +280,7 @@ def chuan_bi_anh(tmp):
             f.write(bia % nguon)
         subprocess.run(["pdflatex", "-interaction=nonstopmode", tex],
                        cwd=tmp, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["pdftoppm", "-r", "220", "-png", "-singlefile",
+        subprocess.run(["pdftoppm", "-r", "320", "-png", "-singlefile",
                         os.path.join(tmp, "w_" + ten + ".pdf"), os.path.join(tmp, ten)],
                        check=True)
     return lambda ten: os.path.join(tmp, ten + ".png")
@@ -770,9 +770,9 @@ def dung_slide(prs, P, tt):
         "COAST, HOVER; mất người dưới 3 giây thì bám theo dự đoán với nửa vận tốc, sau đó đứng "
         "yên chờ; và lệnh chỉ được gửi khi máy bay đang ở chế độ GUIDED, người lái gạt công tắc "
         "là lấy lại quyền ngay lập tức."))
-    pic = anh(s, P("nhip_lenh"), LE, TRAN + Inches(0.2), Inches(6.4), Inches(3.3))
+    pic = anh(s, P("nhip_lenh"), LE, TRAN + Inches(0.15), Inches(6.4), Inches(2.75))
     chu_thich_duoi(s, pic, "Độ trễ từ ánh sáng vào cảm biến tới lúc máy bay nhận lệnh")
-    pic2 = anh(s, P("sodo_antoan"), LE, TRAN + Inches(3.95), Inches(6.4), Inches(1.5))
+    pic2 = anh(s, P("sodo_antoan"), LE, TRAN + Inches(3.55), Inches(6.4), Inches(1.95))
     tf = txt(s, Inches(7.3), TRAN + Inches(0.25), Inches(5.5), Inches(4.9), size=15.5,
              space=1.25, anchor=MSO_ANCHOR.MIDDLE)
     dong(tf, "10 Hz cộng thêm **50 ms** chờ tới lượt gửi mà không đổi lại gì.",
