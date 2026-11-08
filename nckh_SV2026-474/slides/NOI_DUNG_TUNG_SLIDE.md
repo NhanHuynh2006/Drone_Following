@@ -216,6 +216,85 @@ tích bản đồ đặc trưng, nên thay vì né tránh độ phân giải cao
 khác, SteadyDet-N vẫn giữ nhánh P2 cho người nhỏ nhưng làm mỏng nó, dồn tính
 toán về các mức sâu."
 
+### Lý do quan trọng nhất — một nguyên lý duy nhất giải thích mọi khối trong sơ đồ
+
+Trước khi có SteadyDet-N, nhóm đã có bản **SteadyDet-W** — ít tham số hơn
+(1,00 triệu, ít hơn cả SteadyDet-N) nhưng **tốn 12,9 GFLOPs**. Mổ xẻ chi phí
+từng lớp phát hiện ra: **riêng head đặt ở P2 một mình đã ngốn 28% tổng chi
+phí**, chỉ vì dùng 5 lớp tích chập đầy đủ trên đúng bản đồ lớn nhất (160×160).
+→ Bằng chứng sống: *số tham số ít không có nghĩa là chạy nhanh* — vấn đề nằm
+ở **chỗ đặt** phép tính, không phải **số lượng** phép tính.
+
+Từ đó ra một nguyên tắc duy nhất, áp dụng nhất quán cho **mọi** khối trong sơ
+đồ: **ở tầng bản đồ to (tốn) thì làm mỏng hết mức; ở tầng bản đồ nhỏ (rẻ) thì
+mới "chơi sang".** Đây là lý do nên nói đầu tiên nếu Hội đồng hỏi "vì sao
+thiết kế như vậy" — không liệt kê đặc điểm, mà chỉ ra một phép tính chi phí
+duy nhất chi phối toàn bộ quyết định.
+
+### Vì sao UIB (Universal Inverted Bottleneck) chứ không phải tích chập thường
+
+Mỗi khối UIB bên trong là: tích chập **depthwise** 3×3 (xử lý riêng từng
+kênh, rẻ) → mở rộng kênh bằng tích chập **1×1** → thu hẹp lại bằng 1×1. Lý do
+chọn kiểu tách này thay vì một lớp tích chập thường, bằng đúng công thức chi
+phí ở Chương 1: tích chập thường 3×3 từ $C_{in}$ sang $C_{out}$ kênh tốn
+$3^2 \times C_{in} \times C_{out}$ phép tính mỗi điểm ảnh; tách thành
+depthwise + 1×1 chỉ còn $3^2 \times C_{in} + C_{in}\times C_{out}$ — **rẻ hơn
+gần 9 lần** khi $C_{out}$ lớn. UIB dùng ở **mọi** khối trong toàn mạng vì đó
+là cách rẻ nhất để vừa nhìn được không gian xung quanh (depthwise) vừa trộn
+được thông tin giữa các kênh (1×1).
+
+### Vì sao CSP-UIB ở P3–P5 — và nhánh "đi tắt" là gì
+
+Ở ba tầng P3, P4, P5 (mỗi tầng có 2 khối UIB), bản đồ được **chẻ đôi theo
+kênh** thành hai nhánh trước khi vào 2 khối UIB đó:
+- **Nhánh xử lý:** một nửa kênh đi qua lần lượt 2 khối UIB — nhánh "làm việc
+  nặng".
+- **Nhánh đi tắt (skip):** nửa kênh còn lại **không đụng tới gì cả**, đi
+  thẳng một mạch, bỏ qua hoàn toàn 2 khối UIB.
+
+Sau đó hai nhánh được ghép lại (concat) và trộn bằng một tích chập 1×1. Lợi
+ích kép: (1) chỉ một nửa kênh phải chạy qua phần tốn kém → giảm gần một nửa
+chi phí của cả cụm; (2) nhánh đi tắt giữ nguyên thông tin gốc, cho tín hiệu
+sửa lỗi (gradient) một đường ngắn, sạch khi huấn luyện — giúp mạng học ổn
+định hơn khi có nhiều khối xếp chồng. **Vì sao không bọc CSP ở P2?** Vì P2
+chỉ có đúng 1 khối (đã làm mỏng tối đa) — chẻ đôi/ghép lại chỉ có lợi khi có
+từ 2 khối trở lên để "rút gọn"; với 1 khối, thêm bước chẻ/ghép chỉ tốn thêm
+mà không tiết kiệm được gì.
+
+### Vì sao Conv 1×1 — và vì sao neck chỗ dùng Conv 1×1, chỗ dùng UIB
+
+Trong cột FPN neck, hộp `n5` ghi "Conv 1×1" còn `n4`, `n3`, `n2` ghi "UIB" —
+khác nhau vì:
+- `n5` chỉ nhận **một nguồn duy nhất** từ Backbone, chỉ cần "đổi số kênh cho
+  khớp" (192→48 kênh), không có gì để trộn — Conv 1×1 là cách rẻ nhất làm
+  đúng việc đó (tích chập 1×1 áp dụng tại mỗi điểm ảnh chính là phép tuyến
+  tính trộn kênh tại điểm đó, không có phép nào rẻ hơn cho đúng việc "chỉ đổi
+  kênh, giữ nguyên không gian"; dùng tích chập 3×3 cho việc này tốn gấp 9 lần
+  mà không được lợi gì thêm).
+- `n4`, `n3`, `n2` đều có **hai mũi tên chụm vào** trước khi tới hộp: một từ
+  mức trên phóng to lên (mang ngữ cảnh tổng quát), một từ Backbone chiếu
+  ngang qua (mang chi tiết thô, đúng vị trí). Hai luồng này được **cộng**
+  lại — nhưng cộng thô hai nguồn khác nhau chưa chắc đã hợp lý ngay, nên cần
+  thêm một khối UIB **sau phép cộng** để mạng tự học cách hoà trộn hai nguồn
+  thành một đặc trưng thống nhất. Ở `n2`, trước khi cộng còn có thêm một Conv
+  1×1 phụ để ép 48 kênh của `n3` xuống 24 kênh cho khớp với nhánh P2 mỏng.
+
+### Vì sao không dùng khối phổ biến khác (ResNet, self-attention khắp nơi...)
+
+- **Khối ResNet** (2 lớp tích chập 3×3 đầy đủ): dùng tích chập thường chứ
+  không depthwise — tốn hơn UIB nhiều lần cho cùng kích thước đầu ra, không
+  hợp ngân sách 33,3 ms trên máy nhúng không quạt.
+- **Self-attention ở khắp mọi tầng** (không chỉ riêng P5): chi phí
+  self-attention tăng theo **bình phương** số ô trong bản đồ. P5 chỉ có
+  20×20=400 ô (rẻ); P2 có 160×160=25.600 ô — gấp 64 lần số ô, mà chi phí
+  tăng theo bình phương nên sẽ đắt hơn khoảng 4.000 lần. Đặt self-attention
+  ở P2 sẽ phá nát ngân sách tính toán — đây là hệ quả trực tiếp của đúng
+  nguyên lý gốc (chi phí tỷ lệ diện tích bản đồ), áp dụng luôn cho cả phép
+  attention chứ không chỉ tích chập.
+- **Tích chập lớn (5×5, 7×7) thay depthwise 3×3:** tốn hơn theo đúng công
+  thức $k^2$ mà không cần thiết, vì receptive field rộng hơn đã được bù bằng
+  cách xếp nhiều lớp 3×3 liên tiếp qua các tầng.
+
 ---
 
 ## Slide 7 — Quá trình huấn luyện
@@ -263,6 +342,36 @@ giảm nhẹ."
   Hàm mất mát không đổi, kiến trúc không đổi · **Không tốn chi phí khi suy
   luận** — chỉ thay dữ liệu huấn luyện · Biến thể ràng buộc nhất quán (đối
   chứng): tốn 1,8× thời gian huấn luyện, kết quả kém hơn.
+
+### Giải thích từng ký hiệu trong sơ đồ (đọc từ trái sang phải)
+
+| Ký hiệu | Đọc là | Nghĩa là gì | Tại sao có mặt ở đó |
+|---|---|---|---|
+| $x$ | x | Một lô ảnh **sạch** (chưa xử lý gì) lấy từ tập huấn luyện | Điểm bắt đầu của mọi lượt huấn luyện |
+| $y$ | y | Nhãn thật đi kèm — vị trí hộp bao quanh từng người trong ảnh | Dùng để tính xem mô hình đoán đúng/sai bao nhiêu |
+| $p=0{,}5$ | xác suất 0,5 | Tung đồng xu: 50% ảnh đi vào nhánh rung, 50% giữ nguyên | Đây là bước "gieo xúc xắc" quyết định ảnh này có bị làm rung hay không |
+| $\mathcal{T}$ | toán tử rung T (chữ T viết hoa kiểu toán) | Một **hàm số**, nhận ảnh sạch vào, trả ra ảnh đã rung | Chính là công thức rung ở slide 5 ($I_{rung} = \gamma(I_{sạch}*k_{L,\theta})+n$), áp trực tiếp lên ảnh |
+| $L$ | L | Độ dài vệt nhoè (đơn vị: pixel) | Một tham số của $\mathcal{T}$ — quyết định nhoè nhẹ hay nặng |
+| $\theta$ (bên trong $\mathcal{T}$) | theta — **góc** nhoè | Hướng của vệt mờ (vài độ, vài chục độ...) | Tham số thứ hai của $\mathcal{T}$ |
+| $\sigma$ | sigma | Độ lệch chuẩn nhiễu cộng vào ảnh (mô phỏng hạt nhiễu cảm biến) | Tham số thứ ba của $\mathcal{T}$ |
+| $b$ | b | Mức dao động độ sáng (± bao nhiêu %) | Tham số thứ tư của $\mathcal{T}$ |
+| $f_\theta$ | f theta | Chính là mạng SteadyDet-N, với $\theta$ ở đây là **trọng số mạng** (hàng triệu con số mạng đang học) | Đây là mạng duy nhất, không có mạng phụ nào khác — ảnh dù rung hay sạch đều đi qua đúng một mạng này |
+| $\hat{x}$ | x mũ (x-hat) | Ảnh **thực sự** được đưa vào mạng ở lượt đó — có thể là bản đã rung (nếu rơi vào nhánh "có"), hoặc chính là $x$ không đổi (nếu rơi vào nhánh "không": $\hat{x}=x$) | Ký hiệu chung cho "ảnh đầu vào thật sự", vì nó có thể là một trong hai trường hợp tuỳ xác suất |
+| $\mathcal{L}_{\det}$ | L-det | Hàm mất mát phát hiện — công thức chấm điểm "mô hình đoán sai bao nhiêu" | Đúng hàm mất mát bình thường, không thêm thành phần nào mới |
+
+**Lưu ý quan trọng — một chữ $\theta$ dùng cho HAI nghĩa khác nhau, dễ gây
+nhầm:** $\theta$ ở bên trong $\mathcal{T}$ (góc nhoè) và $\theta$ ở $f_\theta$
+(trọng số mạng) là **hai thứ hoàn toàn khác nhau**, chỉ tình cờ dùng chung
+một chữ cái Hy Lạp theo quy ước toán học phổ biến (mỗi công thước tự quy định
+ký hiệu riêng trong phạm vi của nó). Nếu Hội đồng hỏi, cứ nói thẳng: *"Đây là
+cách dùng lại ký hiệu phổ biến trong tài liệu khoa học, hai chữ θ này độc lập
+với nhau, không liên quan gì nhau."*
+
+**Vì sao mũi tên "không: $\hat x = x$" lại vòng xuống dưới rồi mới vào $f$?**
+Đây là nhánh khi *không* rơi vào 50% bị rung — ảnh giữ nguyên, bỏ qua hoàn
+toàn khối $\mathcal{T}$, đi thẳng một đường vòng xuống dưới hộp $\mathcal{T}$
+rồi nhập lại vào cùng mạng $f_\theta$. Vẽ vòng xuống chỉ để không phải vẽ đè
+lên khối $\mathcal{T}$, không có ý nghĩa gì khác ngoài chuyện trình bày hình.
 
 **Nghĩa là gì — đây là đóng góp phương pháp chính, cần hiểu thật kỹ vì Hội
 đồng sẽ hỏi nhiều:**
