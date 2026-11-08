@@ -8,7 +8,7 @@
 | Bài tóm tắt 2 trang, 2 cột | `tomtat/tomtat.docx` (dựng từ file mẫu Word), `tomtat/tomtat.pdf` | Mẫu + Hướng dẫn định dạng tóm tắt |
 | Poster triển lãm | `poster_a3/poster_a3.pdf` (A3 ngang, đóng ở Phụ lục E) và `poster_a3/poster_a1.pdf` (A1 để báo cáo) | Mẫu BM07A |
 | Standee | `standee/standee.pdf` (0,6 × 1,6 m) | Mẫu BM07B |
-| Slide bảo vệ nghiệm thu (~15 phút, 25 slide) | `slides/SteadyDet-N_nghiem_thu.pptx` (PowerPoint, video nhúng sẵn) + `slides/kich_ban_15phut.md`; bản nhẹ để gửi mail `slides/SteadyDet-N_nghiem_thu_nhe.pptx`, bản dự phòng `slides/SteadyDet-N_nghiem_thu.pdf` | — |
+| Slide bảo vệ nghiệm thu (~15 phút, 25 slide) | `slides/SteadyDet-N_nghiem_thu.pptx` (PowerPoint, video nhúng sẵn) + `slides/kich_ban_15phut.md` (bấm giờ) + `slides/NOI_DUNG_TUNG_SLIDE.md` (nội dung và giải thích từng slide); bản nhẹ để gửi mail `slides/SteadyDet-N_nghiem_thu_nhe.pptx`, bản dự phòng `slides/SteadyDet-N_nghiem_thu.pdf` | — |
 | Slide bản dài 12–15 phút (LaTeX) | `slides/slides.pdf` + `slides/kich_ban_thuyet_trinh.md` | — |
 | Video bay thử | `video/video_bay_thu.mp4` (4 phút 43 giây): phần 1 phát hiện người, phần 2 vòng bám người | dựng từ chuyến bay 21/07/2026 |
 | Hai đoạn phim trình chiếu | `video/phan1_phat_hien.mp4` và `video/phan2_vong_bam.mp4` — mỗi đoạn 18 giây, cắt liền một mạch từ cùng khoảng phút 1:38–1:56 của chuyến bay, nhúng sẵn trong slide 13 và 14 | — |

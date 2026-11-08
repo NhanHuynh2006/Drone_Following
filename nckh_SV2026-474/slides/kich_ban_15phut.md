@@ -100,6 +100,10 @@ libreoffice --headless --convert-to pdf SteadyDet-N_nghiem_thu_nhe.pptx
 
 ## Câu hỏi Hội đồng hay hỏi
 
+Giải thích đầy đủ từng slide — nội dung, ý nghĩa, cách nói, câu hỏi dự kiến —
+nằm ở [`NOI_DUNG_TUNG_SLIDE.md`](NOI_DUNG_TUNG_SLIDE.md). Đọc file đó trước khi
+tập nói. Bên dưới chỉ là bản tóm tắt 9 câu hay hỏi.
+
 Đã ghi sẵn trong ô ghi chú của slide cuối. Bản đầy đủ 7 câu nằm ở
 [`kich_ban_thuyet_trinh.md`](kich_ban_thuyet_trinh.md) (kịch bản của bộ slide
 LaTeX `slides.pdf`, vẫn giữ để tham khảo).
