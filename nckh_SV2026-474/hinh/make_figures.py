@@ -127,6 +127,36 @@ def fig_retain():
     save(fig, "retain.pdf")
 
 
+def fig_retain_slide():
+    """Bản rút gọn của fig_retain(), chỉ dùng cho slide PowerPoint — bỏ
+    SteadyDet-W và biến thể ràng buộc nhất quán để slide chỉ nói về
+    SteadyDet-N, gọn và nhẹ hơn khi trình chiếu 15 phút. Báo cáo vẫn dùng
+    retain.pdf đầy đủ 11 dòng, không đổi."""
+    rows = [
+        ("v17-vib-augonly", "SteadyDet-N + huấn luyện rung", BLUE),
+        ("rtdetr-l", "RT-DETR-l", GRAY),
+        ("yolo11n", "YOLO11-n", GRAY),
+        ("yolov10n", "YOLOv10-n", GRAY),
+        ("yolov8n", "YOLOv8-n", GRAY),
+        ("yolo26n", "YOLO26-n", GRAY),
+        ("v17-ft-control", "SteadyDet-N + 120 epoch không rung", GRAY),
+        ("v17-baseline", "SteadyDet-N (gốc)", GRAY),
+    ]
+    fig, ax = plt.subplots(figsize=(6.2, 2.7))
+    ys = np.arange(len(rows))[::-1]
+    for y, (k, lab, col) in zip(ys, rows):
+        a = agg(k)
+        ax.barh(y, a["ret"], color=col, height=0.62)
+        ax.errorbar(a["ret"], y, xerr=a["ret_sd"], color=DGRAY, capsize=2, lw=1)
+        ax.text(a["ret"] + a["ret_sd"] + 0.6, y, f"{a['ret']:.1f}".replace(".", ","),
+                va="center", fontsize=8, color=INK)
+    ax.set_yticks(ys, [r[1] for r in rows], fontsize=8)
+    ax.set_xlabel("Tỷ lệ giữ độ chính xác khi rung, retain (%) — trung bình ± độ lệch chuẩn, 3 seed")
+    ax.set_xlim(0, 45)
+    ax.grid(axis="y", visible=False)
+    save(fig, "retain_slide.pdf")
+
+
 # 3) Đánh đổi: AP sạch vs mCP --------------------------------------------------
 def fig_tradeoff():
     pts = [
@@ -441,6 +471,6 @@ def fig_demo_frames():
 
 
 if __name__ == "__main__":
-    fig_curve(); fig_retain(); fig_tradeoff(); fig_flight(); fig_int8()
+    fig_curve(); fig_retain(); fig_retain_slide(); fig_tradeoff(); fig_flight(); fig_int8()
     fig_latency(); fig_camera(); fig_hailo(); fig_rate(); fig_conf(); fig_training()
     fig_vibration_images(); fig_dataset_samples(); fig_demo_frames()

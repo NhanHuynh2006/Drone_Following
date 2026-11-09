@@ -244,7 +244,7 @@ def chuan_bi_anh(tmp):
             subprocess.run(["ffmpeg", "-y", "-ss", str(giay), "-i", duong, "-frames:v", "1",
                             os.path.join(tmp, ten + ".png")],
                            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for ten in ("duong_cong_rung", "bay_that", "int8", "do_tre", "retain",
+    for ten in ("duong_cong_rung", "bay_that", "int8", "do_tre", "retain_slide",
                 "hailo", "nguong_conf", "nhip_lenh", "huan_luyen", "camera_fps"):
         subprocess.run(["pdftoppm", "-r", "320", "-png", "-singlefile",
                         os.path.join(HINH, ten + ".pdf"), os.path.join(tmp, ten)],
@@ -468,10 +468,10 @@ def dung_slide(prs, P, tt):
         "⏱ 0:40 — SteadyDet-N chỉ 1,17 triệu tham số và 4,6 GFLOPs. Điểm thiết kế chính: "
         "giữ lại nhánh độ phân giải cao P2 cho người nhỏ, nhưng làm nhánh này mỏng đi vì chi "
         "phí tính toán tỷ lệ với diện tích bản đồ đặc trưng, rồi dồn tính toán về các mức sâu. "
-        "Nhờ vậy rẻ hơn bản SteadyDet-W trước đó 2,8 lần mà vẫn giữ khả năng thấy người nhỏ."))
+        "Nhờ vậy mô hình vẫn rất rẻ (4,6 GFLOPs) mà giữ khả năng thấy người nhỏ."))
     dai_so_lieu(s, TRAN - Inches(0.08), [
         ("1,17 M", "tham số — nhỏ nhất trong nhóm so sánh"),
-        ("4,6 GFLOPs", "rẻ hơn SteadyDet-W 2,8 lần"),
+        ("4,6 GFLOPs", "nhỏ và rẻ nhất trong mọi so sánh"),
         ("Nhánh P2", "giữ cho người nhỏ, nhưng làm mỏng"),
         ("LiteHead", "đầu dự đoán tách chiều sâu, dùng chung"),
     ])
@@ -523,16 +523,13 @@ def dung_slide(prs, P, tt):
         "Mô hình gốc chỉ giữ được 16,8% độ chính xác khi rung — gần như mù khi bay tiến. "
         "Đối chứng: huấn luyện thêm 120 epoch trên ảnh sạch vẫn 16,9%, chứng tỏ cái lợi "
         "không đến từ việc train lâu hơn. Phương pháp đề xuất đạt 36,2%, tức AP ở mức rung "
-        "bay tiến tăng 4,2 lần, đổi lại AP trên ảnh sạch chỉ giảm 9,7%. Hai dòng cuối là "
-        "kiểm chứng: tái lập được trên SteadyDet-W, còn trên YOLO11-n thì không có tác dụng."))
+        "bay tiến tăng 4,2 lần, đổi lại AP trên ảnh sạch chỉ giảm 9,7%."))
     bang(s, LE, TRAN - Inches(0.05), W - 2 * LE, Inches(3.5), [
         ["SteadyDet-N", "AP ảnh sạch", "AP mức rung 2", "retain (%)", "Kết luận"],
         ["Gốc", "0,1892", "0,0123", "16,8 ± 0,7", "gần như không phát hiện được"],
         ["+ 120 epoch ảnh sạch", "0,1823", "0,0125", "16,9 ± 0,7", "huấn luyện thêm không cải thiện"],
         ["@+ huấn luyện nhận biết rung", "@0,1708", "@**0,0518**", "@**36,2 ± 0,7**", "@**cao nhất**"],
-        ["SteadyDet-W: gốc → rung", "0,2349 → 0,2219", "0,0258 → 0,0839", "22,2 → 39,4", "tái lập được"],
-        ["YOLO11-n: gốc → rung", "0,2588 → 0,2579", "0,0248 → 0,0227", "21,9 → 21,5", "không cải thiện"],
-    ], rong_cot=[3.0, 1.7, 1.7, 1.6, 2.4], co_chu=13)
+    ], rong_cot=[3.0, 1.7, 1.7, 1.6, 2.4], co_chu=14)
     dai_so_lieu(s, TRAN + Inches(3.75), [
         ("16,8% → 36,2%", "tỷ lệ giữ độ chính xác khi rung"),
         ("× 4,2", "AP ở mức rung của bay tiến"),
@@ -560,16 +557,16 @@ def dung_slide(prs, P, tt):
     ], cao=Inches(1.0))
 
     # ------------------------- 10. xếp hạng độ bền của 11 cấu hình (MỚI)
-    s = trang_moi(prs, "Xếp hạng độ bền khi rung của 11 cấu hình",
+    s = trang_moi(prs, "Xếp hạng độ bền khi rung của 8 cấu hình",
                   phu="retain = tỷ lệ giữ được độ chính xác khi rung · trung bình ± độ lệch chuẩn trên 3 seed",
                   so=11, ghi_chu=(
-        "⏱ 0:40 — Toàn cảnh một hình: mười một cấu hình được đo bằng đúng một chương trình đo. "
-        "Hai thanh dài nhất là hai mô hình của đề tài sau khi huấn luyện nhận biết rung. Nhóm "
-        "giữa là năm mô hình đối chứng, retain chỉ quanh 19 đến 22 phần trăm. Hai thanh ngắn "
-        "nhất ở dưới là mô hình gốc của đề tài và bản huấn luyện thêm 120 epoch không rung, "
-        "chứng tỏ cái lợi đến từ phương pháp chứ không từ việc huấn luyện lâu hơn."))
-    pic = anh(s, P("retain"), LE, TRAN + Inches(0.2), W - 2 * LE, Inches(4.5))
-    chu_thich_duoi(s, pic, "Hai thanh đầu là SteadyDet-W và SteadyDet-N sau huấn luyện nhận biết rung")
+        "⏱ 0:40 — Toàn cảnh một hình: tám cấu hình của SteadyDet-N được đo bằng đúng một "
+        "chương trình đo. Thanh dài nhất là mô hình của đề tài sau khi huấn luyện nhận biết "
+        "rung. Nhóm giữa là năm mô hình đối chứng công khai, retain chỉ quanh 19 đến 26 phần "
+        "trăm. Hai thanh ngắn nhất ở dưới là mô hình gốc và bản huấn luyện thêm 120 epoch "
+        "không rung, chứng tỏ cái lợi đến từ phương pháp chứ không từ việc huấn luyện lâu hơn."))
+    pic = anh(s, P("retain_slide"), LE, TRAN + Inches(0.2), W - 2 * LE, Inches(4.5))
+    chu_thich_duoi(s, pic, "Thanh dẫn đầu là SteadyDet-N sau huấn luyện nhận biết rung")
 
     # --------------------------------------- 8. so sánh với 5 mô hình nhẹ
     s = trang_moi(prs, "Kết quả 2 — Thứ hạng đảo ngược khi có rung",

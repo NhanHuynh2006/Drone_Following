@@ -177,8 +177,8 @@ bám người. Hai chỉ số retain và mCP dùng xuyên suốt toàn bài."
 
 **Trên slide:**
 - 4 ô số liệu: **1,17 M** tham số (nhỏ nhất nhóm so sánh) · **4,6 GFLOPs**
-  (rẻ hơn SteadyDet-W 2,8 lần) · **Nhánh P2** (giữ cho người nhỏ nhưng làm
-  mỏng) · **LiteHead** (đầu dự đoán tách chiều sâu, dùng chung).
+  (nhỏ và rẻ nhất trong mọi so sánh) · **Nhánh P2** (giữ cho người nhỏ nhưng
+  làm mỏng) · **LiteHead** (đầu dự đoán tách chiều sâu, dùng chung).
 - Sơ đồ kiến trúc: Backbone → FPN neck (từ trên xuống) → Head, với nhánh P2
   vẽ nét đứt để nhấn mạnh nó mỏng hơn các nhánh khác.
 - Chú thích: "Chi phí phân bổ không đối xứng: nhánh P2 (nét đứt) mỏng, tính
@@ -204,12 +204,11 @@ bám người. Hai chỉ số retain và mCP dùng xuyên suốt toàn bài."
   cậy) dùng tích chập tách theo chiều sâu (depthwise separable) và **dùng
   chung trọng số giữa các mức** thay vì mỗi mức có một đầu riêng như kiến
   trúc cũ — giảm thêm tham số mà không giảm độ chính xác đáng kể.
-- **So với SteadyDet-W:** SteadyDet-W là phiên bản "rộng" (Wide) ra đời
-  trước, chính xác hơn một chút nhưng tốn 12,9 GFLOPs. SteadyDet-N (Narrow/
-  Nano) là bản tối ưu cho thiết bị biên, rẻ hơn 2,8 lần. Cả hai đều xuất
-  hiện trong bảng đối chứng ở slide 9 và 11 để chứng minh phương pháp huấn
-  luyện nhận biết rung hoạt động trên **cả hai** kiến trúc, không phải chỉ
-  một trường hợp may mắn.
+> **Đã bỏ khỏi slide:** phiên bản tiền nhiệm SteadyDet-W (bản "rộng") và kết
+> quả kiểm chứng phương pháp trên nó — bỏ khỏi bảng/biểu đồ slide 9 và 11 để
+> bản trình chiếu chỉ tập trung vào SteadyDet-N, nhẹ và gọn hơn cho 15 phút.
+> SteadyDet-W vẫn còn đầy đủ trong báo cáo (Chương 3, bảng so sánh hai phiên
+> bản) và vẫn là một phần của câu chuyện thiết kế — xem mục ngay dưới đây.
 
 **Nói sao cho đúng:** "Điểm thiết kế cốt lõi: chi phí một lớp tỷ lệ với diện
 tích bản đồ đặc trưng, nên thay vì né tránh độ phân giải cao như các mô hình
@@ -428,16 +427,15 @@ bền hơn qua dữ liệu" không tốn gì thêm lúc chạy.
 
 **Đây là bảng kết quả quan trọng nhất của toàn bài — đọc kỹ từng dòng.**
 
-**Trên slide (bảng đầy đủ — đã bỏ dòng "ràng buộc nhất quán" khỏi bản trình
-chiếu để đủ giờ, xem ghi chú cuối mục này):**
+**Trên slide (bảng đầy đủ — đã bỏ dòng "ràng buộc nhất quán" và hai dòng kiểm
+chứng SteadyDet-W/YOLO11-n khỏi bản trình chiếu để đủ giờ và gọn nhất có
+thể; xem ghi chú cuối mục này):**
 
 | SteadyDet-N | AP ảnh sạch | AP mức rung 2 | retain (%) | Kết luận |
 |---|---|---|---|---|
 | Gốc | 0,1892 | 0,0123 | 16,8 ± 0,7 | gần như không phát hiện được |
 | + 120 epoch ảnh sạch | 0,1823 | 0,0125 | 16,9 ± 0,7 | huấn luyện thêm không cải thiện |
 | **+ huấn luyện nhận biết rung** | 0,1708 | **0,0518** | **36,2 ± 0,7** | **cao nhất** |
-| SteadyDet-W: gốc → rung | 0,2349→0,2219 | 0,0258→0,0839 | 22,2→39,4 | tái lập được |
-| YOLO11-n: gốc → rung | 0,2588→0,2579 | 0,0248→0,0227 | 21,9→21,5 | không cải thiện |
 
 4 ô số liệu lớn: **16,8% → 36,2%** (tỷ lệ giữ độ chính xác khi rung) · **×4,2**
 (AP ở mức rung của bay tiến) · **−9,7%** (mức suy giảm AP trên ảnh sạch) ·
@@ -456,17 +454,15 @@ trọng khi trình bày, đây là cách "chứng minh bằng loại trừ"):**
 3. **Dòng "+ huấn luyện nhận biết rung" (36,2%) — kết quả chính:** Cao nhất
    trong tất cả, với chi phí huấn luyện rẻ nhất trong các phương án xử lý rung,
    và **0 ms chi phí thêm lúc suy luận**.
-4. **Hai dòng cuối (SteadyDet-W, YOLO11-n) — đây là bước kiểm chứng tính tổng
-   quát, cực kỳ quan trọng để trả lời "có phải chỉ ăn may trên một kiến trúc?"**
-   - Trên **SteadyDet-W** (kiến trúc khác, nhưng cùng họ do nhóm thiết kế):
-     retain tăng từ 22,2% lên 39,4% — **phương pháp tái lập được** trên kiến
-     trúc thứ hai.
-   - Trên **YOLO11-n** (kiến trúc hoàn toàn khác họ, của Ultralytics): retain
-     gần như không đổi (21,9% → 21,5%) — phương pháp **không có tác dụng**.
-     → Kết luận trung thực: phương pháp hiệu quả và tái lập được trên họ kiến
-     trúc SteadyDet, nhưng **không khẳng định** nó tổng quát cho mọi kiến trúc
-     khác. Đây là điểm nhóm *chủ động nói rõ giới hạn* — một dấu hiệu tốt về
-     tính khoa học, không nên né tránh khi Hội đồng hỏi.
+
+> **Đã bỏ khỏi slide (không đủ thời gian):** hai dòng kiểm chứng tính tổng
+> quát — trên **SteadyDet-W** retain tăng từ 22,2% lên 39,4% (phương pháp
+> **tái lập được** trên kiến trúc thứ hai cùng họ), còn trên **YOLO11-n**
+> (khác họ, của Ultralytics) retain gần như không đổi, 21,9% → 21,5%
+> (**không có tác dụng**). Kết luận đầy đủ: phương pháp hiệu quả và tái lập
+> được trên họ kiến trúc SteadyDet, nhưng không khẳng định tổng quát cho mọi
+> kiến trúc khác — nếu Hội đồng hỏi "đã thử trên mô hình khác chưa", đây là
+> câu trả lời, kể cả khi không còn hiện trên slide.
 
 **4 ô số liệu lớn tóm tắt:**
 - 16,8% → 36,2%: con số headline của cả đề tài.
@@ -524,28 +520,30 @@ khác biệt từ mức 2 — đúng là mức bay tiến khi bám người."
 
 ---
 
-## Slide 11 — Xếp hạng độ bền khi rung của 11 cấu hình
+## Slide 11 — Xếp hạng độ bền khi rung của 8 cấu hình
 
-**Trên slide:** Biểu đồ cột ngang, 11 thanh xếp theo retain (%) giảm dần, có
+**Trên slide:** Biểu đồ cột ngang, 8 thanh xếp theo retain (%) giảm dần, có
 thanh sai số (error bar ± độ lệch chuẩn):
-1. SteadyDet-W + huấn luyện rung — 39,4%
-2. SteadyDet-N + huấn luyện rung — 36,2%
-3. SteadyDet-N + ràng buộc nhất quán — 30,0%
-4. RT-DETR-l — 25,6%
-5. SteadyDet-W (gốc) — 22,2%
-6. YOLO11-n — 20,1%
-7. YOLOv10-n — 19,7%
-8. YOLOv8-n — 19,5%
-9. YOLO26-n — 19,0%
-10. SteadyDet-N + 120 epoch không rung — 16,9%
-11. SteadyDet-N (gốc) — 16,8%
+1. SteadyDet-N + huấn luyện rung — 36,2%
+2. RT-DETR-l — 25,6%
+3. YOLO11-n — 20,1%
+4. YOLOv10-n — 19,7%
+5. YOLOv8-n — 19,5%
+6. YOLO26-n — 19,0%
+7. SteadyDet-N + 120 epoch không rung — 16,9%
+8. SteadyDet-N (gốc) — 16,8%
 
-**Nghĩa là gì:** Đây là "bức tranh toàn cảnh" gộp tất cả các cấu hình đã nhắc
-ở slide 9 và các mô hình đối chứng ở slide 12 vào **một hình duy nhất**, xếp
-theo độ bền. Hai quan sát quan trọng:
-- **Hai thanh dẫn đầu là hai mô hình của đề tài** sau khi áp dụng phương pháp
-  — cao hơn hẳn mọi mô hình công khai khác, kể cả RT-DETR-l (mô hình lớn
-  nhất, 108 GFLOPs).
+> **Đã bỏ khỏi biểu đồ này (dựng riêng `retain_slide.pdf`, không đụng tới
+> `retain.pdf` đầy đủ 11 thanh dùng trong báo cáo):** hai thanh SteadyDet-W
+> (39,4% và 22,2%) và thanh "ràng buộc nhất quán" (30,0%) — để slide chỉ nói
+> về SteadyDet-N, gọn và nhẹ nhất có thể cho 15 phút.
+
+**Nghĩa là gì:** Đây là "bức tranh toàn cảnh" gộp các cấu hình của SteadyDet-N
+đã nhắc ở slide 9 và các mô hình đối chứng ở slide 12 vào **một hình duy
+nhất**, xếp theo độ bền. Hai quan sát quan trọng:
+- **Thanh dẫn đầu là mô hình của đề tài** sau khi áp dụng phương pháp — cao
+  hơn hẳn mọi mô hình công khai khác, kể cả RT-DETR-l (mô hình lớn nhất,
+  108 GFLOPs).
 - **Năm mô hình đối chứng công khai (RT-DETR-l, 4×YOLO) nằm sát nhau ở
   19–26%** dù khác nhau rất xa về kích thước và năm ra đời — tức là **chỉ
   tăng kích thước/độ phức tạp mô hình không tự nhiên làm nó bền với rung
@@ -558,7 +556,7 @@ theo độ bền. Hai quan sát quan trọng:
 **Nói sao cho đúng:** "Nhìn toàn cảnh: năm mô hình công khai trải dài nhiều
 năm phát triển nhưng retain gần như ngang nhau quanh 19–26%, chứng tỏ độ bền
 trước rung không tự nhiên cải thiện theo kiến trúc mới hay mô hình lớn hơn —
-phải chủ động xử lý bằng phương pháp, như hai thanh dẫn đầu của đề tài."
+phải chủ động xử lý bằng phương pháp, như thanh dẫn đầu của đề tài."
 
 ### Vì sao so sánh bằng retain chứ không so AP (mCP) tuyệt đối — câu hỏi rất
 ### hay, nhiều người trực giác nghĩ AP tuyệt đối mới "chuẩn" hơn
