@@ -1,0 +1,147 @@
+% =====================================================================
+%  mau.tex — bộ slide mẫu dùng khung ISLab. Chép file này, đổi nội dung.
+%  Biên dịch:  pdflatex mau && pdflatex mau     (phải chạy HAI lần)
+% =====================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+\usepackage[vietnamese]{babel}
+\usepackage{booktabs,array,amsmath,colortbl}
+\usetheme{ISLab}
+
+\title{Tên đề tài hoặc tên báo cáo\\đặt ở đây, tối đa ba dòng}
+\subtitle{Loại báo cáo — ví dụ: báo cáo tiến độ, seminar, nghiệm thu}
+\author{Họ và tên người trình bày}
+\institute{ISLab — Intelligent Systems Laboratory}
+\date{Tháng 11 năm 2026}
+\ISLabTenNgan{Tên ngắn của báo cáo}
+
+\begin{document}
+
+\ISLabTrangBia
+
+% ---------------------------------------------------------------------
+\begin{frame}{Nội dung trình bày}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.47\textwidth}
+      \ISLabThe{01}{Giới thiệu}{Bối cảnh, bài toán và mục tiêu}\par\vspace{3pt}
+      \ISLabThe{02}{Phương pháp}{Hệ thống, mô hình, thuật toán}\par\vspace{3pt}
+      \ISLabThe{03}{Thực nghiệm}{Dữ liệu, cách đo, cấu hình}
+    \column{0.47\textwidth}
+      \ISLabThe{04}{Kết quả}{Số liệu chính và so sánh}\par\vspace{3pt}
+      \ISLabThe{05}{Thảo luận}{Hạn chế và điều còn bỏ ngỏ}\par\vspace{3pt}
+      \ISLabThe{06}{Kết luận}{Đóng góp và hướng tiếp theo}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+\ISLabTrangMuc{01}{Giới thiệu phòng thí nghiệm}{Hai trang dùng lại được cho mọi báo cáo: hướng nghiên cứu và hệ thống phần cứng của ISLab.}
+
+\begin{frame}{Hướng nghiên cứu của ISLab}
+  \framesubtitle{Hệ thống tự hành và robot thông minh, từ trên không, mặt đất đến dưới nước}
+  \ISLabThe[0.82cm]{01}{Autonomous UAVs}{Điều khiển, dẫn đường, nhận thức môi trường, SLAM, phát hiện và theo dõi đối tượng cho drone tự hành.}\par\vspace{2.5pt}
+  \ISLabThe[0.82cm]{02}{Autonomous Vehicles}{Sensor fusion, computer vision, localization, mapping và environment perception cho xe tự hành.}\par\vspace{2.5pt}
+  \ISLabThe[0.82cm]{03}{Mobile Robotics \& Lifelong AI}{SLAM, định vị, xây dựng bản đồ, tự hành và tránh vật cản trên Clearpath Husky A200 và Unitree Go2 EDU.}\par\vspace{2.5pt}
+  \ISLabThe[0.82cm]{04}{Underwater Robotics -- ROV/AUV}{Thị giác dưới nước, điều khiển và dẫn đường ROV, kiểm tra đường ống, docking tự động, định vị và SLAM dưới nước.}\par\vspace{2.5pt}
+  \ISLabThe[0.82cm]{05}{Intelligent \& Assistive Robotics}{Human--robot interaction, computer vision, NLP và robot hỗ trợ con người.}
+\end{frame}
+
+\begin{frame}{Hệ thống phần cứng của ISLab}
+  \framesubtitle{Thiết bị thành viên trực tiếp làm việc}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.31\textwidth}
+      \begin{block}{Tính toán biên}
+        \begin{itemize}\small
+          \item NVIDIA Jetson AGX Orin 64GB
+        \end{itemize}
+      \end{block}
+    \column{0.34\textwidth}
+      \begin{block}{Cảm biến}
+        \begin{itemize}\small
+          \item Ouster OS1-32 3D LiDAR
+          \item Intel RealSense D435i
+          \item Xsens/Movella MTi-630R IMU
+          \item Duro high-precision GNSS
+        \end{itemize}
+      \end{block}
+    \column{0.31\textwidth}
+      \begin{block}{Nền tảng robot}
+        \begin{itemize}\small
+          \item Clearpath Husky A200
+          \item Unitree Go2 EDU
+          \item Các nền tảng robot nghiên cứu khác
+        \end{itemize}
+      \end{block}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+\ISLabTrangMuc{02}{Các kiểu trang nội dung}{Chép kiểu trang cần dùng, thay chữ và hình.}
+
+\begin{frame}{Trang chữ và hình}
+  \framesubtitle{Dòng phụ: phạm vi, bộ dữ liệu hoặc điều kiện đo}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.50\textwidth}
+      \begin{itemize}\setlength{\itemsep}{5pt}
+        \item Mỗi trang chỉ nói một ý, viết thành câu ngắn.
+        \item Dùng \alert{màu nhấn} cho con số hoặc kết luận cần nhớ, mỗi trang không quá hai chỗ.
+        \item Gạch đầu dòng cấp hai dành cho điều kiện hoặc ví dụ:
+          \begin{itemize}
+            \item cỡ chữ nhỏ hơn một bậc;
+            \item không lồng quá hai cấp.
+          \end{itemize}
+      \end{itemize}
+    \column{0.45\textwidth}
+      \centering
+      \begin{tikzpicture}
+        \draw[islabvien,fill=islabnhat,rounded corners=3pt] (0,0) rectangle (6.4,3.7);
+        \node[text=islabmo,font=\footnotesize] at (3.2,1.85) {\texttt{\textbackslash includegraphics\{hinh\}}};
+      \end{tikzpicture}
+      \par\vspace{3pt}{\scriptsize\color{islabmo}Chú thích hình đặt ngay dưới hình}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trang số liệu và bảng}
+  \framesubtitle{Bốn ô số liệu phía trên, bảng chi tiết phía dưới}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.235\textwidth}\ISLabSo{36,2\%}{chỉ số chính}
+    \column{0.235\textwidth}\ISLabSo{$\times$\,4,2}{mức cải thiện}
+    \column{0.235\textwidth}\ISLabSo{63,7 FPS}{tốc độ trên thiết bị biên}
+    \column{0.235\textwidth}\ISLabSo{0 ms}{chi phí tăng thêm}
+  \end{columns}
+  \vspace{8pt}
+  \centering\small
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    \textbf{\color{islabis}Cấu hình} & \textbf{\color{islabis}Chỉ số A} & \textbf{\color{islabis}Chỉ số B} & \textbf{\color{islabis}Ghi chú} \\
+    \midrule
+    Đối chứng            & 0,189 & 16,8 & mốc so sánh \\
+    Phương án 1          & 0,182 & 16,9 & không cải thiện \\
+    \rowcolor{islabnhat}
+    Phương án đề xuất    & 0,171 & \textbf{\color{islabcam}36,2} & \ISLabNhan{Tốt nhất} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Trang khối nhấn mạnh}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.48\textwidth}
+      \begin{block}{Khối thường}
+        Dùng cho định nghĩa, giả thiết, cấu hình thí nghiệm.
+      \end{block}
+      \begin{exampleblock}{Khối ví dụ}
+        Dùng cho ví dụ minh hoạ hoặc ghi chú triển khai.
+      \end{exampleblock}
+    \column{0.48\textwidth}
+      \begin{alertblock}{Khối cần chú ý}
+        Dùng cho hạn chế, điều kiện áp dụng, điều chưa kiểm chứng.
+      \end{alertblock}
+      \vspace{4pt}
+      Công thức đặt như văn bản thường:
+      \[ \text{retain} = \frac{\text{mCP}}{\text{AP}_{\text{sạch}}} \]
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+\ISLabTrangKet{Cảm ơn quý thầy cô và các bạn đã lắng nghe}{Hỏi và đáp}{Họ và tên người trình bày\\ISLab — Intelligent Systems Laboratory\\email@truong.edu.vn}
+
+\end{document}

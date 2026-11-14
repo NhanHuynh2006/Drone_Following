@@ -1,0 +1,259 @@
+% =====================================================================
+%  beamerthemeISLab.sty — khung slide chung của ISLab
+%  (Intelligent Systems Laboratory)
+%
+%  Dùng:   \documentclass[aspectratio=169,10pt]{beamer}
+%          \usetheme{ISLab}
+%  Biên dịch HAI lần bằng pdflatex (trang bìa và trang chuyển mục đặt chữ
+%  theo toạ độ tuyệt đối của trang nên cần lần chạy thứ hai).
+%
+%  Logo và ảnh nền nằm ở ../assets. Nếu để chỗ khác, khai báo TRƯỚC \usetheme:
+%          \newcommand{\ISLabAssets}{duong/dan/toi/assets}
+%
+%  Cùng một bộ màu, cùng một bố cục với bản PowerPoint (pptx/ISLab_mau.pptx):
+%  mọi kích thước ở đây tính bằng cm trên trang 16 x 9 cm, bản PowerPoint
+%  nhân với 13,333/16 inch.
+% =====================================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{beamerthemeISLab}[2026/11/14 Khung slide ISLab]
+
+\RequirePackage[T5]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\RequirePackage{graphicx}
+\RequirePackage{tikz}
+\usetikzlibrary{calc}
+
+\providecommand{\ISLabAssets}{../assets}
+
+% ---- bảng màu: lấy thẳng từ logo ------------------------------------
+\definecolor{islabdam}{HTML}{244E7C}   % nền thanh tiêu đề (bản đậm của màu logo)
+\definecolor{islabis}{HTML}{30649E}    % đúng màu chữ "IS" của logo
+\definecolor{islablab}{HTML}{6B95C5}   % đúng màu chữ "Lab" của logo
+\definecolor{islabcam}{HTML}{C86A2C}   % màu nhấn: số liệu, điểm cần chú ý
+\definecolor{islabnhat}{HTML}{EFF3F9}  % nền khối nhạt
+\definecolor{islabvien}{HTML}{C6D6E9}  % viền khối, đường kẻ
+\definecolor{islabmo}{HTML}{5A6472}    % chữ phụ, chú thích
+\definecolor{islabphu}{HTML}{BFD6F2}   % chữ phụ trên nền đậm
+\definecolor{islabchu}{HTML}{1A1A1A}   % chữ chính
+
+\setbeamercolor{normal text}{fg=islabchu,bg=white}
+\setbeamercolor{structure}{fg=islabis}
+\setbeamercolor{alerted text}{fg=islabcam}
+\setbeamercolor{frametitle}{fg=white}
+\setbeamercolor{block title}{fg=white,bg=islabdam}
+\setbeamercolor{block body}{fg=islabchu,bg=islabnhat}
+\setbeamercolor{block title alerted}{fg=white,bg=islabcam}
+\setbeamercolor{block body alerted}{fg=islabchu,bg=islabnhat}
+\setbeamercolor{block title example}{fg=white,bg=islabis}
+\setbeamercolor{block body example}{fg=islabchu,bg=islabnhat}
+\setbeamercolor{itemize item}{fg=islablab}
+\setbeamercolor{itemize subitem}{fg=islablab}
+\setbeamercolor{enumerate item}{fg=islabis}
+\setbeamercolor{caption name}{fg=islabis}
+\setbeamercolor{caption}{fg=islabmo}
+
+\setbeamerfont{frametitle}{size=\fontsize{12.5}{15}\selectfont,series=\bfseries}
+\setbeamerfont{block title}{size=\small,series=\bfseries}
+\setbeamerfont{caption}{size=\scriptsize}
+\setbeamerfont{alerted text}{series=\bfseries}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\raisebox{0.18ex}{\scalebox{0.75}{$\blacksquare$}}}
+\setbeamertemplate{itemize subitem}{\raisebox{0.2ex}{\scalebox{0.6}{$\blacksquare$}}}
+\setbeamertemplate{enumerate items}[default]
+\setbeamertemplate{caption}{\centering\insertcaption\par}
+\setbeamersize{text margin left=0.66cm,text margin right=0.66cm}
+\setlength{\leftmargini}{1.2em}
+
+% ---- tên ngắn in ở chân trang ---------------------------------------
+\newcommand{\ISLab@ngan}{}
+\newcommand{\ISLabTenNgan}[1]{\renewcommand{\ISLab@ngan}{\quad|\quad #1}}
+
+% =====================================================================
+%  HOẠ TIẾT ĐẶC TRƯNG: bản đồ lưới + quỹ đạo có điểm mốc + phương tiện tự
+%  hành + khung bám mục tiêu. Gói gọn những gì phòng thí nghiệm làm: dẫn
+%  đường, lập bản đồ (SLAM), phát hiện và theo dõi đối tượng.
+% =====================================================================
+% \ISLabQuad{x}{y}{góc quay}{tỷ lệ} — quadrotor nhìn từ trên xuống
+\newcommand{\ISLabQuad}[4]{%
+  \begin{scope}[shift={(#1,#2)},rotate=#3,scale=#4]
+    \draw[white,line width=0.9pt,line cap=round] (-0.34,-0.34) -- (0.34,0.34) (-0.34,0.34) -- (0.34,-0.34);
+    \foreach \a/\b in {-0.34/-0.34,0.34/0.34,-0.34/0.34,0.34/-0.34}
+      \draw[white,line width=0.8pt,fill=islabdam] (\a,\b) circle (0.19);
+    \fill[white,rounded corners=0.6pt] (-0.11,-0.11) rectangle (0.11,0.11);
+    % sóng cảm biến phía trước
+    \foreach \r/\o in {0.75/0.55,1.0/0.35,1.25/0.2}
+      \draw[islablab,opacity=\o,line width=0.7pt] (60:\r) arc (60:120:\r);
+  \end{scope}}
+
+% \ISLabKhungBam{x}{y}{rộng}{cao} — bốn góc khung bám mục tiêu, màu nhấn
+\newcommand{\ISLabKhungBam}[4]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \foreach \sx/\sy in {1/1,-1/1,1/-1,-1/-1}
+      \draw[islabcam,line width=1.1pt,line cap=round]
+        ({\sx*#3/2},{\sy*(#4/2-0.22)}) -- ({\sx*#3/2},{\sy*#4/2}) -- ({\sx*(#3/2-0.22)},{\sy*#4/2});
+    \fill[islabcam] (0,0) circle (0.045);
+  \end{scope}}
+
+\newcommand{\ISLab@logo}[1]{\includegraphics[width=#1]{\ISLabAssets/logo_islab.png}}
+
+% ---- nền trang BÌA (cũng dùng cho trang KẾT) ------------------------
+\newcommand{\ISLabNenBia}{%
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \useasboundingbox (0,0) rectangle (16,9);
+  \fill[islabdam] (0,0) rectangle (16,9);
+  \begin{scope}
+    \clip (9.5,0) -- (16,0) -- (16,9) -- (10.9,9) -- cycle;
+    \fill[black,opacity=0.13] (9,0) rectangle (16,9);
+    \draw[white,opacity=0.07,line width=0.3pt,step=0.5] (9,0) grid (16,9);
+  \end{scope}
+  \draw[islablab,opacity=0.55,line width=0.5pt] (9.5,0) -- (10.9,9);
+  % quỹ đạo
+  \draw[islablab,line width=1pt,dash pattern=on 3.2pt off 3.2pt,line cap=round]
+    (10.55,1.15) .. controls (12.9,1.25) and (11.1,3.5) .. (12.55,4.2)
+                 .. controls (14.1,4.95) and (13.0,5.9) .. (14.05,6.65);
+  \foreach \p in {(10.55,1.15),(12.55,4.2)} {
+    \fill[islabdam] \p circle (0.13);
+    \draw[islablab,line width=0.9pt] \p circle (0.13);
+    \fill[islablab] \p circle (0.045);}
+  \ISLabQuad{14.05}{6.65}{-38}{1.0}
+  \ISLabKhungBam{14.25}{2.55}{0.95}{1.3}
+  \draw[islabcam,opacity=0.55,line width=0.5pt,dash pattern=on 1.2pt off 1.6pt] (12.55,4.2) -- (13.86,2.95);
+  % dải chân trang hai sắc của logo + một đoạn màu nhấn
+  \fill[islablab] (0,0) rectangle (16,0.14);
+  \fill[islabcam] (0,0) rectangle (2.4,0.14);
+  % logo trên nền trắng
+  \fill[white,rounded corners=3pt] (0.66,7.28) rectangle (3.5,8.5);
+  \node[inner sep=0] at (2.08,7.89) {\ISLab@logo{2.3cm}};
+\end{tikzpicture}}
+
+% ---- nền trang CHUYỂN MỤC -------------------------------------------
+\newcommand{\ISLabNenMuc}{%
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \useasboundingbox (0,0) rectangle (16,9);
+  \fill[white] (0,0) rectangle (16,9);
+  \fill[islabdam] (0,0) rectangle (5.2,9);
+  \begin{scope}
+    \clip (0,0) rectangle (5.2,9);
+    \draw[white,opacity=0.07,line width=0.3pt,step=0.5] (0,0) grid (5.5,9);
+    \draw[islablab,line width=1pt,dash pattern=on 3.2pt off 3.2pt,line cap=round]
+      (0.75,0.95) .. controls (2.6,1.0) and (1.5,2.2) .. (3.0,2.35);
+    \fill[islabdam] (0.75,0.95) circle (0.13);
+    \draw[islablab,line width=0.9pt] (0.75,0.95) circle (0.13);
+    \fill[islablab] (0.75,0.95) circle (0.045);
+    \ISLabQuad{3.55}{2.45}{-80}{0.8}
+  \end{scope}
+  \fill[islabcam] (5.2,3.75) rectangle (5.3,5.35);
+  \fill[islablab] (5.2,0) rectangle (16,0.14);
+  \node[inner sep=0,anchor=south east] at (15.34,0.5) {\ISLab@logo{1.9cm}};
+\end{tikzpicture}}
+
+% ---- nền trang NỘI DUNG ---------------------------------------------
+\newcommand{\ISLabNenNoiDung}{%
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \useasboundingbox (0,0) rectangle (16,9);
+  \fill[white] (0,0) rectangle (16,9);
+  \fill[islabdam] (0,7.78) rectangle (16,9);
+  \fill[islablab] (0,7.72) rectangle (16,7.78);
+  \fill[islabcam] (0,7.72) rectangle (1.9,7.78);
+  \fill[white,rounded corners=2.5pt] (13.73,7.935) rectangle (15.59,8.845);
+  \node[inner sep=0] at (14.66,8.39) {\ISLab@logo{1.54cm}};
+  \draw[islabvien,line width=0.4pt] (0.66,0.55) -- (15.34,0.55);
+\end{tikzpicture}}
+
+\setbeamertemplate{background canvas}{\ISLabNenNoiDung}
+
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \vbox to 1.22cm{\vfil
+    \hbox{\parbox{12.4cm}{\raggedright
+      {\usebeamerfont{frametitle}\color{white}\insertframetitle\par}%
+      \ifx\insertframesubtitle\@empty\else
+        {\vskip1.5pt\fontsize{6.5}{8}\selectfont\color{islabphu}\insertframesubtitle\par}\fi}}%
+    \vfil}%
+  \vskip0.12cm}
+
+\setbeamertemplate{footline}{%
+  \hbox to\paperwidth{\hskip0.66cm
+    {\fontsize{5.5}{7}\selectfont\color{islabmo}\textbf{ISLab}\ \textperiodcentered\
+     Intelligent Systems Laboratory\ISLab@ngan}\hfill
+    {\fontsize{6.5}{7}\selectfont\color{islabmo}\insertframenumber}\hskip0.66cm}%
+  \vskip0.2cm}
+
+% =====================================================================
+%  CÁC TRANG ĐẶC BIỆT
+% =====================================================================
+% \ISLabTrangBia — lấy \title, \subtitle, \author, \institute, \date
+\newcommand{\ISLabTrangBia}{{%
+  \setbeamertemplate{background canvas}{\ISLabNenBia}%
+  \frame[plain,noframenumbering]{%
+    \begin{tikzpicture}[remember picture,overlay,x=1cm,y=1cm,shift={(current page.south west)}]
+      \node[anchor=south west,inner sep=0,text width=8.5cm,align=flush left,text=white,
+            font=\bfseries\fontsize{17}{21}\selectfont] at (0.66,4.2) {\inserttitle};
+      \fill[islabcam] (0.66,3.84) rectangle (2.26,3.92);
+      \node[anchor=north west,inner sep=0,text width=8.5cm,align=flush left,text=islabphu,
+            font=\fontsize{9}{12}\selectfont] at (0.66,3.55) {\insertsubtitle};
+      \node[anchor=south west,inner sep=0,text width=8.5cm,align=flush left,text=white,
+            font=\fontsize{7.5}{11}\selectfont] at (0.66,0.75)
+        {{\bfseries\fontsize{8.5}{11}\selectfont\insertauthor}\\[1pt]
+         {\color{islabphu}\insertinstitute}\\[1pt]{\color{islabphu}\insertdate}};
+    \end{tikzpicture}}}}
+
+% \ISLabTrangMuc{01}{Tên phần}{Mô tả ngắn}
+\newcommand{\ISLabTrangMuc}[3]{{%
+  \setbeamertemplate{background canvas}{\ISLabNenMuc}%
+  \frame[plain,noframenumbering]{%
+    \begin{tikzpicture}[remember picture,overlay,x=1cm,y=1cm,shift={(current page.south west)}]
+      \node[anchor=center,inner sep=0,text=white,font=\bfseries\fontsize{46}{46}\selectfont]
+        at (2.6,5.0) {#1};
+      \node[anchor=south west,inner sep=0,text width=8.9cm,align=flush left,text=islabis,
+            font=\bfseries\fontsize{17}{21}\selectfont] at (6.1,4.65) {#2};
+      \node[anchor=north west,inner sep=0,text width=8.9cm,align=flush left,text=islabmo,
+            font=\fontsize{9}{12.5}\selectfont] at (6.1,4.3) {#3};
+    \end{tikzpicture}}}}
+
+% \ISLabTrangKet{Lời kết}{Dòng phụ}{Thông tin liên hệ}
+\newcommand{\ISLabTrangKet}[3]{{%
+  \setbeamertemplate{background canvas}{\ISLabNenBia}%
+  \frame[plain,noframenumbering]{%
+    \begin{tikzpicture}[remember picture,overlay,x=1cm,y=1cm,shift={(current page.south west)}]
+      \node[anchor=south west,inner sep=0,text width=8.5cm,align=flush left,text=white,
+            font=\bfseries\fontsize{17}{21}\selectfont] at (0.66,4.2) {#1};
+      \fill[islabcam] (0.66,3.84) rectangle (2.26,3.92);
+      \node[anchor=north west,inner sep=0,text width=8.5cm,align=flush left,text=islabphu,
+            font=\fontsize{9}{12}\selectfont] at (0.66,3.55) {#2};
+      \node[anchor=south west,inner sep=0,text width=8.5cm,align=flush left,text=islabphu,
+            font=\fontsize{7.5}{11}\selectfont] at (0.66,0.75) {#3};
+    \end{tikzpicture}}}}
+
+% =====================================================================
+%  CÁC KHỐI DÙNG LẠI TRONG TRANG NỘI DUNG
+% =====================================================================
+% \ISLabSo{36,2\%}{nhãn} — ô số liệu, đặt trong \column hoặc minipage
+\newcommand{\ISLabSo}[2]{%
+  \begin{tikzpicture}
+    \node[rounded corners=2.5pt,fill=islabnhat,draw=islabvien,line width=0.4pt,
+          minimum height=1.3cm,text width=\dimexpr\linewidth-10pt\relax,align=center,inner sep=4pt]
+      {{\bfseries\color{islabcam}\fontsize{13}{15}\selectfont #1}\\[2pt]
+       {\fontsize{6.5}{8}\selectfont\color{islabmo}#2}};
+  \end{tikzpicture}}
+
+% \ISLabThe[chiều cao tối thiểu]{01}{Tiêu đề}{Nội dung} — thẻ có số thứ tự
+\newcommand{\ISLabThe}[4][0.9cm]{%
+  \begin{tikzpicture}
+    \node[fill=islabnhat,minimum height=#1,text width=\dimexpr\linewidth-18pt\relax,
+          align=flush left,inner xsep=7pt,inner ysep=4.5pt] (the)
+      {{\bfseries\color{islabcam}\fontsize{9}{11}\selectfont #2}\hspace{0.6em}%
+       {\bfseries\color{islabis}\fontsize{8.5}{11}\selectfont #3}\\[1.5pt]
+       {\fontsize{7.5}{10}\selectfont\color{islabchu}#4}};
+    \fill[islabis] (the.north west) rectangle ([xshift=2pt]the.south west);
+  \end{tikzpicture}}
+
+% \ISLabNhan{chữ} — nhãn nhỏ màu nhấn, ví dụ đánh dấu "Kết quả chính"
+\newcommand{\ISLabNhan}[1]{%
+  \tikz[baseline=(n.base)]\node[fill=islabcam,text=white,rounded corners=2pt,inner xsep=4pt,
+    inner ysep=2pt,font=\bfseries\fontsize{6.5}{8}\selectfont] (n) {#1};}
+
+\endinput

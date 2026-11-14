@@ -1,0 +1,8 @@
+% Xuất hai ảnh nền (bìa, chuyển mục) ra PDF để bản PowerPoint dùng lại đúng
+% hoạ tiết của bản LaTeX. Chạy qua pptx/xuat_nen.sh, không cần chạy tay.
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{ISLab}
+\begin{document}
+{\setbeamertemplate{background canvas}{\ISLabNenBia}\frame[plain]{}}
+{\setbeamertemplate{background canvas}{\ISLabNenMuc}\frame[plain]{}}
+\end{document}
